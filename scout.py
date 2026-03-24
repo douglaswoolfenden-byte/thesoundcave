@@ -45,6 +45,7 @@ GENRES = [
 ]
 
 MAX_FOLLOWERS    = 5000
+MAX_PLAYS        = 25000   # if a track has this many plays, artist is likely not unsigned
 MIN_PLAYS        = 200
 TRACKS_PER_GENRE = 50
 TOP_N            = 20
@@ -93,6 +94,18 @@ def fetch_tracks(genre: str, limit: int = 50) -> list:
         return []
 
 
+def fetch_real_followers(user_id: int) -> int:
+    """Fetch accurate follower count directly from the user profile."""
+    headers = {'Authorization': f'OAuth {TOKEN}'}
+    try:
+        r = requests.get(f'https://api.soundcloud.com/users/{user_id}', headers=headers, timeout=10)
+        if r.status_code == 200:
+            return r.json().get('followers_count', 0) or 0
+    except Exception:
+        pass
+    return 0
+
+
 # --- Scoring ---
 
 def now_utc():
@@ -125,10 +138,13 @@ def score_track(track: dict) -> float:
 # --- Filters ---
 
 def is_eligible(track: dict) -> bool:
-    followers = (track.get('user') or {}).get('followers_count') or 0
-    plays     = track.get('playback_count') or 0
-    if followers >= MAX_FOLLOWERS or plays < MIN_PLAYS:
+    plays = track.get('playback_count') or 0
+
+    # Hard play count ceiling — too many plays = likely not unsigned
+    if plays > MAX_PLAYS or plays < MIN_PLAYS:
         return False
+
+    # Recency check
     created_at = track.get('created_at', '')
     if created_at:
         try:
@@ -137,6 +153,20 @@ def is_eligible(track: dict) -> bool:
                 return False
         except Exception:
             pass
+
+    # Get follower count — API sometimes returns 0 for embedded user objects
+    # so fetch the real profile if it looks suspicious (0 followers but decent plays)
+    user      = track.get('user') or {}
+    followers = user.get('followers_count') or 0
+    user_id   = user.get('id')
+
+    if followers == 0 and plays > 1000 and user_id:
+        followers = fetch_real_followers(user_id)
+        user['followers_count'] = followers  # update in place for scoring
+
+    if followers >= MAX_FOLLOWERS:
+        return False
+
     return True
 
 

@@ -6,217 +6,205 @@
   <title>The Sound Cave</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #0a0a0a;
-      --surface:   #141414;
-      --surface2:  #1e1e1e;
-      --border:    #2a2a2a;
-      --orange:    #ff5500;
-      --orange-dim:#b33b00;
-      --text:      #ffffff;
-      --muted:     #888888;
-      --green:     #00c896;
-      --gold:      #f5a623;
+      --bg:       #0a0a0a;
+      --surface:  #141414;
+      --surface2: #1e1e1e;
+      --surface3: #252525;
+      --border:   #2a2a2a;
+      --orange:   #ff5500;
+      --orange-d: #b33b00;
+      --text:     #ffffff;
+      --muted:    #888888;
+      --muted2:   #555555;
+      --green:    #00c896;
+      --red:      #ff4444;
+      --gold:     #f5a623;
+      --blue:     #5b9cf6;
     }
+    body { background:var(--bg); color:var(--text); font-family:Arial,sans-serif; min-height:100vh; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: Arial, sans-serif;
-      min-height: 100vh;
-    }
-
+    /* Header */
     header {
-      border-bottom: 1px solid var(--border);
-      padding: 20px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 100;
+      border-bottom:1px solid var(--border); padding:16px 28px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; background:var(--bg); z-index:200;
     }
-    .logo { display: flex; align-items: center; gap: 12px; }
-    .logo-icon {
-      width: 36px; height: 36px;
-      background: var(--orange);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    }
-    .logo h1 { font-size: 20px; letter-spacing: 0.5px; }
-    .logo span { color: var(--orange); }
-    .week-badge {
-      background: var(--orange);
-      color: #fff;
-      font-size: 12px;
-      font-weight: bold;
-      padding: 4px 10px;
-      border-radius: 20px;
-      letter-spacing: 0.5px;
-    }
+    .logo { display:flex; align-items:center; gap:10px; }
+    .logo-icon { width:32px; height:32px; background:var(--orange); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .logo h1 { font-size:18px; } .logo span { color:var(--orange); }
 
-    .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+    /* Tabs */
+    .tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); padding:0 28px; background:var(--bg); }
+    .tab { background:none; border:none; color:var(--muted); font-size:14px; padding:12px 20px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.2s; }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:var(--orange); border-bottom-color:var(--orange); }
+    .tab .count { background:var(--surface2); font-size:11px; padding:1px 6px; border-radius:10px; margin-left:6px; }
 
-    .tabs {
-      display: flex; gap: 4px;
-      margin-bottom: 28px;
-      border-bottom: 1px solid var(--border);
-    }
-    .tab {
-      background: none; border: none;
-      color: var(--muted); font-size: 14px;
-      padding: 10px 20px; cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: color 0.2s, border-color 0.2s;
-    }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+    /* Container */
+    .container { max-width:1200px; margin:0 auto; padding:28px; }
 
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
-    }
-    .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
-    .stat-card .value { font-size: 26px; font-weight: bold; }
-    .stat-card .value.orange { color: var(--orange); }
-    .stat-card .value.green  { color: var(--green); }
+    /* Stats bar */
+    .stats-bar { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+    .stat .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; margin-bottom:5px; }
+    .stat .val { font-size:24px; font-weight:bold; }
+    .stat .val.o { color:var(--orange); } .stat .val.g { color:var(--green); }
 
-    .week-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-    .week-nav label { font-size: 13px; color: var(--muted); }
-    .week-select {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); padding: 8px 14px;
-      border-radius: 8px; font-size: 13px; cursor: pointer;
-    }
-    .week-select:focus { outline: none; border-color: var(--orange); }
+    /* Week nav */
+    .week-nav { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+    .week-nav label { font-size:13px; color:var(--muted); }
+    .week-select { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:7px 12px; border-radius:8px; font-size:13px; cursor:pointer; }
+    .week-select:focus { outline:none; border-color:var(--orange); }
 
-    .track-grid { display: grid; gap: 12px; }
-
+    /* Track cards */
+    .track-grid { display:grid; gap:10px; }
     .track-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      display: grid;
-      grid-template-columns: 40px 52px 1fr auto;
-      gap: 16px;
-      align-items: center;
-      transition: border-color 0.2s, background 0.2s;
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      padding:16px 18px; display:grid; grid-template-columns:36px 48px 1fr auto;
+      gap:14px; align-items:center; transition:border-color .2s,background .2s;
     }
-    .track-card:hover { border-color: var(--orange-dim); background: var(--surface2); }
-    .track-card.dismissed { opacity: 0.3; }
-    .track-card.watching  { border-color: var(--orange); }
-    .track-card.repeat    { border-left: 3px solid var(--green); }
+    .track-card:hover { border-color:var(--orange-d); background:var(--surface2); }
+    .track-card.favourited { border-color:var(--orange); }
+    .track-card.repeat { border-left:3px solid var(--green); }
+    .rank { font-size:20px; font-weight:bold; color:var(--muted); text-align:center; }
+    .rank.top { color:var(--orange); }
+    .artwork { width:48px; height:48px; border-radius:8px; object-fit:cover; background:var(--surface2); }
+    .art-ph { width:48px; height:48px; border-radius:8px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:20px; }
+    .track-info { min-width:0; }
+    .track-title { font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+    .track-artist { font-size:13px; color:var(--orange); margin-bottom:5px; cursor:pointer; }
+    .track-artist:hover { text-decoration:underline; }
+    .track-meta { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); }
+    .track-meta .mi { display:flex; flex-direction:column; gap:1px; }
+    .track-meta .mi .lbl { font-size:10px; color:var(--muted2); text-transform:uppercase; }
+    .track-meta .mi .val { color:var(--text); font-size:12px; }
+    .badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+    .badge { font-size:10px; padding:2px 7px; border-radius:20px; font-weight:bold; }
+    .badge.genre { background:#1e2a3a; color:var(--blue); }
+    .badge.repeat { background:#0d2b22; color:var(--green); }
+    .badge.hot { background:#2b1a00; color:var(--gold); }
+    .track-actions { display:flex; flex-direction:column; gap:7px; align-items:flex-end; min-width:110px; }
+    .score-lbl { font-size:10px; color:var(--muted); }
+    .score-val { font-size:16px; font-weight:bold; color:var(--orange); }
+    .act-btns { display:flex; gap:5px; }
+    .btn { background:var(--surface2); border:1px solid var(--border); color:var(--muted); padding:5px 9px; border-radius:6px; font-size:11px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .btn:hover { border-color:var(--orange); color:var(--orange); }
+    .btn.active { background:var(--orange); border-color:var(--orange); color:#fff; }
+    .sc-link { color:var(--orange); text-decoration:none; font-size:11px; padding:4px 9px; border:1px solid var(--orange-d); border-radius:6px; transition:background .15s; }
+    .sc-link:hover { background:var(--orange); color:#fff; }
 
-    .rank { font-size: 22px; font-weight: bold; color: var(--muted); text-align: center; }
-    .rank.top3 { color: var(--orange); }
+    /* Repeat banner */
+    .repeat-banner { background:#0d2b22; border:1px solid #1a4a38; border-radius:10px; padding:12px 18px; margin-bottom:18px; display:flex; align-items:center; gap:10px; font-size:13px; }
+    .repeat-banner strong { color:var(--green); }
 
-    .artwork {
-      width: 52px; height: 52px;
-      border-radius: 8px; object-fit: cover;
+    /* Favourites grid */
+    .fav-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+    .fav-card {
+      background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px;
+      cursor:pointer; transition:border-color .2s;
     }
-    .artwork-placeholder {
-      width: 52px; height: 52px;
-      border-radius: 8px;
-      background: var(--surface2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
+    .fav-card:hover { border-color:var(--orange); }
+    .fav-card.cut { opacity:.4; }
+    .fav-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .fav-avatar { width:44px; height:44px; border-radius:50%; background:var(--surface2); object-fit:cover; display:flex; align-items:center; justify-content:center; font-size:18px; overflow:hidden; }
+    .fav-avatar img { width:100%; height:100%; object-fit:cover; }
+    .fav-name { font-size:15px; font-weight:bold; color:var(--orange); }
+    .fav-name:hover { text-decoration:underline; }
+    .fav-genre { font-size:12px; color:var(--muted); margin-top:2px; }
+    .fav-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+    .fav-stat { background:var(--surface2); border-radius:8px; padding:8px 10px; }
+    .fav-stat .lbl { font-size:10px; color:var(--muted2); text-transform:uppercase; margin-bottom:2px; }
+    .fav-stat .val { font-size:14px; font-weight:bold; }
+    .fav-platforms { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .plat-badge { font-size:10px; padding:2px 8px; border-radius:20px; border:1px solid var(--border); color:var(--muted); }
+    .plat-badge.linked { border-color:var(--green); color:var(--green); }
+    .fav-actions { display:flex; gap:6px; justify-content:flex-end; }
+    .trend { font-size:13px; font-weight:bold; }
+    .trend.up { color:var(--green); }
+    .trend.down { color:var(--red); }
+    .trend.flat { color:var(--muted); }
+
+    /* Tracking table */
+    .tracking-table { width:100%; border-collapse:collapse; }
+    .tracking-table th { text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; padding:10px 14px; border-bottom:1px solid var(--border); }
+    .tracking-table td { padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+    .tracking-table tr:hover td { background:var(--surface2); }
+    .tracking-table tr.cut td { opacity:.4; }
+    .tbl-artist { display:flex; align-items:center; gap:10px; }
+    .tbl-avatar { width:32px; height:32px; border-radius:50%; background:var(--surface2); overflow:hidden; flex-shrink:0; }
+    .tbl-avatar img { width:100%; height:100%; object-fit:cover; }
+    .tbl-name { font-weight:bold; color:var(--orange); cursor:pointer; }
+    .tbl-name:hover { text-decoration:underline; }
+    .weeks-bar { display:flex; gap:2px; }
+    .week-dot { width:8px; height:8px; border-radius:50%; background:var(--orange); }
+    .week-dot.miss { background:var(--surface3); }
+
+    /* Artist detail panel */
+    .panel-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; display:none; }
+    .panel-overlay.open { display:block; }
+    .artist-panel {
+      position:fixed; right:0; top:0; bottom:0; width:500px; max-width:100vw;
+      background:var(--surface); border-left:1px solid var(--border);
+      z-index:301; overflow-y:auto; transform:translateX(100%); transition:transform .3s;
     }
+    .artist-panel.open { transform:translateX(0); }
+    .panel-head { padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; }
+    .panel-avatar { width:56px; height:56px; border-radius:50%; background:var(--surface2); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:24px; }
+    .panel-avatar img { width:100%; height:100%; object-fit:cover; }
+    .panel-name { font-size:18px; font-weight:bold; }
+    .panel-genre { font-size:13px; color:var(--muted); margin-top:2px; }
+    .panel-close { margin-left:auto; background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; padding:4px 8px; }
+    .panel-close:hover { color:var(--text); }
+    .panel-body { padding:20px; }
+    .panel-section { margin-bottom:24px; }
+    .panel-section h3 { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px; }
 
-    .track-info { min-width: 0; }
-    .track-title {
-      font-size: 15px; font-weight: bold;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 4px;
-    }
-    .track-artist { font-size: 13px; color: var(--orange); margin-bottom: 6px; }
-    .track-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+    /* Platform links */
+    .platform-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .plat-row { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .plat-row.linked { border-color:var(--green); }
+    .plat-label { font-size:11px; color:var(--muted); margin-bottom:4px; }
+    .plat-input { background:none; border:none; color:var(--text); font-size:12px; width:100%; outline:none; }
+    .plat-input::placeholder { color:var(--muted2); }
 
-    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: bold; }
-    .badge.genre    { background: #1e2a3a; color: #5b9cf6; }
-    .badge.repeat   { background: #0d2b22; color: var(--green); }
-    .badge.trending { background: #2b1a00; color: var(--gold); }
+    /* Snapshots */
+    .snap-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .snap-table th { text-align:left; color:var(--muted); padding:5px 8px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; }
+    .snap-table td { padding:7px 8px; border-bottom:1px solid var(--border); }
+    .snap-table tr:last-child td { border-bottom:none; }
 
-    .track-actions {
-      display: flex; flex-direction: column;
-      gap: 8px; align-items: flex-end;
-    }
-    .score-label { font-size: 11px; color: var(--muted); text-align: right; }
-    .score-value { font-size: 18px; font-weight: bold; color: var(--orange); text-align: right; }
-    .action-btns { display: flex; gap: 6px; }
+    /* Tracks seen */
+    .track-seen { background:var(--surface2); border-radius:8px; padding:10px 12px; margin-bottom:6px; }
+    .track-seen-title { font-size:13px; font-weight:bold; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .track-seen-meta { font-size:11px; color:var(--muted); }
 
-    .btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 5px 10px; border-radius: 6px;
-      font-size: 12px; cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn:hover { border-color: var(--orange); color: var(--orange); }
-    .btn.active { background: var(--orange); border-color: var(--orange); color: #fff; }
-    .btn.dismiss.active { background: #333; border-color: #555; color: var(--muted); }
+    /* Notes */
+    .notes-area { width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; font-size:13px; resize:vertical; min-height:80px; font-family:Arial,sans-serif; }
+    .notes-area:focus { outline:none; border-color:var(--orange); }
 
-    .sc-link {
-      color: var(--orange); text-decoration: none;
-      font-size: 12px; padding: 5px 10px;
-      border: 1px solid var(--orange-dim); border-radius: 6px;
-      transition: background 0.15s;
-    }
-    .sc-link:hover { background: var(--orange); color: #fff; }
+    /* Manual playlist adds */
+    .manual-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .manual-input { flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:7px 10px; border-radius:6px; font-size:12px; }
+    .manual-input:focus { outline:none; border-color:var(--orange); }
+    .save-btn { background:var(--orange); border:none; color:#fff; padding:7px 14px; border-radius:6px; font-size:12px; cursor:pointer; }
+    .save-btn:hover { background:var(--orange-d); }
 
-    .repeat-banner {
-      background: #0d2b22; border: 1px solid #1a4a38;
-      border-radius: 10px; padding: 14px 20px;
-      margin-bottom: 20px; display: flex;
-      align-items: center; gap: 12px; font-size: 14px;
-    }
-    .repeat-banner strong { color: var(--green); }
+    /* Empty states */
+    .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+    .empty .ico { font-size:48px; margin-bottom:16px; }
+    .empty p { font-size:14px; line-height:1.6; }
+    .loading { text-align:center; padding:50px; color:var(--muted); }
 
-    .history-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-    }
-    .history-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 20px; cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .history-card:hover { border-color: var(--orange); }
-    .history-card .wk  { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    .history-card .dt  { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
-    .history-card .info { font-size: 13px; color: var(--muted); }
-    .history-card .repeats { color: var(--green); margin-top: 4px; font-size: 13px; }
+    /* Cut toggle */
+    .cut-line { text-decoration:line-through; opacity:.5; }
 
-    .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
-    .empty-state .icon { font-size: 56px; margin-bottom: 20px; }
-    .empty-state h2 { font-size: 20px; margin-bottom: 10px; color: var(--text); }
-    .empty-state p  { font-size: 14px; line-height: 1.6; }
-
-    .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 15px; }
-
-    .watchlist-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-    .watchlist-empty .icon { font-size: 48px; margin-bottom: 16px; }
-
-    @media (max-width: 700px) {
-      .container { padding: 16px; }
-      .track-card { grid-template-columns: 32px 1fr auto; }
-      .artwork, .artwork-placeholder { display: none; }
-      header { padding: 14px 16px; }
+    @media(max-width:700px) {
+      .container { padding:14px; }
+      .track-card { grid-template-columns:28px 1fr auto; }
+      .artwork,.art-ph { display:none; }
+      header,.tabs { padding-left:14px; padding-right:14px; }
+      .artist-panel { width:100vw; }
     }
   </style>
 </head>
@@ -227,277 +215,660 @@
     <div class="logo-icon">🎵</div>
     <h1>The Sound <span>Cave</span></h1>
   </div>
-  <span id="headerWeekBadge" class="week-badge">Loading...</span>
+  <span id="headerBadge" style="background:var(--orange);color:#fff;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:20px;letter-spacing:.5px;">Loading...</span>
 </header>
 
-<div class="container">
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('scout')">Scout Report</button>
-    <button class="tab" onclick="switchTab('watchlist')">Watchlist <span id="watchCount"></span></button>
-    <button class="tab" onclick="switchTab('history')">History</button>
-  </div>
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('discover')">🔍 Discover <span class="count" id="discoverCount"></span></button>
+  <button class="tab" onclick="switchTab('favourites')">⭐ Favourites <span class="count" id="favCount"></span></button>
+  <button class="tab" onclick="switchTab('tracking')">📈 Tracking <span class="count" id="trackCount"></span></button>
+</div>
 
-  <div id="tab-scout">
-    <div class="stats-bar" id="statsBar"></div>
+<div class="container">
+
+  <!-- DISCOVER TAB -->
+  <div id="tab-discover">
+    <div class="stats-bar" id="discoverStats"></div>
     <div class="week-nav">
       <label>Week:</label>
       <select class="week-select" id="weekSelect" onchange="loadWeek(this.value)"></select>
     </div>
     <div id="repeatBanner"></div>
-    <div id="trackGrid" class="track-grid">
-      <div class="loading">Loading report...</div>
+    <div id="trackGrid" class="track-grid"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- FAVOURITES TAB -->
+  <div id="tab-favourites" style="display:none">
+    <div class="stats-bar" id="favStats"></div>
+    <div class="fav-grid" id="favGrid"></div>
+  </div>
+
+  <!-- TRACKING TAB -->
+  <div id="tab-tracking" style="display:none">
+    <div class="stats-bar" id="trackStats"></div>
+    <div style="overflow-x:auto">
+      <table class="tracking-table" id="trackingTable">
+        <thead>
+          <tr>
+            <th>Artist</th>
+            <th>Genre</th>
+            <th>Followers</th>
+            <th>Latest Score</th>
+            <th>Trend</th>
+            <th>Playlist Adds</th>
+            <th>Weeks Seen</th>
+            <th>Platforms</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="trackingBody"></tbody>
+      </table>
     </div>
   </div>
 
-  <div id="tab-watchlist" style="display:none">
-    <div id="watchlistContent"></div>
+</div>
+
+<!-- ARTIST DETAIL PANEL -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="artist-panel" id="artistPanel">
+  <div class="panel-head">
+    <div class="panel-avatar" id="panelAvatar">🎵</div>
+    <div>
+      <div class="panel-name" id="panelName"></div>
+      <div class="panel-genre" id="panelGenre"></div>
+      <a id="panelSCLink" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--orange);">SoundCloud ↗</a>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
 
-  <div id="tab-history" style="display:none">
-    <div class="history-grid" id="historyGrid"></div>
+  <div class="panel-body">
+
+    <!-- Platform Links -->
+    <div class="panel-section">
+      <h3>Platform links</h3>
+      <div class="platform-grid" id="platformGrid"></div>
+    </div>
+
+    <!-- Performance snapshots -->
+    <div class="panel-section">
+      <h3>Performance history</h3>
+      <table class="snap-table">
+        <thead><tr><th>Date</th><th>Followers</th><th>Plays</th><th>Likes</th><th>Reposts</th><th>Playlist Adds</th><th>Score</th></tr></thead>
+        <tbody id="snapBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Manual playlist adds -->
+    <div class="panel-section">
+      <h3>Manual data entry</h3>
+      <div class="manual-row">
+        <span style="font-size:12px;color:var(--muted);width:100px;flex-shrink:0">Playlist adds</span>
+        <input class="manual-input" id="manualPlaylists" type="number" min="0" placeholder="Enter current count">
+        <button class="save-btn" onclick="saveManualData()">Save</button>
+      </div>
+    </div>
+
+    <!-- Tracks seen -->
+    <div class="panel-section">
+      <h3>Tracks discovered</h3>
+      <div id="tracksSeen"></div>
+    </div>
+
+    <!-- Notes -->
+    <div class="panel-section">
+      <h3>Notes</h3>
+      <textarea class="notes-area" id="artistNotes" placeholder="Add notes about this artist..." oninput="saveNotes()"></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-section">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="toggleCut()" id="cutBtn">✂ Cut from tracking</button>
+        <button class="btn" onclick="removeFavourite()" style="color:var(--red);border-color:var(--red)">🗑 Remove from favourites</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
-  let allReports  = [];
-  let currentData = null;
-  let currentTab  = 'scout';
-  let watchlist   = JSON.parse(localStorage.getItem('sc_watching')  || '[]');
-  let dismissed   = JSON.parse(localStorage.getItem('sc_dismissed') || '[]');
+// ── State ──────────────────────────────────────────────
+let allReports  = [];
+let currentData = null;
+let currentTab  = 'discover';
+let activeArtist = null; // username of open panel
 
-  function saveState() {
-    localStorage.setItem('sc_watching',  JSON.stringify(watchlist));
-    localStorage.setItem('sc_dismissed', JSON.stringify(dismissed));
-    updateWatchCount();
+const PLATFORMS = ['spotify','youtube','instagram','tiktok','beatport','bandcamp'];
+const PLAT_LABELS = { spotify:'Spotify', youtube:'YouTube', instagram:'Instagram', tiktok:'TikTok', beatport:'Beatport', bandcamp:'Bandcamp' };
+const PLAT_ICONS  = { spotify:'🟢', youtube:'▶', instagram:'📸', tiktok:'🎵', beatport:'🎧', bandcamp:'🎸' };
+
+// ── LocalStorage helpers ───────────────────────────────
+function getFavourites() { return JSON.parse(localStorage.getItem('sc_favs') || '{}'); }
+function saveFavourites(data) { localStorage.setItem('sc_favs', JSON.stringify(data)); }
+function getDismissed()  { return JSON.parse(localStorage.getItem('sc_dismissed') || '[]'); }
+function saveDismissed(d){ localStorage.setItem('sc_dismissed', JSON.stringify(d)); }
+
+function isFavourited(username) { return !!getFavourites()[username]; }
+function isCut(username) {
+  const favs = getFavourites();
+  return favs[username] ? favs[username].status === 'cut' : false;
+}
+
+// ── Favourites management ──────────────────────────────
+function addFavourite(track) {
+  const favs = getFavourites();
+  const user = track.user || {};
+  const username = track.artist_username || user.username || track.artist || '';
+  if (!username) return;
+
+  if (!favs[username]) {
+    favs[username] = {
+      username,
+      display_name: track.artist || username,
+      genre:        track.genre || '',
+      avatar_url:   track.avatar_url || user.avatar_url || '',
+      artist_url:   track.artist_url || user.permalink_url || '',
+      added_date:   today(),
+      status:       'active',
+      notes:        '',
+      platforms:    { spotify:'', youtube:'', instagram:'', tiktok:'', beatport:'', bandcamp:'' },
+      playlist_adds: null,
+      snapshots:    [],
+      tracks_seen:  [],
+    };
   }
 
-  function isWatching(id)  { return watchlist.includes(String(id)); }
-  function isDismissed(id) { return dismissed.includes(String(id)); }
+  // Add snapshot from this track
+  addSnapshot(favs, username, track);
+  addTrackSeen(favs, username, track);
+  saveFavourites(favs);
+  updateCounts();
+}
 
-  function toggleWatch(id) {
-    id = String(id);
-    if (isWatching(id)) {
-      watchlist = watchlist.filter(x => x !== id);
-    } else {
-      watchlist.push(id);
-      dismissed = dismissed.filter(x => x !== id);
+function addSnapshot(favs, username, track) {
+  const snap = {
+    date:          today(),
+    followers:     track.followers || 0,
+    plays:         track.plays || 0,
+    likes:         track.likes || 0,
+    reposts:       track.reposts || 0,
+    playlist_adds: favs[username].playlist_adds || null,
+    score:         track.score || 0,
+    source:        'scout',
+  };
+  const snaps = favs[username].snapshots;
+  if (!snaps.find(s => s.date === snap.date)) snaps.push(snap);
+}
+
+function addTrackSeen(favs, username, track) {
+  const seen = favs[username].tracks_seen;
+  if (!seen.find(t => t.url === track.url)) {
+    seen.push({ title: track.title, url: track.url, date: today(), score: track.score });
+  }
+}
+
+function removeFavourite() {
+  if (!activeArtist) return;
+  if (!confirm(`Remove ${activeArtist} from favourites?`)) return;
+  const favs = getFavourites();
+  delete favs[activeArtist];
+  saveFavourites(favs);
+  closePanel();
+  updateCounts();
+  if (currentTab === 'favourites') renderFavourites();
+  if (currentTab === 'tracking')   renderTracking();
+}
+
+function toggleCut() {
+  if (!activeArtist) return;
+  const favs = getFavourites();
+  if (!favs[activeArtist]) return;
+  favs[activeArtist].status = favs[activeArtist].status === 'cut' ? 'active' : 'cut';
+  saveFavourites(favs);
+  document.getElementById('cutBtn').textContent = favs[activeArtist].status === 'cut' ? '♻ Restore to tracking' : '✂ Cut from tracking';
+  if (currentTab === 'tracking')   renderTracking();
+  if (currentTab === 'favourites') renderFavourites();
+}
+
+function savePlatform(username, platform, value) {
+  const favs = getFavourites();
+  if (!favs[username]) return;
+  favs[username].platforms[platform] = value.trim();
+  saveFavourites(favs);
+}
+
+function saveNotes() {
+  if (!activeArtist) return;
+  const favs = getFavourites();
+  if (!favs[activeArtist]) return;
+  favs[activeArtist].notes = document.getElementById('artistNotes').value;
+  saveFavourites(favs);
+}
+
+function saveManualData() {
+  if (!activeArtist) return;
+  const favs = getFavourites();
+  if (!favs[activeArtist]) return;
+  const val = parseInt(document.getElementById('manualPlaylists').value);
+  if (!isNaN(val)) {
+    favs[activeArtist].playlist_adds = val;
+    // Update latest snapshot
+    const snaps = favs[activeArtist].snapshots;
+    if (snaps.length) snaps[snaps.length-1].playlist_adds = val;
+    saveFavourites(favs);
+    renderPanel(activeArtist);
+  }
+}
+
+// ── Tab switching ──────────────────────────────────────
+function switchTab(name) {
+  currentTab = name;
+  ['discover','favourites','tracking'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => {
+    el.classList.toggle('active', ['discover','favourites','tracking'][i] === name);
+  });
+  if (name === 'favourites') renderFavourites();
+  if (name === 'tracking')   renderTracking();
+}
+
+function updateCounts() {
+  const favs  = getFavourites();
+  const all   = Object.values(favs);
+  const active = all.filter(a => a.status !== 'cut');
+  document.getElementById('favCount').textContent   = all.length || '';
+  document.getElementById('trackCount').textContent = active.length || '';
+  if (currentData) {
+    const faved = (currentData.tracks||[]).filter(t=>isFavourited(t.artist_username)).length;
+    document.getElementById('discoverCount').textContent = faved || '';
+  }
+}
+
+// ── Data loading ───────────────────────────────────────
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function init() {
+  let manifest = null;
+  try { manifest = await fetchJSON('data/manifest.json'); } catch(e){}
+
+  if (manifest && manifest.weeks && manifest.weeks.length) {
+    for (const file of [...manifest.weeks].reverse()) {
+      try { const d = await fetchJSON(`data/${file}`); if(d) allReports.push(d); } catch(e){}
     }
-    saveState();
-    renderCurrentView();
   }
 
-  function toggleDismiss(id) {
-    id = String(id);
-    if (isDismissed(id)) {
-      dismissed = dismissed.filter(x => x !== id);
-    } else {
-      dismissed.push(id);
-      watchlist = watchlist.filter(x => x !== id);
-    }
-    saveState();
-    renderCurrentView();
+  if (!allReports.length) {
+    document.getElementById('trackGrid').innerHTML = `
+      <div class="empty"><div class="ico">🎵</div>
+      <p>No reports yet.<br>Run <code>scout.py</code> to generate the first weekly report.</p></div>`;
+    document.getElementById('headerBadge').textContent = 'No data yet';
+    updateCounts();
+    return;
   }
 
-  function updateWatchCount() {
-    document.getElementById('watchCount').textContent = watchlist.length > 0 ? `(${watchlist.length})` : '';
-  }
+  populateWeekSelect();
+  loadWeek(allReports[0].date);
+  updateCounts();
 
-  function switchTab(name) {
-    currentTab = name;
-    ['scout','watchlist','history'].forEach(t => {
-      document.getElementById(`tab-${t}`).style.display = t === name ? 'block' : 'none';
-    });
-    document.querySelectorAll('.tab').forEach((el, i) => {
-      el.classList.toggle('active', ['scout','watchlist','history'][i] === name);
-    });
-    if (name === 'watchlist') renderWatchlist();
-    if (name === 'history')   renderHistory();
-  }
+  // Auto-add snapshots for favourited artists found in reports
+  syncFavouriteSnapshots();
+}
 
-  async function fetchJSON(url) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(r.status);
-    return r.json();
-  }
-
-  async function init() {
-    let manifest = null;
-    try { manifest = await fetchJSON('data/manifest.json'); } catch(e) {}
-
-    if (manifest && manifest.weeks && manifest.weeks.length) {
-      for (const file of [...manifest.weeks].reverse()) {
-        try {
-          const data = await fetchJSON(`data/${file}`);
-          if (data) allReports.push(data);
-        } catch(e) {}
+function syncFavouriteSnapshots() {
+  const favs = getFavourites();
+  if (!Object.keys(favs).length) return;
+  for (const report of allReports) {
+    for (const track of (report.tracks||[])) {
+      const u = track.artist_username;
+      if (favs[u]) {
+        addSnapshot(favs, u, track);
+        addTrackSeen(favs, u, track);
       }
     }
-
-    if (!allReports.length) {
-      document.getElementById('trackGrid').innerHTML = `
-        <div class="empty-state">
-          <div class="icon">🎵</div>
-          <h2>No reports yet</h2>
-          <p>The scout runs every Monday.<br>Check back after the first automated run,<br>or run <code>scout.py</code> manually to generate the first report.</p>
-        </div>`;
-      document.getElementById('headerWeekBadge').textContent = 'No data yet';
-      return;
-    }
-
-    populateWeekSelect();
-    loadWeek(allReports[0].date);
-    renderHistory();
-    updateWatchCount();
   }
+  saveFavourites(favs);
+}
 
-  function populateWeekSelect() {
-    document.getElementById('weekSelect').innerHTML = allReports
-      .map(r => `<option value="${r.date}">Week ${r.week} — ${r.date}</option>`)
-      .join('');
-  }
+function populateWeekSelect() {
+  document.getElementById('weekSelect').innerHTML = allReports
+    .map(r=>`<option value="${r.date}">Week ${r.week} — ${r.date}</option>`).join('');
+}
 
-  function loadWeek(date) {
-    document.getElementById('weekSelect').value = date;
-    currentData = allReports.find(r => r.date === date) || allReports[0];
-    renderScout();
-  }
+function loadWeek(date) {
+  document.getElementById('weekSelect').value = date;
+  currentData = allReports.find(r=>r.date===date)||allReports[0];
+  renderDiscover();
+}
 
-  function renderScout() {
-    if (!currentData) return;
-    renderStats();
-    renderRepeatBanner();
-    renderTracks();
-    document.getElementById('headerWeekBadge').textContent = `Week ${currentData.week}`;
-  }
+// ── DISCOVER tab ───────────────────────────────────────
+function renderDiscover() {
+  if (!currentData) return;
+  document.getElementById('headerBadge').textContent = `Week ${currentData.week}`;
+  renderDiscoverStats();
+  renderRepeatBanner();
+  renderTracks();
+  updateCounts();
+}
 
-  function renderCurrentView() {
-    if (currentTab === 'scout')     renderScout();
-    if (currentTab === 'watchlist') renderWatchlist();
-  }
+function renderDiscoverStats() {
+  const tracks  = currentData.tracks || [];
+  const repeats = tracks.filter(t=>t.is_repeat).length;
+  const faved   = tracks.filter(t=>isFavourited(t.artist_username)).length;
+  document.getElementById('discoverStats').innerHTML = `
+    <div class="stat"><div class="lbl">Week</div><div class="val o">${currentData.week}</div></div>
+    <div class="stat"><div class="lbl">Artists Found</div><div class="val">${tracks.length}</div></div>
+    <div class="stat"><div class="lbl">Repeat Artists</div><div class="val g">${repeats}</div></div>
+    <div class="stat"><div class="lbl">Favourited</div><div class="val o">${faved}</div></div>
+    <div class="stat"><div class="lbl">Genres</div><div class="val">${currentData.genres_scouted||'—'}</div></div>`;
+}
 
-  function renderStats() {
-    const tracks  = currentData.tracks || [];
-    const repeats = tracks.filter(t => t.is_repeat).length;
-    const topScore = tracks.length ? tracks[0].score.toFixed(1) : '—';
-    document.getElementById('statsBar').innerHTML = `
-      <div class="stat-card"><div class="label">Week</div><div class="value orange">${currentData.week}</div></div>
-      <div class="stat-card"><div class="label">Artists Found</div><div class="value">${tracks.length}</div></div>
-      <div class="stat-card"><div class="label">Repeat Artists</div><div class="value green">${repeats}</div></div>
-      <div class="stat-card"><div class="label">On Watchlist</div><div class="value orange">${tracks.filter(t=>isWatching(t.track_id)).length}</div></div>
-      <div class="stat-card"><div class="label">Top Score</div><div class="value">${topScore}</div></div>
-      <div class="stat-card"><div class="label">Genres Scouted</div><div class="value">${currentData.genres_scouted || '—'}</div></div>`;
-  }
+function renderRepeatBanner() {
+  const repeats = (currentData.tracks||[]).filter(t=>t.is_repeat);
+  const el = document.getElementById('repeatBanner');
+  if (!repeats.length) { el.innerHTML=''; return; }
+  el.innerHTML=`<div class="repeat-banner">📈 <div><strong>${repeats.length} repeat artist${repeats.length>1?'s':''}</strong> this week — ${repeats.map(t=>`<strong>${esc(t.artist)}</strong>`).join(', ')}</div></div>`;
+}
 
-  function renderRepeatBanner() {
-    const repeats = (currentData.tracks || []).filter(t => t.is_repeat);
-    const el = document.getElementById('repeatBanner');
-    if (!repeats.length) { el.innerHTML = ''; return; }
-    el.innerHTML = `<div class="repeat-banner">
-      <span>📈</span>
-      <div><strong>${repeats.length} repeat artist${repeats.length > 1 ? 's' : ''}</strong> this week —
-      ${repeats.map(t => `<strong>${esc(t.artist)}</strong>`).join(', ')}</div>
-    </div>`;
-  }
+function renderTracks() {
+  const tracks = currentData.tracks||[];
+  document.getElementById('trackGrid').innerHTML = tracks.length
+    ? tracks.map(buildDiscoverCard).join('')
+    : '<div class="loading">No tracks in this report.</div>';
+}
 
-  function renderTracks() {
-    const tracks = currentData.tracks || [];
-    document.getElementById('trackGrid').innerHTML = tracks.length
-      ? tracks.map(buildCard).join('')
-      : '<div class="loading">No tracks in this report.</div>';
-  }
-
-  function buildCard(t) {
-    const w = isWatching(t.track_id);
-    const d = isDismissed(t.track_id);
-    const art = t.artwork_url
-      ? `<img class="artwork" src="${t.artwork_url}" alt="" onerror="this.outerHTML='<div class=artwork-placeholder>🎵</div>'">`
-      : `<div class="artwork-placeholder">🎵</div>`;
-    const badges = [
-      t.genre    ? `<span class="badge genre">${esc(t.genre)}</span>` : '',
-      t.is_repeat? `<span class="badge repeat">📈 ${t.weeks_seen} weeks</span>` : '',
-      t.score > 500 ? `<span class="badge trending">🔥 Hot</span>` : '',
-    ].filter(Boolean).join('');
-    const cls = ['track-card', d?'dismissed':'', w?'watching':'', t.is_repeat?'repeat':''].filter(Boolean).join(' ');
-    return `
-      <div class="${cls}">
-        <div class="rank ${t.rank<=3?'top3':''}">${t.rank}</div>
-        ${art}
-        <div class="track-info">
-          <div class="track-title">${esc(t.title)}</div>
-          <div class="track-artist">${esc(t.artist)}</div>
-          <div class="track-meta">
-            <span><span style="color:var(--muted)">Followers</span> ${fmt(t.followers)}</span>
-            <span><span style="color:var(--muted)">Plays</span> ${fmt(t.plays)}</span>
-            <span><span style="color:var(--muted)">Likes</span> ${fmt(t.likes)}</span>
-            <span><span style="color:var(--muted)">Reposts</span> ${fmt(t.reposts)}</span>
-            <span><span style="color:var(--muted)">Uploaded</span> ${t.uploaded}</span>
-          </div>
-          <div class="badges">${badges}</div>
+function buildDiscoverCard(t) {
+  const fav = isFavourited(t.artist_username);
+  const art = t.artwork_url
+    ? `<img class="artwork" src="${t.artwork_url}" alt="" onerror="this.outerHTML='<div class=art-ph>🎵</div>'">`
+    : `<div class="art-ph">🎵</div>`;
+  const badges = [
+    t.genre    ? `<span class="badge genre">${esc(t.genre)}</span>` : '',
+    t.is_repeat? `<span class="badge repeat">📈 ${t.weeks_seen}wk</span>` : '',
+    t.score>200? `<span class="badge hot">🔥 Hot</span>` : '',
+  ].filter(Boolean).join('');
+  return `
+    <div class="track-card ${fav?'favourited':''} ${t.is_repeat?'repeat':''}">
+      <div class="rank ${t.rank<=3?'top':''}">${t.rank}</div>
+      ${art}
+      <div class="track-info">
+        <div class="track-title">${esc(t.title)}</div>
+        <div class="track-artist" onclick="openPanel('${t.artist_username}')">${esc(t.artist)}</div>
+        <div class="track-meta">
+          <div class="mi"><span class="lbl">Followers</span><span class="val">${fmt(t.followers)}</span></div>
+          <div class="mi"><span class="lbl">Plays</span><span class="val">${fmt(t.plays)}</span></div>
+          <div class="mi"><span class="lbl">Likes</span><span class="val">${fmt(t.likes)}</span></div>
+          <div class="mi"><span class="lbl">Reposts</span><span class="val">${fmt(t.reposts)}</span></div>
+          <div class="mi"><span class="lbl">Uploaded</span><span class="val">${t.uploaded}</span></div>
         </div>
-        <div class="track-actions">
-          <div class="score-label">Score</div>
-          <div class="score-value">${t.score.toFixed(1)}</div>
-          <div class="action-btns">
-            <button class="btn ${w?'active':''}" onclick="toggleWatch('${t.track_id}')">
-              ${w ? '★ Watching' : '☆ Watch'}
-            </button>
-            <button class="btn dismiss ${d?'active':''}" onclick="toggleDismiss('${t.track_id}')">✕</button>
-          </div>
-          <a class="sc-link" href="${t.url}" target="_blank" rel="noopener">Listen ↗</a>
-        </div>
-      </div>`;
-  }
-
-  function renderWatchlist() {
-    const el = document.getElementById('watchlistContent');
-    const seen = new Set();
-    const found = [];
-    for (const r of allReports) {
-      for (const t of (r.tracks || [])) {
-        if (isWatching(t.track_id) && !seen.has(String(t.track_id))) {
-          seen.add(String(t.track_id));
-          found.push(t);
-        }
-      }
-    }
-    if (!found.length) {
-      el.innerHTML = `<div class="watchlist-empty"><div class="icon">⭐</div><p>No artists on your watchlist yet.<br>Hit <strong>☆ Watch</strong> on any track in the Scout Report.</p></div>`;
-      return;
-    }
-    el.innerHTML = `
-      <div class="stats-bar" style="margin-bottom:24px">
-        <div class="stat-card"><div class="label">Watching</div><div class="value orange">${found.length}</div></div>
-        <div class="stat-card"><div class="label">Repeat Artists</div><div class="value green">${found.filter(t=>t.is_repeat).length}</div></div>
+        <div class="badges">${badges}</div>
       </div>
-      <div class="track-grid">${found.map(buildCard).join('')}</div>`;
+      <div class="track-actions">
+        <div class="score-lbl">Score</div>
+        <div class="score-val">${t.score.toFixed(1)}</div>
+        <div class="act-btns">
+          <button class="btn ${fav?'active':''}" onclick="handleFavourite(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+            ${fav?'⭐ Saved':'☆ Favourite'}
+          </button>
+        </div>
+        <a class="sc-link" href="${t.url}" target="_blank" rel="noopener">Listen ↗</a>
+      </div>
+    </div>`;
+}
+
+function handleFavourite(track) {
+  if (isFavourited(track.artist_username)) {
+    openPanel(track.artist_username);
+  } else {
+    addFavourite(track);
+    renderTracks();
+    renderDiscoverStats();
+  }
+}
+
+// ── FAVOURITES tab ─────────────────────────────────────
+function renderFavourites() {
+  const favs  = getFavourites();
+  const all   = Object.values(favs);
+  const el    = document.getElementById('favGrid');
+
+  const active = all.filter(a=>a.status!=='cut');
+  const cut    = all.filter(a=>a.status==='cut');
+
+  document.getElementById('favStats').innerHTML = `
+    <div class="stat"><div class="lbl">Favourited</div><div class="val o">${all.length}</div></div>
+    <div class="stat"><div class="lbl">Active</div><div class="val g">${active.length}</div></div>
+    <div class="stat"><div class="lbl">Cut</div><div class="val" style="color:var(--red)">${cut.length}</div></div>
+    <div class="stat"><div class="lbl">Platforms linked</div><div class="val">${all.reduce((n,a)=>n+Object.values(a.platforms||{}).filter(v=>v).length,0)}</div></div>`;
+
+  if (!all.length) {
+    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="ico">⭐</div><p>No favourites yet.<br>Go to <strong>Discover</strong> and hit ☆ Favourite on any artist.</p></div>`;
+    return;
   }
 
-  function renderHistory() {
-    const el = document.getElementById('historyGrid');
-    if (!allReports.length) { el.innerHTML = '<div class="loading">No history yet.</div>'; return; }
-    el.innerHTML = allReports.map(r => {
-      const repeats = (r.tracks||[]).filter(t=>t.is_repeat).length;
-      return `<div class="history-card" onclick="switchTab('scout');loadWeek('${r.date}')">
-        <div class="wk">WEEK ${r.week}</div>
-        <div class="dt">${r.date}</div>
-        <div class="info">${(r.tracks||[]).length} artists discovered</div>
-        ${repeats ? `<div class="repeats">📈 ${repeats} repeat artist${repeats>1?'s':''}</div>` : ''}
-      </div>`;
+  el.innerHTML = [...active,...cut].map(a => buildFavCard(a)).join('');
+}
+
+function buildFavCard(a) {
+  const snaps   = a.snapshots || [];
+  const latest  = snaps[snaps.length-1] || {};
+  const first   = snaps[0] || {};
+  const trend   = getTrend(first.score, latest.score);
+  const linked  = PLATFORMS.filter(p=>a.platforms&&a.platforms[p]);
+  const avatarHTML = a.avatar_url
+    ? `<div class="fav-avatar"><img src="${a.avatar_url}" alt="" onerror="this.parentElement.innerHTML='🎵'"></div>`
+    : `<div class="fav-avatar">🎵</div>`;
+  const platBadges = PLATFORMS.map(p=>`<span class="plat-badge ${a.platforms&&a.platforms[p]?'linked':''}">${PLAT_ICONS[p]} ${PLAT_LABELS[p]}</span>`).join('');
+
+  return `
+    <div class="fav-card ${a.status==='cut'?'cut':''}" onclick="openPanel('${a.username}')">
+      <div class="fav-header">
+        ${avatarHTML}
+        <div>
+          <div class="fav-name">${esc(a.display_name)}</div>
+          <div class="fav-genre">${esc(a.genre)} · Added ${a.added_date}</div>
+        </div>
+        <div class="trend ${trend.cls}" style="margin-left:auto;font-size:18px">${trend.arrow}</div>
+      </div>
+      <div class="fav-stats">
+        <div class="fav-stat"><div class="lbl">Followers</div><div class="val">${fmt(latest.followers||0)}</div></div>
+        <div class="fav-stat"><div class="lbl">Latest Score</div><div class="val" style="color:var(--orange)">${(latest.score||0).toFixed(1)}</div></div>
+        <div class="fav-stat"><div class="lbl">Weeks seen</div><div class="val">${snaps.length}</div></div>
+      </div>
+      <div class="fav-platforms">${platBadges}</div>
+      ${a.status==='cut'?'<div style="font-size:12px;color:var(--red);text-align:center">✂ Cut from tracking</div>':''}
+    </div>`;
+}
+
+// ── TRACKING tab ───────────────────────────────────────
+function renderTracking() {
+  const favs   = getFavourites();
+  const all    = Object.values(favs);
+  const active = all.filter(a=>a.status!=='cut');
+  const cut    = all.filter(a=>a.status==='cut');
+
+  document.getElementById('trackStats').innerHTML = `
+    <div class="stat"><div class="lbl">Tracked</div><div class="val o">${active.length}</div></div>
+    <div class="stat"><div class="lbl">Rising</div><div class="val g">${active.filter(a=>getTrend(a.snapshots?.[0]?.score,a.snapshots?.[a.snapshots.length-1]?.score).cls==='up').length}</div></div>
+    <div class="stat"><div class="lbl">Declining</div><div class="val" style="color:var(--red)">${active.filter(a=>getTrend(a.snapshots?.[0]?.score,a.snapshots?.[a.snapshots.length-1]?.score).cls==='down').length}</div></div>
+    <div class="stat"><div class="lbl">Cut</div><div class="val">${cut.length}</div></div>
+    <div class="stat"><div class="lbl">Weeks of data</div><div class="val">${allReports.length}</div></div>`;
+
+  const tbody = document.getElementById('trackingBody');
+  if (!all.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:50px;color:var(--muted)">No tracked artists yet — add some from Discover.</td></tr>`;
+    return;
+  }
+
+  // Sort: active first, then by latest score desc
+  const sorted = [...active,...cut].sort((a,b)=>{
+    const sa = a.snapshots?.[(a.snapshots?.length||1)-1]?.score||0;
+    const sb = b.snapshots?.[(b.snapshots?.length||1)-1]?.score||0;
+    return sb-sa;
+  });
+
+  tbody.innerHTML = sorted.map(a => {
+    const snaps  = a.snapshots||[];
+    const latest = snaps[snaps.length-1]||{};
+    const first  = snaps[0]||{};
+    const trend  = getTrend(first.score,latest.score);
+    const linked = PLATFORMS.filter(p=>a.platforms&&a.platforms[p]).length;
+    const avatarHTML = a.avatar_url
+      ? `<div class="tbl-avatar"><img src="${a.avatar_url}" alt="" onerror="this.parentElement.innerHTML='🎵'"></div>`
+      : `<div class="tbl-avatar" style="display:flex;align-items:center;justify-content:center">🎵</div>`;
+
+    // Week dots — last 8 weeks
+    const weekDots = allReports.slice(0,8).map(r=>{
+      const found = (r.tracks||[]).find(t=>t.artist_username===a.username);
+      return `<div class="week-dot ${found?'':'miss'}" title="${r.date}"></div>`;
     }).join('');
-  }
 
-  function fmt(n) {
-    if (!n) return '0';
-    if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
-    if (n >= 1000)    return (n/1000).toFixed(1)+'K';
-    return String(n);
-  }
-  function esc(s) {
-    if (!s) return '';
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+    return `
+      <tr class="${a.status==='cut'?'cut':''}">
+        <td>
+          <div class="tbl-artist">
+            ${avatarHTML}
+            <div>
+              <div class="tbl-name" onclick="openPanel('${a.username}')">${esc(a.display_name)}</div>
+              <div style="font-size:11px;color:var(--muted)">Since ${a.added_date}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="badge genre">${esc(a.genre)}</span></td>
+        <td>${fmt(latest.followers||0)}</td>
+        <td style="color:var(--orange);font-weight:bold">${(latest.score||0).toFixed(1)}</td>
+        <td><span class="trend ${trend.cls}">${trend.arrow} ${trend.label}</span></td>
+        <td>${latest.playlist_adds!=null?latest.playlist_adds:'<span style="color:var(--muted2)">—</span>'}</td>
+        <td><div class="weeks-bar">${weekDots}</div></td>
+        <td>${linked ? `<span style="color:var(--green);font-size:12px">${linked} linked</span>` : '<span style="color:var(--muted2);font-size:12px">None</span>'}</td>
+        <td>
+          <div style="display:flex;gap:5px">
+            <button class="btn" onclick="openPanel('${a.username}')">View</button>
+            <button class="btn" onclick="quickCut('${a.username}')" style="${a.status==='cut'?'color:var(--green)':'color:var(--red)'}">${a.status==='cut'?'Restore':'Cut'}</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
 
-  init();
+function quickCut(username) {
+  const favs = getFavourites();
+  if (!favs[username]) return;
+  favs[username].status = favs[username].status==='cut'?'active':'cut';
+  saveFavourites(favs);
+  renderTracking();
+  updateCounts();
+}
+
+// ── ARTIST PANEL ───────────────────────────────────────
+function openPanel(username) {
+  // If artist not yet in favourites (opening from discover), check if they exist in any report
+  const favs = getFavourites();
+  if (!favs[username]) {
+    // Find them in reports and auto-add
+    for (const r of allReports) {
+      const track = (r.tracks||[]).find(t=>t.artist_username===username);
+      if (track) { addFavourite(track); break; }
+    }
+  }
+  activeArtist = username;
+  renderPanel(username);
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('artistPanel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('artistPanel').classList.remove('open');
+  activeArtist = null;
+}
+
+function renderPanel(username) {
+  const favs = getFavourites();
+  const a    = favs[username];
+  if (!a) return;
+
+  // Header
+  const avatarHTML = a.avatar_url
+    ? `<img src="${a.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='🎵'">`
+    : '🎵';
+  document.getElementById('panelAvatar').innerHTML   = avatarHTML;
+  document.getElementById('panelName').textContent   = a.display_name;
+  document.getElementById('panelGenre').textContent  = a.genre;
+  document.getElementById('panelSCLink').href        = a.artist_url;
+
+  // Platforms
+  document.getElementById('platformGrid').innerHTML = PLATFORMS.map(p=>`
+    <div class="plat-row ${a.platforms[p]?'linked':''}">
+      <div class="plat-label">${PLAT_ICONS[p]} ${PLAT_LABELS[p]}</div>
+      <input class="plat-input" placeholder="Paste URL or handle"
+        value="${esc(a.platforms[p]||'')}"
+        onblur="savePlatform('${username}','${p}',this.value);this.closest('.plat-row').classList.toggle('linked',!!this.value)">
+    </div>`).join('');
+
+  // Snapshots
+  const snaps = a.snapshots||[];
+  document.getElementById('snapBody').innerHTML = snaps.length
+    ? [...snaps].reverse().map(s=>`
+        <tr>
+          <td>${s.date}</td>
+          <td>${fmt(s.followers)}</td>
+          <td>${fmt(s.plays)}</td>
+          <td>${fmt(s.likes)}</td>
+          <td>${fmt(s.reposts)}</td>
+          <td>${s.playlist_adds!=null?s.playlist_adds:'—'}</td>
+          <td style="color:var(--orange)">${s.score.toFixed(1)}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="7" style="color:var(--muted);padding:10px">No snapshots yet.</td></tr>';
+
+  // Manual playlist adds
+  const latest = snaps[snaps.length-1]||{};
+  document.getElementById('manualPlaylists').value = latest.playlist_adds!=null ? latest.playlist_adds : '';
+
+  // Tracks seen
+  const tracks = a.tracks_seen||[];
+  document.getElementById('tracksSeen').innerHTML = tracks.length
+    ? tracks.map(t=>`
+        <div class="track-seen">
+          <div class="track-seen-title">${esc(t.title)}</div>
+          <div class="track-seen-meta">${t.date} · Score ${t.score?.toFixed(1)||'—'} · <a href="${t.url}" target="_blank" rel="noopener" style="color:var(--orange)">Listen ↗</a></div>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>';
+
+  // Notes
+  document.getElementById('artistNotes').value = a.notes||'';
+
+  // Cut button
+  document.getElementById('cutBtn').textContent = a.status==='cut' ? '♻ Restore to tracking' : '✂ Cut from tracking';
+}
+
+// ── Trend helper ───────────────────────────────────────
+function getTrend(first, latest) {
+  if (first == null || latest == null || first === latest) return { cls:'flat', arrow:'→', label:'Stable' };
+  const pct = ((latest-first)/Math.max(first,0.001))*100;
+  if (pct >  10) return { cls:'up',   arrow:'↑', label:`+${pct.toFixed(0)}%` };
+  if (pct < -10) return { cls:'down', arrow:'↓', label:`${pct.toFixed(0)}%`  };
+  return { cls:'flat', arrow:'→', label:'Stable' };
+}
+
+// ── Utils ──────────────────────────────────────────────
+function today() { return new Date().toISOString().slice(0,10); }
+function fmt(n) {
+  if (!n) return '0';
+  if (n>=1000000) return (n/1000000).toFixed(1)+'M';
+  if (n>=1000)    return (n/1000).toFixed(1)+'K';
+  return String(n);
+}
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
 </script>
 </body>
 </html>

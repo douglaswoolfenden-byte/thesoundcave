@@ -154,15 +154,16 @@ def is_eligible(track: dict) -> bool:
         except Exception:
             pass
 
-    # Get follower count — API sometimes returns 0 for embedded user objects
-    # so fetch the real profile if it looks suspicious (0 followers but decent plays)
+    # Get follower count — API often returns wrong/low numbers in embedded user objects
+    # Fetch real profile if: followers is 0, OR ratio of plays:followers looks off
     user      = track.get('user') or {}
     followers = user.get('followers_count') or 0
     user_id   = user.get('id')
 
-    if followers == 0 and plays > 1000 and user_id:
+    suspicious = (followers == 0) or (followers < 500 and plays > 5000)
+    if suspicious and user_id:
         followers = fetch_real_followers(user_id)
-        user['followers_count'] = followers  # update in place for scoring
+        user['followers_count'] = followers
 
     if followers >= MAX_FOLLOWERS:
         return False
@@ -285,7 +286,14 @@ def scout() -> tuple:
             track['_score'] = score_track(track)
             all_tracks.append(track)
 
-    top = sorted(all_tracks, key=lambda t: t['_score'], reverse=True)[:TOP_N]
+    # Deduplicate by artist — keep only their highest scoring track
+    seen_artists = {}
+    for track in sorted(all_tracks, key=lambda t: t['_score'], reverse=True):
+        username = (track.get('user') or {}).get('username', '')
+        if username and username not in seen_artists:
+            seen_artists[username] = track
+
+    top = list(seen_artists.values())[:TOP_N]
     return top, total_analysed
 
 

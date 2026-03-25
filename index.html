@@ -426,11 +426,11 @@
           <div class="track-title">${esc(t.title)}</div>
           <div class="track-artist">${esc(t.artist)}</div>
           <div class="track-meta">
-            <span>👥 ${fmt(t.followers)}</span>
-            <span>▶ ${fmt(t.plays)}</span>
-            <span>❤ ${fmt(t.likes)}</span>
-            <span>🔁 ${fmt(t.reposts)}</span>
-            <span>📅 ${t.uploaded}</span>
+            <span><span style="color:var(--muted)">Followers</span> ${fmt(t.followers)}</span>
+            <span><span style="color:var(--muted)">Plays</span> ${fmt(t.plays)}</span>
+            <span><span style="color:var(--muted)">Likes</span> ${fmt(t.likes)}</span>
+            <span><span style="color:var(--muted)">Reposts</span> ${fmt(t.reposts)}</span>
+            <span><span style="color:var(--muted)">Uploaded</span> ${t.uploaded}</span>
           </div>
           <div class="badges">${badges}</div>
         </div>

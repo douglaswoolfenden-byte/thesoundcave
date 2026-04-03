@@ -16,23 +16,31 @@
   <div class="splash-logo">
     <svg width="80" height="72" viewBox="0 0 36 32" style="display:block;margin:0 auto">
       <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
-      <path d="M10,30 Q18,13 26,30 Z" fill="#3a3a3a"/>
-      <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95"/>
-      <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
-      <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
+      <path d="M8,30 Q18,8 28,30 Z" fill="#3a3a3a"/>
+      <path d="M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z" fill="#e63946" opacity="0.95"/>
+      <path d="M16.5,29.5 Q15.5,27 17,25 Q17.5,27 16.8,29.5 Z" fill="#ff4444" opacity="0.8"/>
+      <path d="M19.5,29.5 Q20.5,27 19,25 Q18.5,27 19.2,29.5 Z" fill="#ff4444" opacity="0.8"/>
       <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.1"/>
-      <g opacity="0.9">
-        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946"/>
-        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946"/>
-        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946"/>
+      <g transform="translate(16.5, 9.5) scale(0.5) translate(-16.5, -9.5)" opacity="0.95">
+        <ellipse cx="14.5" cy="13.5" rx="3" ry="2.2" transform="rotate(-15 14.5 13.5)" fill="#2a2a2a" opacity="0.7"/>
+        <rect x="17" y="5.3" width="1.8" height="8.7" rx="0.3" fill="#2a2a2a" opacity="0.7"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#3a3a3a"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#3a3a3a"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#3a3a3a"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#c1121f" opacity="0.45"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#c1121f" opacity="0.45"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#c1121f" opacity="0.45"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
       </g>
     </svg>
     <div class="splash-text">The Sound Cave</div>
   </div>
 </div>
-<div class="curtain-left" id="curtainLeft"></div>
-<div class="curtain-right" id="curtainRight"></div>
+<div class="cave-entrance" id="caveEntrance"></div>
 
+<div class="app-wrap" id="appWrap">
 <!-- ═══════════════════════════════════════════════════════
      HEADER
      ═══════════════════════════════════════════════════════ -->
@@ -48,33 +56,44 @@
       <path d="M25,10 L27,9" stroke="#777" stroke-width="0.4" opacity="0.4"/>
       <path d="M5,25 L9,24" stroke="#5a5a5a" stroke-width="0.4" opacity="0.4"/>
       <path d="M28,25 L31,26" stroke="#5a5a5a" stroke-width="0.4" opacity="0.4"/>
-      <path d="M10,30 Q18,13 26,30 Z" fill="#4a4a4a"/>
-      <line x1="14.5" y1="29.5" x2="21.5" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
-      <line x1="15" y1="28.8" x2="21" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
-      <line x1="16" y1="29.8" x2="20" y2="29.8" stroke="#7B4413" stroke-width="0.7" stroke-linecap="round"/>
-      <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95">
-        <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z;M18,29.5 Q15.5,25.5 18,21.5 Q20.5,25 18,29.5 Z;M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z"/>
+      <path d="M8,30 Q18,8 28,30 Z" fill="#4a4a4a"/>
+      <line x1="13" y1="29.5" x2="23" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="13.5" y1="28.8" x2="22.5" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
+      <line x1="14.5" y1="29.8" x2="21.5" y2="29.8" stroke="#7B4413" stroke-width="0.7" stroke-linecap="round"/>
+      <path d="M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z" fill="#e63946" opacity="0.95">
+        <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z;M18,29.5 Q16,27 18,24 Q20,26.5 18,29.5 Z;M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z"/>
       </path>
-      <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8">
-        <animate attributeName="d" dur="1s" repeatCount="indefinite" values="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z;M16,29.5 Q15,26.5 17,23.5 Q17,27 16.5,29.5 Z;M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z"/>
+      <path d="M16.5,29.5 Q15.5,27 17,25 Q17.5,27 16.8,29.5 Z" fill="#ff4444" opacity="0.8">
+        <animate attributeName="d" dur="1s" repeatCount="indefinite" values="M16.5,29.5 Q15.5,27 17,25 Q17.5,27 16.8,29.5 Z;M16.5,29.5 Q16,27.5 17,25.5 Q17,27.5 16.8,29.5 Z;M16.5,29.5 Q15.5,27 17,25 Q17.5,27 16.8,29.5 Z"/>
       </path>
-      <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8">
-        <animate attributeName="d" dur="1.1s" repeatCount="indefinite" values="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z;M20,29.5 Q21,26.5 19,23.5 Q19,27 19.5,29.5 Z;M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z"/>
+      <path d="M19.5,29.5 Q20.5,27 19,25 Q18.5,27 19.2,29.5 Z" fill="#ff4444" opacity="0.8">
+        <animate attributeName="d" dur="1.1s" repeatCount="indefinite" values="M19.5,29.5 Q20.5,27 19,25 Q18.5,27 19.2,29.5 Z;M19.5,29.5 Q20,27.5 19,25.5 Q19,27.5 19.2,29.5 Z;M19.5,29.5 Q20.5,27 19,25 Q18.5,27 19.2,29.5 Z"/>
       </path>
-      <path d="M17.2,29 Q16.5,26 18,24 Q18.8,26.5 17.8,29 Z" fill="#ff6b35" opacity="0.7"/>
-      <path d="M19,29 Q19.5,26.5 18.2,24.5 Q17.5,27 18.5,29 Z" fill="#ff6b35" opacity="0.6"/>
-      <path d="M17.8,28.5 Q17.5,26.5 18,25 Q18.5,27 18.2,28.5 Z" fill="#ffaa00" opacity="0.9"/>
+      <path d="M17.5,29 Q17,27 18,26 Q18.5,27.5 17.8,29 Z" fill="#ff6b35" opacity="0.7"/>
+      <path d="M18.5,29 Q19,27.5 18.2,26.5 Q17.8,28 18.3,29 Z" fill="#ff6b35" opacity="0.6"/>
+      <path d="M17.8,28.5 Q17.6,27.5 18,26.5 Q18.4,27.5 18.1,28.5 Z" fill="#ffaa00" opacity="0.9"/>
       <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.08"/>
-      <g opacity="0.9">
-        <ellipse cx="14.5" cy="13.5" rx="3" ry="2.2" transform="rotate(-15 14.5 13.5)" fill="#555" opacity="0.5"/>
-        <rect x="17" y="5.5" width="1.8" height="8.5" rx="0.3" fill="#555" opacity="0.5"/>
-        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#c1121f"/>
-        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946" opacity="0.7"/>
-        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#c1121f"/>
-        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946" opacity="0.7"/>
-        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#c1121f"/>
-        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946" opacity="0.7"/>
-        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="none" stroke="#555" stroke-width="0.4" stroke-dasharray="1,1.5" opacity="0.4"/>
+      <!-- Music note — half size, etched into stone -->
+      <g transform="translate(16.5, 9.5) scale(0.5) translate(-16.5, -9.5)" opacity="0.95">
+        <!-- Carved shadow (depth) -->
+        <ellipse cx="14.5" cy="13.5" rx="3" ry="2.2" transform="rotate(-15 14.5 13.5)" fill="#2a2a2a" opacity="0.7"/>
+        <rect x="17" y="5.3" width="1.8" height="8.7" rx="0.3" fill="#2a2a2a" opacity="0.7"/>
+        <path d="M18.6,5.3 Q23.3,3.8 23.3,6.3 Q23.3,8.8 18.6,7.8 Z" fill="#2a2a2a" opacity="0.7"/>
+        <!-- Carved groove base -->
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#3a3a3a"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#3a3a3a"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#3a3a3a"/>
+        <!-- Red tint in the carved groove -->
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#c1121f" opacity="0.45"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#c1121f" opacity="0.45"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#c1121f" opacity="0.45"/>
+        <!-- Highlight edge (top-left, simulates light catching carved edge) -->
+        <ellipse cx="13.9" cy="12.9" rx="2.6" ry="1.8" transform="rotate(-15 13.9 12.9)" fill="none" stroke="#999" stroke-width="0.4" opacity="0.35"/>
+        <rect x="16.5" y="4.7" width="1.4" height="8.3" rx="0.3" fill="none" stroke="#999" stroke-width="0.4" opacity="0.35"/>
+        <!-- Etch texture lines across red -->
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
       </g>
     </svg>
     <span class="logo-text">The Sound Cave</span>
@@ -84,7 +103,7 @@
     <button class="htab" data-tab="cave">🔥 <span>The Cave</span></button>
     <button class="htab" data-tab="foraging">🏹 <span>Foraging</span></button>
     <button class="htab" data-tab="clan">🦴 <span>Clan</span> <span class="count" id="clanCount"></span></button>
-    <button class="htab" data-tab="footprints">🐾 <span>Footprints</span></button>
+    <button class="htab" data-tab="footprints"><span class="fp-ico">👣</span> <span>Footprints</span></button>
     <button class="htab" data-tab="firepit">🪨 <span>Firepit</span> <span class="count" id="firepitCount"></span></button>
   </nav>
 </header>
@@ -103,20 +122,30 @@
           <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
           <path d="M6,18 L10,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
           <path d="M26,14 L30,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
-          <path d="M10,30 Q18,13 26,30 Z" fill="#4a4a4a"/>
-          <line x1="14.5" y1="29.5" x2="21.5" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="15" y1="28.8" x2="21" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
-          <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95">
-            <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z;M18,29.5 Q15.5,25.5 18,21.5 Q20.5,25 18,29.5 Z;M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z"/>
+          <path d="M8,30 Q18,8 28,30 Z" fill="#4a4a4a"/>
+          <line x1="13" y1="29.5" x2="23" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="13.5" y1="28.8" x2="22.5" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
+          <path d="M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z" fill="#e63946" opacity="0.95">
+            <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z;M18,29.5 Q16,27 18,24 Q20,26.5 18,29.5 Z;M18,29.5 Q16.5,26.5 18,23.5 Q19.5,26.5 18,29.5 Z"/>
           </path>
-          <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
-          <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
-          <path d="M17.8,28.5 Q17.5,26.5 18,25 Q18.5,27 18.2,28.5 Z" fill="#ffaa00" opacity="0.9"/>
+          <path d="M16.5,29.5 Q15.5,27 17,25 Q17.5,27 16.8,29.5 Z" fill="#ff4444" opacity="0.8"/>
+          <path d="M19.5,29.5 Q20.5,27 19,25 Q18.5,27 19.2,29.5 Z" fill="#ff4444" opacity="0.8"/>
+          <path d="M17.8,28.5 Q17.6,27.5 18,26.5 Q18.4,27.5 18.1,28.5 Z" fill="#ffaa00" opacity="0.9"/>
           <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.08"/>
-          <g opacity="0.9">
-            <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946"/>
-            <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946"/>
-            <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946"/>
+          <g transform="translate(16.5, 9.5) scale(0.5) translate(-16.5, -9.5)" opacity="0.95">
+            <ellipse cx="14.5" cy="13.5" rx="3" ry="2.2" transform="rotate(-15 14.5 13.5)" fill="#2a2a2a" opacity="0.7"/>
+            <rect x="17" y="5.3" width="1.8" height="8.7" rx="0.3" fill="#2a2a2a" opacity="0.7"/>
+            <path d="M18.6,5.3 Q23.3,3.8 23.3,6.3 Q23.3,8.8 18.6,7.8 Z" fill="#2a2a2a" opacity="0.7"/>
+            <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#3a3a3a"/>
+            <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#3a3a3a"/>
+            <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#3a3a3a"/>
+            <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#c1121f" opacity="0.45"/>
+            <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#c1121f" opacity="0.45"/>
+            <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#c1121f" opacity="0.45"/>
+            <ellipse cx="13.9" cy="12.9" rx="2.6" ry="1.8" transform="rotate(-15 13.9 12.9)" fill="none" stroke="#999" stroke-width="0.4" opacity="0.35"/>
+            <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+            <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
+            <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
           </g>
         </svg>
       </div>
@@ -155,7 +184,7 @@
           <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your dashboard. See aggregate stats, genre breakdowns, weekly charts and new track drops from your Clan at a glance.</p>
         </div>
         <div class="card-elevated">
-          <div style="font-size:20px;margin-bottom:6px">🐾</div>
+          <div style="font-size:20px;margin-bottom:6px"><span class="fp-ico">👣</span></div>
           <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Footprints</div>
           <p style="font-size:12px;color:var(--secondary);line-height:1.5">Analytics deep dive. Per-artist growth charts, week-over-week metrics and insights on who's rising and who's fading.</p>
         </div>
@@ -369,7 +398,7 @@
 
   <!-- ─── FOOTPRINTS TAB ─────────────────────────────── -->
   <div id="tab-footprints" style="display:none">
-    <h2 style="font-size:20px;font-weight:700;color:var(--heading);margin-bottom:6px">Footprints 🐾</h2>
+    <h2 style="font-size:20px;font-weight:700;color:var(--heading);margin-bottom:6px">Footprints <span class="fp-ico">👣</span></h2>
     <p class="subtitle" style="margin-bottom:24px">Track how your artists move over time.</p>
     <div id="fpSummary" class="stats-row"></div>
     <div class="fp-layout" id="fpLayout">
@@ -572,6 +601,8 @@
 <!-- ═══════════════════════════════════════════════════════
      JAVASCRIPT — loaded per-tab for token efficiency
      ═══════════════════════════════════════════════════════ -->
+</div><!-- /.app-wrap -->
+
 <script src="js/app.js"></script>
 <script src="js/cave.js"></script>
 <script src="js/foraging.js"></script>

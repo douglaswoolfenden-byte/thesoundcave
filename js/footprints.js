@@ -14,7 +14,7 @@ function renderFootprints() {
 
   if (!clan.length) {
     document.getElementById('fpSummary').innerHTML = '';
-    document.getElementById('fpLayout').innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="ico">🐾</div><p>No tracked artists yet. Add some from Foraging.</p></div>`;
+    document.getElementById('fpLayout').innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="ico"><span class="fp-ico">👣</span></div><p>No tracked artists yet. Add some from Foraging.</p></div>`;
     document.getElementById('fpInsights').innerHTML = '';
     return;
   }

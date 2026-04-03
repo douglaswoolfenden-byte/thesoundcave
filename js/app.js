@@ -2,22 +2,36 @@
 // SPLASH SCREEN
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (function initSplash() {
+  const splash   = document.getElementById('splashOverlay');
+  const cave     = document.getElementById('caveEntrance');
+  const appWrap  = document.getElementById('appWrap');
+  const logo     = splash.querySelector('.splash-logo');
+
   if (sessionStorage.getItem('sc_splash_done')) {
-    document.getElementById('splashOverlay').classList.add('hidden');
-    document.getElementById('curtainLeft').style.display = 'none';
-    document.getElementById('curtainRight').style.display = 'none';
+    splash.classList.add('hidden');
+    cave.classList.add('hidden');
+    appWrap.classList.add('revealed');
     return;
   }
+
+  // Phase 1: logo visible for 1.2s, then fade it out
   setTimeout(() => {
-    document.getElementById('splashOverlay').classList.add('hidden');
-    document.getElementById('curtainLeft').classList.add('open');
-    document.getElementById('curtainRight').classList.add('open');
+    logo.classList.add('fade-out');
+
+    // Phase 2: after logo fades (0.4s), hide splash & open cave
     setTimeout(() => {
-      document.getElementById('curtainLeft').style.display = 'none';
-      document.getElementById('curtainRight').style.display = 'none';
-    }, 800);
-    sessionStorage.setItem('sc_splash_done', '1');
-  }, 1500);
+      splash.classList.add('hidden');
+      cave.classList.add('open');
+      appWrap.classList.add('revealed');
+
+      // Phase 3: cleanup after cave animation (1.6s)
+      setTimeout(() => {
+        cave.classList.add('hidden');
+      }, 1700);
+
+      sessionStorage.setItem('sc_splash_done', '1');
+    }, 400);
+  }, 1200);
 })();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

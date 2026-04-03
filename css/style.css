@@ -1,13 +1,16 @@
-/* ── Splash Screen ────────────────────────────────────── */
+/* ── Splash / Cave Entrance ───────────────────────────── */
 .splash-overlay {
   position: fixed; inset: 0; z-index: 9999;
   display: flex; align-items: center; justify-content: center;
-  background: #3a3a3a;
+  background: #1a1a1a;
 }
 .splash-overlay.hidden { display: none; }
 .splash-logo {
   opacity: 0;
   animation: splashFadeIn 0.6s ease forwards;
+}
+.splash-logo.fade-out {
+  animation: splashFadeOut 0.4s ease forwards;
 }
 .splash-logo .splash-text {
   font-family: 'DM Sans', system-ui, sans-serif;
@@ -15,18 +18,61 @@
   color: #f5f5f5; text-transform: uppercase;
   margin-top: 16px; text-align: center;
 }
-@keyframes splashFadeIn { to { opacity: 1; } }
+@keyframes splashFadeIn  { to { opacity: 1; } }
+@keyframes splashFadeOut { to { opacity: 0; } }
 
-.curtain-left, .curtain-right {
-  position: fixed; top: 0; bottom: 0; z-index: 9998;
-  background: #3a3a3a; width: 50%;
+/* Animated custom property for the cave opening radius */
+@property --cave-r {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: false;
 }
-.curtain-left  { left: 0; }
-.curtain-right { right: 0; }
-.curtain-left.open  { animation: curtainSlideLeft 0.7s ease-in forwards; }
-.curtain-right.open { animation: curtainSlideRight 0.7s ease-in forwards; }
-@keyframes curtainSlideLeft  { to { transform: translateX(-100%); } }
-@keyframes curtainSlideRight { to { transform: translateX(100%); } }
+
+.cave-entrance {
+  position: fixed; inset: 0; z-index: 9998;
+  --cave-r: 0%;
+  /* Layered radial gradients create an irregular, rocky cave mouth */
+  background:
+    /* warm glow at the opening edge */
+    radial-gradient(ellipse 60% 55% at 50% 52%,
+      transparent calc(var(--cave-r) - 2%),
+      rgba(230,57,70,0.12) var(--cave-r),
+      transparent calc(var(--cave-r) + 4%)),
+    /* main cave wall */
+    radial-gradient(ellipse 58% 54% at 50% 52%,
+      transparent var(--cave-r),
+      #1a1a1a calc(var(--cave-r) + 2.5%)),
+    /* rough edge layer 1 — offset left */
+    radial-gradient(ellipse 62% 50% at 47% 55%,
+      transparent calc(var(--cave-r) - 1.5%),
+      rgba(30,30,30,0.6) calc(var(--cave-r) + 1.5%)),
+    /* rough edge layer 2 — offset right */
+    radial-gradient(ellipse 54% 56% at 53% 49%,
+      transparent calc(var(--cave-r) - 1%),
+      rgba(35,35,35,0.5) calc(var(--cave-r) + 2%));
+  pointer-events: auto;
+}
+.cave-entrance.hidden { display: none; }
+
+.cave-entrance.open {
+  animation: caveReveal 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes caveReveal {
+  0%   { --cave-r: 0%; }
+  100% { --cave-r: 90%; }
+}
+
+/* Subtle depth zoom on the page content as the cave opens */
+.app-wrap {
+  transform: scale(0.94);
+  transform-origin: 50% 45%;
+  transition: transform 1.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.app-wrap.revealed {
+  transform: scale(1);
+}
 
 /* ── Reset & Variables ────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,6 +130,7 @@ header {
   background: var(--elevated); font-size: 10px; padding: 1px 6px;
   border-radius: 10px; margin-left: 2px;
 }
+.htab .count:empty { display: none; }
 
 /* ── Layout ────────────────────────────────────────────── */
 .container { max-width: 1200px; margin: 0 auto; padding: 28px; }
@@ -283,6 +330,9 @@ header {
 .preferred-track .remove { cursor: pointer; color: var(--muted); font-size: 11px; }
 .preferred-track .remove:hover { color: var(--body); }
 .add-track-row { display: flex; gap: 6px; margin-top: 6px; }
+
+/* ── Footprint icon (white human footsteps) ───────────── */
+.fp-ico { filter: grayscale(1) brightness(10); }
 
 /* ── Footprints ────────────────────────────────────────── */
 .fp-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }
@@ -606,7 +656,7 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 /* ── Print Styles ──────────────────────────────────────── */
 @media print {
   body { background: #fff; color: #222; }
-  header, .splash-overlay, .curtain-left, .curtain-right,
+  header, .splash-overlay, .cave-entrance,
   .panel-overlay, .artist-panel, .dash-export, .btn-red, .btn-outline,
   .clan-card-star { display: none !important; }
   .card, .stat-card, .card-elevated { border-color: #ddd; background: #fafafa; }
@@ -689,7 +739,7 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   * { color: #111 !important; background: #fff !important; box-shadow: none !important; text-shadow: none !important; }
   body { font-size: 12pt; line-height: 1.5; }
   header, nav, .htab, .panel-overlay, .artist-panel, .splash-overlay,
-  .curtain-left, .curtain-right, .dash-filters, .forage-tabs,
+  .cave-entrance, .dash-filters, .forage-tabs,
   .action-btn, .btn-red, .btn-outline, .panel-close, button,
   .forage-actions, #tab-home, .firepit-content { display: none !important; }
   .container { max-width: 100%; padding: 0; }

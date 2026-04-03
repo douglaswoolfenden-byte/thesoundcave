@@ -114,7 +114,12 @@ header {
   font-weight: 700; font-size: 15px; letter-spacing: 0.15em;
   color: var(--heading); text-transform: uppercase;
 }
-.header-tabs { display: flex; gap: 4px; }
+.header-tabs {
+  display: flex; gap: 4px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; flex: 1; min-width: 0;
+}
+.header-tabs::-webkit-scrollbar { display: none; }
 .htab {
   background: none; border: none; cursor: pointer;
   padding: 0 14px; height: 56px;
@@ -123,6 +128,7 @@ header {
   color: var(--secondary);
   border-bottom: 2px solid transparent;
   transition: all 0.15s;
+  white-space: nowrap; flex-shrink: 0;
 }
 .htab:hover { color: var(--body); }
 .htab.active { color: var(--red); font-weight: 600; border-bottom-color: var(--red); }
@@ -332,7 +338,7 @@ header {
 .add-track-row { display: flex; gap: 6px; margin-top: 6px; }
 
 /* ── Footprint icon (white human footsteps) ───────────── */
-.fp-ico { filter: grayscale(1) brightness(10); }
+.fp-ico { filter: grayscale(1) brightness(10); font-size: 18px; display: inline-block; min-width: 1.2em; }
 
 /* ── Footprints ────────────────────────────────────────── */
 .fp-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }

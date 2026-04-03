@@ -10,10 +10,10 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════════
-     SPLASH SCREEN
+     CAVE ENTRANCE — single unified splash + reveal
      ═══════════════════════════════════════════════════════ -->
-<div class="splash-overlay" id="splashOverlay">
-  <div class="splash-logo">
+<div class="cave-entrance" id="caveEntrance">
+  <div class="cave-logo">
     <svg width="80" height="72" viewBox="0 0 36 32" style="display:block;margin:0 auto">
       <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
       <path d="M8,30 Q18,8 28,30 Z" fill="#3a3a3a"/>
@@ -35,10 +35,9 @@
         <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="none" stroke="#1a1a1a" stroke-width="0.35" stroke-dasharray="0.6,1" opacity="0.45"/>
       </g>
     </svg>
-    <div class="splash-text">The Sound Cave</div>
+    <div class="cave-logo-text">The Sound Cave</div>
   </div>
 </div>
-<div class="cave-entrance" id="caveEntrance"></div>
 
 <div class="app-wrap" id="appWrap">
 <!-- ═══════════════════════════════════════════════════════
@@ -479,6 +478,11 @@
             <textarea class="input" id="forgeFreeform" rows="3" placeholder="Anything else the AI should know — vibe, angle, specific details..."></textarea>
           </div>
 
+          <div class="forge-input-group" style="display:flex;align-items:center;gap:10px">
+            <label class="forge-label" style="margin:0">Output Mode</label>
+            <button class="forge-mode-toggle" id="imageModeToggle" onclick="toggleImageMode()">📝 Text Only</button>
+          </div>
+
           <button class="btn-red" style="width:100%" onclick="generateContent()">🔨 Generate Content</button>
         </div>
 
@@ -494,6 +498,8 @@
             </div>
           </div>
 
+          <div id="forgeImageArea" class="forge-image-area" style="display:none"></div>
+
           <div id="forgeActions" style="display:none">
             <div class="forge-actions">
               <button class="btn-outline" onclick="generateContent()">🔄 Regenerate</button>
@@ -502,7 +508,9 @@
               <button class="btn-outline" onclick="generateVariation('tone')">🎭 Change Tone</button>
             </div>
             <div class="forge-actions" style="margin-top:8px">
-              <button class="btn-red" onclick="copyForgeOutput()">📋 Copy</button>
+              <button class="btn-red" onclick="copyForgeOutput()">📋 Copy Text</button>
+              <button class="btn-outline" id="btnRegenImage" onclick="regenerateImage()" style="display:none">🖼️ New Image</button>
+              <button class="btn-outline" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">⬇️ Download</button>
               <button class="btn-red" onclick="saveToStash()" style="background:var(--card);border:1px solid var(--border);color:var(--body)">📦 Save to Stash</button>
             </div>
           </div>

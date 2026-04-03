@@ -1,76 +1,95 @@
-/* ── Splash / Cave Entrance ───────────────────────────── */
-.splash-overlay {
+/* ── Cave Entrance (unified splash + reveal) ─────────── */
+
+/* The cave mouth SVG shape — used as an inverted mask so the
+   dark "rock" surrounds an organic opening you peer through */
+.cave-entrance {
   position: fixed; inset: 0; z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
   background: #1a1a1a;
+  pointer-events: auto;
+  overflow: hidden;
 }
-.splash-overlay.hidden { display: none; }
-.splash-logo {
+.cave-entrance.hidden { display: none; }
+
+/* Inner layer that carries the mask and gets scaled up.
+   We animate transform (GPU-accelerated) instead of mask-size. */
+.cave-entrance::before {
+  content: '';
+  position: absolute;
+  /* start centered, sized to cover viewport */
+  top: 50%; left: 50%;
+  width: 200vmax; height: 200vmax;
+  transform: translate(-50%, -50%) scale(0);
+  transform-origin: center;
+  /* Inverted mask trick: this is the "hole".
+     We use a radial with an irregular SVG shape via mask on the parent.
+     Instead, we make THIS element the hole — background transparent,
+     with a huge box-shadow that IS the dark rock. */
+  border-radius: 45% 52% 48% 55% / 50% 45% 55% 48%;
+  background: transparent;
+  box-shadow: 0 0 0 200vmax #1a1a1a;
+  transition: transform 2s cubic-bezier(0.16, 0.7, 0.3, 1);
+}
+
+/* Warm glow ring at the cave mouth edge */
+.cave-entrance::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 45vmin; height: 50vmin;
+  transform: translate(-50%, -50%);
+  border-radius: 45% 52% 48% 55% / 50% 45% 55% 48%;
+  box-shadow:
+    0 0 40px 15px rgba(230,57,70,0.08),
+    0 0 80px 30px rgba(230,57,70,0.04);
   opacity: 0;
-  animation: splashFadeIn 0.6s ease forwards;
+  transition: opacity 0.8s ease 0.3s;
 }
-.splash-logo.fade-out {
-  animation: splashFadeOut 0.4s ease forwards;
+
+/* Logo centered in the cave mouth */
+.cave-logo {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  text-align: center;
+  opacity: 0;
+  animation: caveLogoIn 0.6s ease 0.2s forwards;
 }
-.splash-logo .splash-text {
+.cave-logo-text {
   font-family: 'DM Sans', system-ui, sans-serif;
   font-weight: 700; font-size: 28px; letter-spacing: 0.15em;
   color: #f5f5f5; text-transform: uppercase;
-  margin-top: 16px; text-align: center;
+  margin-top: 16px;
 }
-@keyframes splashFadeIn  { to { opacity: 1; } }
-@keyframes splashFadeOut { to { opacity: 0; } }
+@keyframes caveLogoIn { to { opacity: 1; } }
 
-/* Cave entrance — SVG mask approach for organic rocky opening */
-.cave-entrance {
-  position: fixed; inset: 0; z-index: 9998;
-  background: #1a1a1a;
-  pointer-events: auto;
-  /* The SVG mask: white = visible (rock), black = transparent (opening) */
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpath d='M50,85 C42,84 36,80 31,74 C27,68 24,61 23,54 C22,47 23,40 26,34 C29,28 34,23 39,20 C43,17 47,16 50,15 C53,16 57,17 61,20 C66,23 71,28 74,34 C77,40 78,47 77,54 C76,61 73,68 69,74 C64,80 58,84 50,85Z' fill='black'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='white'/%3E%3Cpath d='M50,85 C42,84 36,80 31,74 C27,68 24,61 23,54 C22,47 23,40 26,34 C29,28 34,23 39,20 C43,17 47,16 50,15 C53,16 57,17 61,20 C66,23 71,28 74,34 C77,40 78,47 77,54 C76,61 73,68 69,74 C64,80 58,84 50,85Z' fill='black'/%3E%3C/svg%3E");
-  -webkit-mask-size: 0% 0%;
-  mask-size: 0% 0%;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+/* Phase 1: small cave mouth visible — you're looking at the entrance */
+.cave-entrance.mouth-open::before {
+  transform: translate(-50%, -50%) scale(0.12);
+}
+.cave-entrance.mouth-open::after {
+  opacity: 1;
 }
 
-/* Warm glow ring around the opening edge */
-.cave-entrance::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 50% 45% at 50% 50%,
-    rgba(230,57,70,0.15) 0%,
-    rgba(230,57,70,0.06) 30%,
-    transparent 60%);
+/* Phase 2: entering — logo fades, cave opens fully around you */
+.cave-entrance.entering .cave-logo {
+  animation: caveLogoOut 0.5s ease forwards;
+}
+.cave-entrance.entering::before {
+  transform: translate(-50%, -50%) scale(1);
+}
+.cave-entrance.entering::after {
   opacity: 0;
   transition: opacity 0.6s ease;
 }
 
-.cave-entrance.open::before {
-  opacity: 1;
-}
+@keyframes caveLogoOut { to { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
 
-.cave-entrance.hidden { display: none; }
-
-.cave-entrance.open {
-  animation: caveReveal 1.8s cubic-bezier(0.16, 0.7, 0.3, 1) forwards;
-  pointer-events: none;
-}
-
-@keyframes caveReveal {
-  0%   { -webkit-mask-size: 0% 0%;   mask-size: 0% 0%;   }
-  5%   { -webkit-mask-size: 8% 10%;  mask-size: 8% 10%;  }
-  100% { -webkit-mask-size: 300% 350%; mask-size: 300% 350%; }
-}
-
-/* Subtle depth zoom on the page content as the cave opens */
+/* Subtle depth zoom on the page content as you enter */
 .app-wrap {
   transform: scale(0.94);
   transform-origin: 50% 45%;
-  transition: transform 1.8s cubic-bezier(0.16, 0.7, 0.3, 1);
+  transition: transform 2s cubic-bezier(0.16, 0.7, 0.3, 1);
 }
 .app-wrap.revealed {
   transform: scale(1);
@@ -514,6 +533,42 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 }
 .forge-loading .dot { animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+/* ── Image generation ──────────────────────────────────── */
+.forge-mode-toggle {
+  font-size: 11px; padding: 4px 12px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--elevated);
+  color: var(--secondary); cursor: pointer; transition: all 0.15s;
+}
+.forge-mode-toggle:hover { border-color: var(--border-lt); }
+.forge-mode-toggle.active {
+  background: var(--red-faint); border-color: var(--red); color: var(--red);
+}
+.forge-image-area { margin-top: 12px; }
+.forge-image-preview {
+  width: 100%; max-height: 420px; object-fit: contain;
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.forge-image-meta {
+  font-size: 11px; color: var(--muted); margin-top: 6px;
+  font-family: 'DM Mono', monospace;
+}
+.forge-image-loading {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 160px; color: var(--secondary); font-size: 13px;
+  border: 1px dashed var(--border); border-radius: 8px;
+}
+.forge-image-skeleton {
+  width: 80px; height: 80px; border-radius: 8px;
+  background: linear-gradient(110deg, var(--elevated) 30%, var(--border) 50%, var(--elevated) 70%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.stash-thumb {
+  width: 44px; height: 44px; border-radius: 6px;
+  object-fit: cover; flex-shrink: 0; border: 1px solid var(--border);
+}
 
 .stash-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .stash-item {

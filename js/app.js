@@ -1,37 +1,33 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SPLASH SCREEN
+// CAVE ENTRANCE (unified splash + reveal)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-(function initSplash() {
-  const splash   = document.getElementById('splashOverlay');
-  const cave     = document.getElementById('caveEntrance');
-  const appWrap  = document.getElementById('appWrap');
-  const logo     = splash.querySelector('.splash-logo');
+(function initCaveEntrance() {
+  const cave    = document.getElementById('caveEntrance');
+  const appWrap = document.getElementById('appWrap');
 
   if (sessionStorage.getItem('sc_splash_done')) {
-    splash.classList.add('hidden');
     cave.classList.add('hidden');
     appWrap.classList.add('revealed');
     return;
   }
 
-  // Phase 1: logo visible for 1.2s, then fade it out
+  // Phase 1: cave mouth opens to small peephole (you see the entrance)
+  requestAnimationFrame(() => {
+    cave.classList.add('mouth-open');
+  });
+
+  // Phase 2: after 1.4s with logo visible, walk through the entrance
   setTimeout(() => {
-    logo.classList.add('fade-out');
+    cave.classList.add('entering');
+    appWrap.classList.add('revealed');
 
-    // Phase 2: after logo fades (0.4s), hide splash & open cave
+    // Phase 3: cleanup after entrance animation (2s transition)
     setTimeout(() => {
-      splash.classList.add('hidden');
-      cave.classList.add('open');
-      appWrap.classList.add('revealed');
+      cave.classList.add('hidden');
+    }, 2100);
 
-      // Phase 3: cleanup after cave animation (1.8s)
-      setTimeout(() => {
-        cave.classList.add('hidden');
-      }, 1900);
-
-      sessionStorage.setItem('sc_splash_done', '1');
-    }, 400);
-  }, 1200);
+    sessionStorage.setItem('sc_splash_done', '1');
+  }, 1400);
 })();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

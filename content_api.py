@@ -187,8 +187,179 @@ def generate():
         return jsonify({'error': str(e)}), 500
 
 
+# ── SoundCloud search (reuses scout.py patterns) ──────────
+
+SC_CLIENT_ID = os.getenv('SOUNDCLOUD_CLIENT_ID')
+SC_CLIENT_SECRET = os.getenv('SOUNDCLOUD_CLIENT_SECRET')
+SC_TOKEN = None
+
+def get_sc_token():
+    global SC_TOKEN
+    if SC_TOKEN:
+        return SC_TOKEN
+    stored = os.getenv('SOUNDCLOUD_OAUTH_TOKEN')
+    if stored:
+        SC_TOKEN = stored
+        return SC_TOKEN
+    if not SC_CLIENT_ID or not SC_CLIENT_SECRET:
+        return None
+    try:
+        r = http_requests.post('https://api.soundcloud.com/oauth2/token', data={
+            'grant_type': 'client_credentials',
+            'client_id': SC_CLIENT_ID,
+            'client_secret': SC_CLIENT_SECRET,
+        }, timeout=10)
+        if r.status_code == 200:
+            SC_TOKEN = r.json().get('access_token', '')
+            return SC_TOKEN
+    except Exception:
+        pass
+    return None
+
+
+def sc_fetch_tracks(genre, limit=50):
+    token = get_sc_token()
+    if not token:
+        return []
+    headers = {'Authorization': f'OAuth {token}'}
+    params = {'genres': genre, 'limit': limit, 'order': 'hotness', 'filter': 'streamable'}
+    try:
+        r = http_requests.get('https://api.soundcloud.com/tracks', params=params, headers=headers, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return []
+
+
+def sc_fetch_followers(user_id):
+    token = get_sc_token()
+    if not token:
+        return 0
+    try:
+        r = http_requests.get(f'https://api.soundcloud.com/users/{user_id}',
+                              headers={'Authorization': f'OAuth {token}'}, timeout=10)
+        if r.status_code == 200:
+            return r.json().get('followers_count', 0) or 0
+    except Exception:
+        pass
+    return 0
+
+
+def sc_score_track(track):
+    likes = track.get('likes_count') or track.get('favoritings_count') or 0
+    reposts = track.get('reposts_count') or 0
+    comments = track.get('comment_count') or 0
+    followers = (track.get('user') or {}).get('followers_count') or 1
+    engagement = (likes + reposts * 2 + comments * 3) / max(followers, 1)
+    # Recency bonus
+    created = track.get('created_at', '')
+    bonus = 1.0
+    if created:
+        try:
+            dt = datetime.strptime(created[:10], '%Y/%m/%d').replace(tzinfo=timezone.utc)
+            days_old = (datetime.now(timezone.utc) - dt).days
+            if days_old <= 14: bonus = 3.0
+            elif days_old <= 30: bonus = 2.0
+            elif days_old <= 60: bonus = 1.5
+        except Exception:
+            pass
+    return round(engagement * bonus, 6)
+
+
+def sc_build_record(track, rank):
+    user = track.get('user') or {}
+    created_raw = track.get('created_at', '')
+    uploaded = created_raw[:10].replace('/', '-') if created_raw else ''
+    return {
+        'rank': rank,
+        'track_id': track.get('id'),
+        'title': track.get('title', ''),
+        'artist': user.get('username', ''),
+        'artist_username': user.get('username', ''),
+        'artist_url': user.get('permalink_url', ''),
+        'avatar_url': user.get('avatar_url', ''),
+        'artwork_url': track.get('artwork_url', ''),
+        'genre': track.get('genre', ''),
+        'followers': user.get('followers_count', 0),
+        'plays': track.get('playback_count', 0),
+        'likes': track.get('likes_count') or track.get('favoritings_count') or 0,
+        'reposts': track.get('reposts_count', 0),
+        'comments': track.get('comment_count', 0),
+        'score': track.get('_score', 0),
+        'url': track.get('permalink_url', ''),
+        'uploaded': uploaded,
+    }
+
+
+SCOUT_GENRES = [
+    'house', 'deep house', 'tech house', 'afro house', 'uk garage', 'garage',
+    'bassline', 'drum and bass', 'jungle', 'techno', 'minimal techno',
+    'breaks', 'breakbeat', 'electronic', 'lo-fi', '140',
+]
+
+
+@app.route('/api/search', methods=['GET'])
+def search():
+    genre = request.args.get('genre', '')
+    min_followers = int(request.args.get('min_followers', 0))
+    max_followers = int(request.args.get('max_followers', 5000))
+    keyword = request.args.get('keyword', '').strip()
+    limit = min(int(request.args.get('limit', 20)), 100)
+
+    token = get_sc_token()
+    if not token:
+        return jsonify({'error': 'SoundCloud credentials not configured. Set SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET in .env'}), 500
+
+    # Determine which genres to search
+    genres_to_search = [genre] if genre else SCOUT_GENRES
+    all_tracks = []
+    seen_ids = set()
+
+    for g in genres_to_search:
+        tracks = sc_fetch_tracks(g, limit=50)
+        for track in tracks:
+            track_id = track.get('id')
+            if not track_id or track_id in seen_ids:
+                continue
+            seen_ids.add(track_id)
+
+            user = track.get('user') or {}
+            followers = user.get('followers_count') or 0
+            user_id = user.get('id')
+
+            # Verify suspicious follower counts
+            if (followers == 0 or (followers < 500 and (track.get('playback_count') or 0) > 5000)) and user_id:
+                followers = sc_fetch_followers(user_id)
+                user['followers_count'] = followers
+
+            # Apply filters
+            if followers < min_followers or followers > max_followers:
+                continue
+            plays = track.get('playback_count') or 0
+            if plays < 100:
+                continue
+            if keyword and keyword.lower() not in (track.get('title', '') + ' ' + user.get('username', '')).lower():
+                continue
+
+            track['_score'] = sc_score_track(track)
+            all_tracks.append(track)
+
+    # Deduplicate by artist, keep highest scoring
+    seen_artists = {}
+    for track in sorted(all_tracks, key=lambda t: t['_score'], reverse=True):
+        username = (track.get('user') or {}).get('username', '')
+        if username and username not in seen_artists:
+            seen_artists[username] = track
+
+    top = list(seen_artists.values())[:limit]
+    results = [sc_build_record(t, i + 1) for i, t in enumerate(top)]
+
+    return jsonify({'tracks': results, 'total_scanned': len(seen_ids), 'returned': len(results)})
+
+
 if __name__ == '__main__':
     port = int(os.getenv('CONTENT_API_PORT', 8000))
-    print(f"🪨 Firepit Content API running on http://localhost:{port}")
-    print(f"   API key configured: {'Yes' if os.getenv('ANTHROPIC_API_KEY') else 'No — set ANTHROPIC_API_KEY in .env'}")
+    print(f"🪨 Sound Cave API running on http://localhost:{port}")
+    print(f"   Anthropic key: {'✅' if os.getenv('ANTHROPIC_API_KEY') else '❌'}")
+    print(f"   SoundCloud:    {'✅' if SC_CLIENT_ID else '❌'}")
     app.run(host='0.0.0.0', port=port, debug=True)

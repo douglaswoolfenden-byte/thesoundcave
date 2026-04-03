@@ -619,6 +619,51 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .empty .ico { font-size: 48px; margin-bottom: 16px; }
 .empty p { font-size: 14px; line-height: 1.6; }
 
+/* ── Panel star ────────────────────────────────────────── */
+.panel-star {
+  font-size: 22px; cursor: pointer; opacity: 0.4;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.panel-star:hover { opacity: 0.8; transform: scale(1.2); }
+.panel-star.starred { opacity: 1; }
+
+/* ── Panel stats & growth ─────────────────────────────── */
+.panel-stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 12px;
+}
+.panel-stat { text-align: center; }
+.panel-stat-val { font-size: 18px; font-weight: 700; color: var(--heading); display: block; }
+.panel-stat-label { font-size: 11px; color: var(--secondary); }
+.panel-growth-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.panel-growth-tag {
+  font-size: 11px; padding: 3px 8px; border-radius: 10px;
+  background: var(--elevated); color: var(--secondary);
+}
+.panel-growth-tag.up { color: var(--green, #22c55e); }
+.panel-growth-tag.down { color: var(--red); }
+
+/* ── Platform hover-to-paste ──────────────────────────── */
+.plat-hover-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.plat-icon-btn {
+  font-size: 20px; cursor: pointer; opacity: 0.35;
+  transition: opacity 0.15s;
+  flex-shrink: 0; width: 30px; text-align: center;
+}
+.plat-icon-btn:hover { opacity: 0.7; }
+.plat-icon-btn.linked { opacity: 1; }
+.plat-hover-input {
+  display: none; flex: 1; align-items: center; gap: 4px;
+}
+.plat-hover-input.show { display: flex; }
+.plat-hover-input .plat-input { flex: 1; }
+.plat-open {
+  color: var(--red); text-decoration: none; font-size: 14px; padding: 2px 4px;
+}
+.plat-open:hover { opacity: 0.7; }
+
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 900px) {
   .two-col { grid-template-columns: 1fr; }
@@ -636,4 +681,25 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   .detail-grid { grid-template-columns: 1fr; }
   .stats-row { flex-direction: column; }
   .htab span:not(.count) { display: none; }
+  .panel-stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Print stylesheet (PDF export) ────────────────────── */
+@media print {
+  * { color: #111 !important; background: #fff !important; box-shadow: none !important; text-shadow: none !important; }
+  body { font-size: 12pt; line-height: 1.5; }
+  header, nav, .htab, .panel-overlay, .artist-panel, .splash-overlay,
+  .curtain-left, .curtain-right, .dash-filters, .forage-tabs,
+  .action-btn, .btn-red, .btn-outline, .panel-close, button,
+  .forage-actions, #tab-home, .firepit-content { display: none !important; }
+  .container { max-width: 100%; padding: 0; }
+  .stat-card { border: 1px solid #ddd; break-inside: avoid; }
+  .stat-card svg { display: none; }
+  .genre-bar-fill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .clan-grid { grid-template-columns: repeat(3, 1fr); }
+  .clan-card { border: 1px solid #ddd; break-inside: avoid; }
+  a { text-decoration: none; }
+  a[href]:after { content: none; }
+  .snap-table { font-size: 10pt; }
+  .snap-table th, .snap-table td { padding: 4px 6px; border: 1px solid #ddd; }
 }

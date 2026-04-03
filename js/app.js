@@ -461,15 +461,56 @@ function renderPanel(username) {
   document.getElementById('panelGenre').textContent = a.genre;
   document.getElementById('panelSCLink').href = a.artist_url;
 
-  document.getElementById('platformGrid').innerHTML = PLATFORMS.map(p => `
-    <div class="plat-row ${(a.platforms||{})[p]?'linked':''}">
-      <div class="plat-label">${PLAT_ICONS[p]} ${PLAT_LABELS[p]}</div>
-      <input class="plat-input" placeholder="Paste URL or handle"
-        value="${esc((a.platforms||{})[p]||'')}"
-        onblur="savePlatform('${username}','${p}',this.value);this.closest('.plat-row').classList.toggle('linked',!!this.value)">
-    </div>`).join('');
+  // Star toggle
+  const starEl = document.getElementById('panelStar');
+  if (starEl) {
+    starEl.innerHTML = `<span class="panel-star ${a.starred?'starred':''}" onclick="togglePanelStar('${esc(username)}')" title="Star this artist">${a.starred?'⭐':'☆'}</span>`;
+  }
 
+  // Tracking duration + growth rates
   const snaps = a.snapshots||[];
+  const latest = snaps[snaps.length-1]||{};
+  const first = snaps[0]||{};
+  const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
+  const followers = a.followers_override != null ? a.followers_override : (latest.followers||0);
+
+  const growthEl = document.getElementById('panelGrowth');
+  if (growthEl) {
+    const fGrowth = first.followers ? (((latest.followers||0) - first.followers) / first.followers * 100).toFixed(1) : null;
+    const pGrowth = first.plays ? (((latest.plays||0) - first.plays) / first.plays * 100).toFixed(1) : null;
+    const lGrowth = first.likes ? (((latest.likes||0) - first.likes) / first.likes * 100).toFixed(1) : null;
+
+    growthEl.innerHTML = `
+      <div class="panel-stats-row">
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(followers)}</span><span class="panel-stat-label">Followers</span></div>
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.plays||0)}</span><span class="panel-stat-label">Plays</span></div>
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.likes||0)}</span><span class="panel-stat-label">Likes</span></div>
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.reposts||0)}</span><span class="panel-stat-label">Reposts</span></div>
+      </div>
+      <div class="panel-growth-row">
+        ${daysTracked > 0 ? `<span class="panel-growth-tag">📅 Tracked ${daysTracked} days</span>` : ''}
+        ${fGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(fGrowth)>=0?'up':'down'}">Followers ${parseFloat(fGrowth)>=0?'+':''}${fGrowth}%</span>` : ''}
+        ${pGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(pGrowth)>=0?'up':'down'}">Plays ${parseFloat(pGrowth)>=0?'+':''}${pGrowth}%</span>` : ''}
+        ${lGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(lGrowth)>=0?'up':'down'}">Likes ${parseFloat(lGrowth)>=0?'+':''}${lGrowth}%</span>` : ''}
+      </div>
+      ${snaps.length >= 2 ? `<div style="margin-top:12px">${buildSparkline(snaps.map(s=>s.followers||0), 260, 40, '#e63946')}</div>` : ''}`;
+  }
+
+  // Platform links — logos with hover-to-paste
+  document.getElementById('platformGrid').innerHTML = PLATFORMS.map(p => {
+    const url = (a.platforms||{})[p] || '';
+    const linked = !!url;
+    return `<div class="plat-hover-row ${linked?'linked':''}" title="${PLAT_LABELS[p]}">
+      <div class="plat-icon-btn ${linked?'linked':''}" onclick="this.nextElementSibling.classList.toggle('show')">${PLAT_ICONS[p]}</div>
+      <div class="plat-hover-input ${linked?'show':''}">
+        <input class="plat-input" placeholder="${PLAT_LABELS[p]} URL" value="${esc(url)}"
+          onblur="savePlatform('${username}','${p}',this.value);this.closest('.plat-hover-row').classList.toggle('linked',!!this.value)">
+        ${linked ? `<a href="${url.startsWith('http')?url:'https://'+url}" target="_blank" rel="noopener" class="plat-open">↗</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Snapshot history
   document.getElementById('snapBody').innerHTML = snaps.length
     ? [...snaps].reverse().map(s => `
         <tr>
@@ -483,21 +524,34 @@ function renderPanel(username) {
         </tr>`).join('')
     : '<tr><td colspan="7" style="color:var(--muted);padding:10px">No snapshots yet.</td></tr>';
 
-  const latest = snaps[snaps.length-1]||{};
   document.getElementById('manualFollowers').value = a.followers_override != null ? a.followers_override : (latest.followers||'');
   document.getElementById('manualPlaylists').value = latest.playlist_adds != null ? latest.playlist_adds : '';
 
+  // Suggested tracks (from tracks_seen)
   const tracks = a.tracks_seen||[];
-  document.getElementById('tracksSeen').innerHTML = tracks.length
-    ? tracks.map(t => `
-        <div style="background:var(--elevated);border-radius:8px;padding:10px 12px;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:bold;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
-          <div style="font-size:11px;color:var(--secondary)">${t.date} · Score ${t.score?.toFixed(1)||'—'} · <a href="${t.url}" target="_blank" rel="noopener" style="color:var(--red)">Listen ↗</a></div>
+  document.getElementById('tracksSeen').innerHTML = `
+    <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--heading)">Suggested Tracks</h4>
+    ${tracks.length
+      ? tracks.map(t => `
+        <div style="background:var(--elevated);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+          <div style="overflow:hidden">
+            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
+            <div style="font-size:11px;color:var(--secondary)">${t.date} · Score ${t.score?.toFixed(1)||'—'}</div>
+          </div>
+          ${t.url ? `<a href="${t.url}" target="_blank" rel="noopener" style="color:var(--red);font-size:18px;text-decoration:none" title="Listen on SoundCloud">▶</a>` : ''}
         </div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>';
+      : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>'}`;
 
   document.getElementById('artistNotes').value = a.notes||'';
   document.getElementById('cutBtn').textContent = a.status === 'cut' ? '♻️ Restore to tracking' : '✂️ Cut from tracking';
+}
+
+function togglePanelStar(username) {
+  const favs = getFavourites();
+  if (!favs[username]) return;
+  favs[username].starred = !favs[username].starred;
+  saveFavourites(favs);
+  renderPanel(username);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -24,10 +24,10 @@
       cave.classList.add('open');
       appWrap.classList.add('revealed');
 
-      // Phase 3: cleanup after cave animation (1.6s)
+      // Phase 3: cleanup after cave animation (1.8s)
       setTimeout(() => {
         cave.classList.add('hidden');
-      }, 1700);
+      }, 1900);
 
       sessionStorage.setItem('sc_splash_done', '1');
     }, 400);

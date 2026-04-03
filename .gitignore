@@ -3,3 +3,5 @@
 *.key
 secrets.json
 config.local.js
+__pycache__/
+*.pyc

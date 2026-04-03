@@ -8,13 +8,25 @@ The Sound Cave is a music discovery platform that finds unsigned/emerging artist
 
 ## Architecture
 
-Four Python scripts + one single-file HTML frontend:
+Four Python scripts + a multi-file static frontend (no build step):
 
 - **`scout.py`** — Weekly artist discovery engine. Searches SoundCloud across 16 dance music genres, filters by follower/play thresholds, scores tracks by engagement-to-follower ratio with recency bonuses, deduplicates by artist, and saves a top-20 JSON report to `data/YYYY-MM-DD.json`.
 - **`clan_tracker.py`** — Daily stats tracker. Reads all previously discovered artists from weekly reports (and optional `data/clan_artists.json`), fetches their current SoundCloud profiles and recent tracks, saves daily snapshots to `data/snapshots/YYYY-MM-DD.json`, then updates the manifest.
 - **`update_manifest.py`** — Rebuilds `data/manifest.json` (index of all weekly reports and daily snapshots). The frontend reads this to know which data files exist.
 - **`content_api.py`** — Flask server for AI content generation. Calls Claude API (Haiku) to produce social posts, event copy, press releases, etc. Run locally during dev, deploy to Vercel/Railway for prod.
-- **`index.html`** — Single-file static dashboard (HTML/CSS/JS, no build step). Five tabs: The Cave (overview), Foraging (discovery), Clan (tracked artists), Footprints (analytics), Firepit (content production). Hosted via GitHub Pages.
+
+### Frontend structure
+
+- **`index.html`** — HTML shell with nav, tab containers, and artist detail panel. Loads CSS and JS via external files.
+- **`css/style.css`** — All shared styles (variables, layout, components, responsive breakpoints).
+- **`js/app.js`** — Shared logic: state, localStorage, favourites management, utilities, SVG chart builders, tab switching, data loading, artist detail panel, init.
+- **`js/cave.js`** — The Cave tab (dashboard overview).
+- **`js/foraging.js`** — Foraging tab (artist discovery).
+- **`js/clan.js`** — Clan tab (tracked artists, report builder, CSV export).
+- **`js/footprints.js`** — Footprints tab (analytics, charts).
+- **`js/firepit.js`** — Firepit tab (Forge content generator, Stash library, Trail Map placeholder).
+
+All files are kept under 500 lines for token efficiency. Hosted via GitHub Pages.
 
 ## Data flow
 

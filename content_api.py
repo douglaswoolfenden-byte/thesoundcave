@@ -5,10 +5,12 @@ Run: python content_api.py
 """
 import os
 import json
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
+import requests as http_requests
 
 # Load .env from workspace root (one level up from project)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))

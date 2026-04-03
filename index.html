@@ -5,516 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Sound Cave</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    /* ── Reset & Variables ────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg:         #4a4a4a;
-      --card:       #545454;
-      --elevated:   #5e5e5e;
-      --hover:      #666666;
-      --border:     #3a3a3a;
-      --border-lt:  #6e6e6e;
-      --red:        #e63946;
-      --red-dark:   #c1121f;
-      --red-darker: #a4161a;
-      --red-faint:  rgba(230,57,70,0.15);
-      --heading:    #f5f5f5;
-      --body:       #e8e8e8;
-      --secondary:  #aaaaaa;
-      --muted:      #888888;
-      --green:      #00c896;
-    }
-    body { background: var(--bg); color: var(--body); font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--card); }
-    ::-webkit-scrollbar-thumb { background: var(--border-lt); border-radius: 3px; }
-    input, select, textarea, button { font-family: inherit; }
-    a { color: var(--red); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* ── Header ───────────────────────────────────────────── */
-    header {
-      position: sticky; top: 0; z-index: 200;
-      background: rgba(74,74,74,0.95); backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 28px; height: 56px;
-      display: flex; align-items: center;
-    }
-    .logo { display: flex; align-items: center; gap: 10px; margin-right: 36px; flex-shrink: 0; }
-    .logo-text {
-      font-weight: 700; font-size: 15px; letter-spacing: 0.15em;
-      color: var(--heading); text-transform: uppercase;
-    }
-    .header-tabs { display: flex; gap: 4px; }
-    .htab {
-      background: none; border: none; cursor: pointer;
-      padding: 0 14px; height: 56px;
-      display: flex; align-items: center; gap: 6px;
-      font-size: 13px; font-weight: 400;
-      color: var(--secondary);
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-    }
-    .htab:hover { color: var(--body); }
-    .htab.active { color: var(--red); font-weight: 600; border-bottom-color: var(--red); }
-    .htab .count {
-      background: var(--elevated); font-size: 10px; padding: 1px 6px;
-      border-radius: 10px; margin-left: 2px;
-    }
-
-    /* ── Layout ────────────────────────────────────────────── */
-    .container { max-width: 1200px; margin: 0 auto; padding: 28px; }
-    .section-title { font-size: 14px; font-weight: 600; color: var(--heading); margin: 0 0 14px; }
-    .subtitle { font-size: 13px; color: var(--secondary); margin: 4px 0 0; }
-
-    /* ── Cards & Surfaces ──────────────────────────────────── */
-    .card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px;
-    }
-    .card-elevated {
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 6px; padding: 12px 14px;
-    }
-
-    /* ── Stat Cards Row ────────────────────────────────────── */
-    .stats-row { display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap; }
-    .stat-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px; flex: 1; min-width: 140px;
-    }
-    .stat-label {
-      font-size: 10px; letter-spacing: 0.1em; color: var(--secondary);
-      text-transform: uppercase; margin-bottom: 10px;
-    }
-    .stat-row { display: flex; justify-content: space-between; align-items: flex-end; }
-    .stat-value {
-      font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 600;
-      color: var(--heading); line-height: 1;
-    }
-    .stat-value.red { color: var(--red); }
-    .stat-trend { font-size: 12px; margin-top: 6px; }
-    .stat-trend.up { color: var(--red); }
-    .stat-trend.down { color: var(--muted); }
-
-    /* ── Summary Cards (smaller) ───────────────────────────── */
-    .summary-card { flex: 1; min-width: 140px; }
-    .summary-card .stat-value { font-size: 20px; }
-    .summary-suffix { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-    /* ── Two Column Grid ───────────────────────────────────── */
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-
-    /* ── Genre Bar ─────────────────────────────────────────── */
-    .genre-row { margin-bottom: 10px; }
-    .genre-row-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .genre-name { font-size: 12px; color: var(--body); }
-    .genre-pct { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--secondary); }
-    .genre-bar-bg { height: 6px; background: var(--elevated); border-radius: 3px; overflow: hidden; }
-    .genre-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-
-    /* ── Track Drop Row ────────────────────────────────────── */
-    .track-drop {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 0; border-bottom: 1px solid var(--border);
-    }
-    .track-drop:last-child { border-bottom: none; }
-    .track-drop-title { font-size: 13px; color: var(--body); font-weight: 500; }
-    .track-drop-artist { font-size: 11px; color: var(--secondary); margin-top: 2px; }
-    .track-drop-right { display: flex; align-items: center; gap: 10px; }
-    .track-drop-date { font-size: 11px; color: var(--muted); }
-    .play-btn {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--red-faint); border: 1px solid var(--red-dark);
-      color: var(--red); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-size: 10px;
-    }
-
-    /* ── Artist Tile Grid ──────────────────────────────────── */
-    .artist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-    .artist-tile {
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 6px; padding: 12px 14px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .artist-tile-name { font-size: 13px; font-weight: 600; color: var(--body); }
-    .artist-tile-genre { font-size: 11px; color: var(--secondary); margin-top: 2px; }
-    .artist-tile-followers { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--secondary); margin-top: 3px; }
-    .trend-arrow { font-size: 15px; }
-    .trend-arrow.up { color: var(--red); }
-    .trend-arrow.down { color: var(--muted); }
-
-    /* ── Foraging ──────────────────────────────────────────── */
-    .foraging-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .autocut-setting { display: flex; align-items: center; gap: 10px; }
-    .autocut-setting label { font-size: 12px; color: var(--secondary); }
-
-    .filter-panel {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; margin-bottom: 20px; overflow: hidden;
-    }
-    .filter-toggle {
-      width: 100%; background: none; border: none; color: var(--body);
-      cursor: pointer; padding: 14px 18px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 13px; font-weight: 600;
-    }
-    .filter-toggle .arrow { transition: transform 0.2s; color: var(--secondary); }
-    .filter-toggle .arrow.open { transform: rotate(180deg); }
-    .filter-body { padding: 0 18px 18px; border-top: 1px solid var(--border); }
-    .filter-modes { display: flex; gap: 8px; margin: 14px 0 16px; }
-    .mode-btn {
-      padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
-      cursor: pointer; border: 1px solid var(--border); background: var(--elevated);
-      color: var(--secondary); transition: all 0.15s;
-    }
-    .mode-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
-    .filter-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-    .schedule-row { display: flex; align-items: center; gap: 10px; }
-    .schedule-badge {
-      font-size: 11px; color: var(--secondary);
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 4px; padding: 4px 8px;
-    }
-
-    /* ── Foraging Artist Card ──────────────────────────────── */
-    .forage-card {
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px 16px;
-      display: flex; justify-content: space-between; align-items: center; gap: 16;
-      margin-bottom: 8px; transition: border-color 0.15s;
-    }
-    .forage-card:hover { border-color: var(--border-lt); }
-    .forage-info { flex: 1; min-width: 0; }
-    .forage-name { font-size: 14px; font-weight: 600; color: var(--body); }
-    .forage-meta { font-size: 12px; color: var(--secondary); margin-top: 2px; }
-    .forage-track { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .forage-timer { font-size: 11px; margin-top: 3px; }
-    .forage-timer.urgent { color: var(--red); }
-    .forage-timer.normal { color: var(--secondary); }
-    .forage-actions { display: flex; gap: 8px; flex-shrink: 0; }
-    .action-btn {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--secondary); cursor: pointer;
-      padding: 6px 10px; font-size: 11px;
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      transition: all 0.15s;
-    }
-    .action-btn:hover { background: rgba(255,255,255,0.08); }
-    .action-btn.clan-btn:hover { border-color: var(--red); color: var(--red); }
-    .action-btn.watch-btn:hover { border-color: var(--secondary); color: var(--body); }
-    .action-btn.cut-btn:hover { border-color: var(--muted); color: var(--body); }
-    .action-btn .icon { font-size: 14px; }
-    .section-label {
-      font-size: 12px; letter-spacing: 0.08em; color: var(--secondary);
-      text-transform: uppercase; margin-bottom: 8px;
-    }
-
-    /* ── Clan Tab ──────────────────────────────────────────── */
-    .clan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .clan-actions { display: flex; gap: 8px; }
-    .report-notice {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;
-      font-size: 12px; color: var(--secondary);
-    }
-
-    .clan-row {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px 16px; cursor: pointer;
-      display: flex; align-items: center; gap: 16px;
-      transition: all 0.15s; margin-bottom: 6px;
-    }
-    .clan-row:hover { border-color: var(--border-lt); background: var(--elevated); }
-    .clan-row.selected { border-color: var(--red); background: var(--elevated); border-radius: 8px 8px 0 0; }
-    .clan-row.in-report { border-color: var(--red-dark); }
-    .clan-check {
-      width: 18px; height: 18px; border-radius: 4px;
-      border: 2px solid var(--border); flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .clan-check.checked { background: var(--red); border-color: var(--red); }
-    .clan-row-info { flex: 1; display: grid; grid-template-columns: 1fr auto auto auto auto auto; gap: 16px; align-items: center; }
-    .data-pill { text-align: right; }
-    .data-pill-value { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--body); }
-    .data-pill-label { font-size: 10px; color: var(--muted); }
-    .clan-trend { display: flex; align-items: center; gap: 6px; }
-    .clan-trend-pct { font-size: 12px; font-family: 'DM Mono', monospace; }
-
-    .clan-detail {
-      background: var(--elevated); border: 1px solid var(--red); border-top: none;
-      border-radius: 0 0 8px 8px; padding: 20px 18px; margin-bottom: 6px;
-    }
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .detail-section-label {
-      font-size: 11px; letter-spacing: 0.08em; color: var(--secondary);
-      text-transform: uppercase; margin-bottom: 12px;
-    }
-    .detail-field { margin-bottom: 10px; }
-    .detail-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
-    .preferred-track {
-      font-size: 12px; color: var(--body);
-      padding: 5px 10px; background: var(--card); border-radius: 4px;
-      margin-bottom: 4px; display: flex; justify-content: space-between;
-    }
-    .preferred-track .remove { cursor: pointer; color: var(--muted); font-size: 11px; }
-    .preferred-track .remove:hover { color: var(--body); }
-    .add-track-row { display: flex; gap: 6px; margin-top: 6px; }
-
-    /* ── Footprints ────────────────────────────────────────── */
-    .fp-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }
-    .fp-sidebar {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; overflow: hidden;
-    }
-    .fp-sidebar-head {
-      padding: 12px 14px; border-bottom: 1px solid var(--border);
-      font-size: 11px; letter-spacing: 0.08em; color: var(--secondary); text-transform: uppercase;
-    }
-    .fp-artist-item {
-      padding: 10px 14px; cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      border-left: 3px solid transparent;
-      transition: all 0.15s;
-    }
-    .fp-artist-item:hover { background: var(--elevated); }
-    .fp-artist-item.active { background: var(--elevated); border-left-color: var(--red); }
-    .fp-artist-name { font-size: 13px; color: var(--body); }
-    .fp-artist-item.active .fp-artist-name { font-weight: 600; }
-    .fp-artist-meta { font-size: 11px; color: var(--secondary); margin-top: 2px; }
-    .metric-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
-    .metric-tab {
-      padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600;
-      cursor: pointer; border: 1px solid var(--border); background: var(--elevated);
-      color: var(--secondary); transition: all 0.15s;
-    }
-    .metric-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
-    .wow-grid { display: flex; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
-    .wow-card {
-      flex: 1; min-width: 100px;
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 12px;
-    }
-    .wow-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-    .wow-value { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--body); }
-    .wow-change { font-size: 11px; margin-top: 2px; }
-
-    .insight-row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 14px; background: var(--elevated);
-      border: 1px solid var(--border); border-radius: 6px;
-    }
-    .insight-icon { font-size: 18px; }
-    .insight-name { font-size: 13px; color: var(--body); font-weight: 500; }
-    .insight-detail { font-size: 11px; margin-top: 1px; }
-
-    /* ── Form Elements ─────────────────────────────────────── */
-    .input {
-      background: var(--elevated); border: 1px solid var(--border); border-radius: 6px;
-      color: var(--body); padding: 8px 12px; font-size: 13px; outline: none;
-      width: 100%; box-sizing: border-box; transition: border-color 0.15s;
-    }
-    .input:focus { border-color: var(--red); }
-    .input::placeholder { color: var(--muted); }
-    .input-sm { padding: 7px 10px; font-size: 12px; }
-    select.input { cursor: pointer; }
-    textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
-    .btn-red {
-      background: var(--red); color: #fff; border: none; border-radius: 6px;
-      padding: 9px 22px; font-size: 13px; font-weight: 600; cursor: pointer;
-      transition: background 0.15s;
-    }
-    .btn-red:hover { background: var(--red-dark); }
-    .btn-outline {
-      background: var(--elevated); border: 1px solid var(--border); color: var(--secondary);
-      border-radius: 6px; padding: 8px 16px; font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s;
-    }
-    .btn-outline:hover { border-color: var(--red); color: var(--red); }
-    .btn-outline.active { background: var(--red); border-color: var(--red); color: #fff; }
-
-    /* ── Artist Detail Panel (slide-out) ───────────────────── */
-    .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: none; }
-    .panel-overlay.open { display: block; }
-    .artist-panel {
-      position: fixed; right: 0; top: 0; bottom: 0; width: 500px; max-width: 100vw;
-      background: var(--card); border-left: 1px solid var(--border);
-      z-index: 301; overflow-y: auto; transform: translateX(100%); transition: transform .3s;
-    }
-    .artist-panel.open { transform: translateX(0); }
-    .panel-head {
-      padding: 20px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 14px;
-    }
-    .panel-avatar {
-      width: 56px; height: 56px; border-radius: 50%;
-      background: var(--elevated); overflow: hidden; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 24px;
-    }
-    .panel-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .panel-name { font-size: 18px; font-weight: bold; color: var(--heading); }
-    .panel-genre { font-size: 13px; color: var(--secondary); margin-top: 2px; }
-    .panel-close {
-      margin-left: auto; background: none; border: none; color: var(--secondary);
-      font-size: 22px; cursor: pointer; padding: 4px 8px;
-    }
-    .panel-close:hover { color: var(--heading); }
-    .panel-body { padding: 20px; }
-    .panel-section { margin-bottom: 24px; }
-    .panel-section h3 {
-      font-size: 12px; color: var(--secondary); text-transform: uppercase;
-      letter-spacing: .8px; margin-bottom: 12px;
-    }
-    .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .plat-row {
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px;
-    }
-    .plat-row.linked { border-color: var(--green); }
-    .plat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-    .plat-input {
-      background: none; border: none; color: var(--body);
-      font-size: 12px; width: 100%; outline: none;
-    }
-    .plat-input::placeholder { color: var(--muted); }
-    .snap-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .snap-table th {
-      text-align: left; color: var(--muted); padding: 5px 8px;
-      border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase;
-    }
-    .snap-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
-    .notes-area {
-      width: 100%; background: var(--elevated); border: 1px solid var(--border);
-      color: var(--body); padding: 10px 12px; border-radius: 8px;
-      font-size: 13px; resize: vertical; min-height: 80px; font-family: 'DM Sans', sans-serif;
-    }
-    .notes-area:focus { outline: none; border-color: var(--red); }
-
-    /* ── Listen Link ───────────────────────────────────────── */
-    .sc-link {
-      color: var(--red); text-decoration: none; font-size: 11px;
-      padding: 4px 9px; border: 1px solid var(--red-dark); border-radius: 6px;
-      transition: background 0.15s;
-    }
-    .sc-link:hover { background: var(--red); color: #fff; text-decoration: none; }
-
-    /* ── Firepit Tab ──────────────────────────────────────── */
-    .firepit-modes { display: flex; gap: 8px; margin-bottom: 24px; }
-    .firepit-mode {
-      padding: 7px 18px; border-radius: 6px; font-size: 12px; font-weight: 600;
-      cursor: pointer; border: 1px solid var(--border); background: var(--elevated);
-      color: var(--secondary); transition: all 0.15s;
-    }
-    .firepit-mode.active { background: var(--red); color: #fff; border-color: var(--red); }
-
-    .forge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .forge-input-group { margin-bottom: 14px; }
-    .forge-label {
-      font-size: 11px; letter-spacing: 0.06em; color: var(--secondary);
-      text-transform: uppercase; margin-bottom: 6px; display: block;
-    }
-    .forge-output {
-      width: 100%; min-height: 200px; background: var(--elevated);
-      border: 1px solid var(--border); border-radius: 8px;
-      color: var(--body); padding: 14px 16px; font-size: 13px;
-      font-family: 'DM Sans', sans-serif; resize: vertical; line-height: 1.6;
-    }
-    .forge-output:focus { outline: none; border-color: var(--red); }
-    .forge-output::placeholder { color: var(--muted); }
-    .forge-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-    .forge-char-count {
-      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-      margin-top: 8px; text-align: right;
-    }
-    .forge-char-count.over { color: var(--red); }
-    .forge-loading {
-      display: flex; align-items: center; justify-content: center;
-      min-height: 200px; color: var(--secondary); font-size: 13px;
-    }
-    .forge-loading .dot { animation: pulse 1.2s infinite; }
-    @keyframes pulse { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
-
-    .stash-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .stash-item {
-      background: var(--elevated); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px 16px;
-      display: flex; justify-content: space-between; align-items: center; gap: 16px;
-      margin-bottom: 8px; transition: border-color 0.15s;
-    }
-    .stash-item:hover { border-color: var(--border-lt); }
-    .stash-info { flex: 1; min-width: 0; }
-    .stash-type { font-size: 11px; color: var(--secondary); margin-bottom: 2px; }
-    .stash-preview { font-size: 13px; color: var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stash-date { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .stash-status {
-      font-size: 10px; padding: 2px 8px; border-radius: 10px;
-      text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0;
-    }
-    .stash-status.draft { background: var(--card); color: var(--secondary); }
-    .stash-status.scheduled { background: var(--red-faint); color: var(--red); }
-    .stash-status.published { background: rgba(0,200,150,0.15); color: var(--green); }
-    .stash-actions { display: flex; gap: 6px; flex-shrink: 0; }
-
-    .trail-placeholder {
-      text-align: center; padding: 80px 20px; color: var(--secondary);
-      border: 2px dashed var(--border); border-radius: 12px;
-    }
-    .trail-placeholder .ico { font-size: 48px; margin-bottom: 16px; }
-
-    /* ── Empty States ──────────────────────────────────────── */
-    .empty { text-align: center; padding: 60px 20px; color: var(--secondary); }
-    .empty .ico { font-size: 48px; margin-bottom: 16px; }
-    .empty p { font-size: 14px; line-height: 1.6; }
-
-    /* ── Responsive ────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      .two-col { grid-template-columns: 1fr; }
-      .forge-grid { grid-template-columns: 1fr; }
-      .fp-layout { grid-template-columns: 1fr; }
-      .filter-grid { grid-template-columns: 1fr 1fr; }
-      .clan-row-info { grid-template-columns: 1fr auto auto; }
-      .clan-row-info .data-pill:nth-child(n+4) { display: none; }
-    }
-    @media (max-width: 700px) {
-      .container { padding: 14px; }
-      header { padding: 0 14px; }
-      .filter-grid { grid-template-columns: 1fr; }
-      .artist-panel { width: 100vw; }
-      .detail-grid { grid-template-columns: 1fr; }
-      .stats-row { flex-direction: column; }
-      .htab span:not(.count) { display: none; }
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════
+     SPLASH SCREEN
+     ═══════════════════════════════════════════════════════ -->
+<div class="splash-overlay" id="splashOverlay">
+  <div class="splash-logo">
+    <svg width="80" height="72" viewBox="0 0 36 32" style="display:block;margin:0 auto">
+      <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
+      <path d="M10,30 Q18,13 26,30 Z" fill="#3a3a3a"/>
+      <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95"/>
+      <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
+      <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
+      <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.1"/>
+      <g opacity="0.9">
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946"/>
+      </g>
+    </svg>
+    <div class="splash-text">The Sound Cave</div>
+  </div>
+</div>
+<div class="curtain-left" id="curtainLeft"></div>
+<div class="curtain-right" id="curtainRight"></div>
 
 <!-- ═══════════════════════════════════════════════════════
      HEADER
      ═══════════════════════════════════════════════════════ -->
 <header>
   <div class="logo">
-    <svg width="36" height="32" viewBox="0 0 36 32" style="display:block">
-      <!-- Cave mountain -->
+    <svg width="36" height="32" viewBox="0 0 36 32" style="display:block" class="logo-svg">
       <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
-      <!-- Cave entrance -->
-      <path d="M12,30 Q18,16 24,30 Z" fill="#4a4a4a"/>
-      <!-- Fire in cave entrance -->
-      <path d="M17,30 Q16.5,26 18,24 Q19,26 18.5,30 Z" fill="#e63946" opacity="0.9"/>
-      <path d="M16.2,30 Q15.8,27 17.5,25.5 Q18,27 17.2,30 Z" fill="#ff6b35" opacity="0.7"/>
-      <path d="M18.8,30 Q18.5,27.5 19.5,26 Q20,28 19.5,30 Z" fill="#ff6b35" opacity="0.6"/>
-      <path d="M17.5,30 Q17.2,27.5 18,26.5 Q18.5,28 18.2,30 Z" fill="#ffaa00" opacity="0.8"/>
-      <!-- Music note (centred above entrance) -->
-      <g fill="#e63946">
-        <ellipse cx="16.5" cy="15" rx="2.5" ry="1.8" transform="rotate(-15 16.5 15)"/>
-        <rect x="18.7" y="8" width="1.3" height="7.5" rx="0.6"/>
-        <path d="M20,8 Q24.5,6.5 24.5,9 Q24.5,11.5 20,10.5 Z"/>
+      <path d="M6,18 L10,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
+      <path d="M8,22 L13,20" stroke="#5a5a5a" stroke-width="0.5" opacity="0.5"/>
+      <path d="M26,14 L30,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
+      <path d="M24,20 L29,22" stroke="#5a5a5a" stroke-width="0.5" opacity="0.5"/>
+      <path d="M10,10 L12,11" stroke="#777" stroke-width="0.4" opacity="0.4"/>
+      <path d="M25,10 L27,9" stroke="#777" stroke-width="0.4" opacity="0.4"/>
+      <path d="M5,25 L9,24" stroke="#5a5a5a" stroke-width="0.4" opacity="0.4"/>
+      <path d="M28,25 L31,26" stroke="#5a5a5a" stroke-width="0.4" opacity="0.4"/>
+      <path d="M10,30 Q18,13 26,30 Z" fill="#4a4a4a"/>
+      <line x1="14.5" y1="29.5" x2="21.5" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="15" y1="28.8" x2="21" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
+      <line x1="16" y1="29.8" x2="20" y2="29.8" stroke="#7B4413" stroke-width="0.7" stroke-linecap="round"/>
+      <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95">
+        <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z;M18,29.5 Q15.5,25.5 18,21.5 Q20.5,25 18,29.5 Z;M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z"/>
+      </path>
+      <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8">
+        <animate attributeName="d" dur="1s" repeatCount="indefinite" values="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z;M16,29.5 Q15,26.5 17,23.5 Q17,27 16.5,29.5 Z;M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z"/>
+      </path>
+      <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8">
+        <animate attributeName="d" dur="1.1s" repeatCount="indefinite" values="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z;M20,29.5 Q21,26.5 19,23.5 Q19,27 19.5,29.5 Z;M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z"/>
+      </path>
+      <path d="M17.2,29 Q16.5,26 18,24 Q18.8,26.5 17.8,29 Z" fill="#ff6b35" opacity="0.7"/>
+      <path d="M19,29 Q19.5,26.5 18.2,24.5 Q17.5,27 18.5,29 Z" fill="#ff6b35" opacity="0.6"/>
+      <path d="M17.8,28.5 Q17.5,26.5 18,25 Q18.5,27 18.2,28.5 Z" fill="#ffaa00" opacity="0.9"/>
+      <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.08"/>
+      <g opacity="0.9">
+        <ellipse cx="14.5" cy="13.5" rx="3" ry="2.2" transform="rotate(-15 14.5 13.5)" fill="#555" opacity="0.5"/>
+        <rect x="17" y="5.5" width="1.8" height="8.5" rx="0.3" fill="#555" opacity="0.5"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#c1121f"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946" opacity="0.7"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#c1121f"/>
+        <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946" opacity="0.7"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#c1121f"/>
+        <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946" opacity="0.7"/>
+        <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="none" stroke="#555" stroke-width="0.4" stroke-dasharray="1,1.5" opacity="0.4"/>
       </g>
     </svg>
     <span class="logo-text">The Sound Cave</span>
   </div>
   <nav class="header-tabs">
-    <button class="htab active" data-tab="cave">🔥 <span>The Cave</span></button>
+    <button class="htab active" data-tab="home">🏠 <span>Home</span></button>
+    <button class="htab" data-tab="cave">🔥 <span>The Cave</span></button>
     <button class="htab" data-tab="foraging">🏹 <span>Foraging</span></button>
     <button class="htab" data-tab="clan">🦴 <span>Clan</span> <span class="count" id="clanCount"></span></button>
     <button class="htab" data-tab="footprints">🐾 <span>Footprints</span></button>
@@ -527,9 +94,154 @@
      ═══════════════════════════════════════════════════════ -->
 <div class="container">
 
+  <!-- ─── HOME TAB ────────────────────────────────────── -->
+  <div id="tab-home">
+    <!-- Hero -->
+    <div style="text-align:center;padding:40px 0 48px">
+      <div class="home-logo-glow">
+        <svg width="120" height="108" viewBox="0 0 36 32" style="display:block;margin:0 auto">
+          <path d="M2,30 L8,6 L18,2 L28,6 L34,30 Z" fill="#6e6e6e" stroke="#3a3a3a" stroke-width="1"/>
+          <path d="M6,18 L10,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
+          <path d="M26,14 L30,16" stroke="#5a5a5a" stroke-width="0.5" opacity="0.6"/>
+          <path d="M10,30 Q18,13 26,30 Z" fill="#4a4a4a"/>
+          <line x1="14.5" y1="29.5" x2="21.5" y2="29.5" stroke="#8B4513" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="15" y1="28.8" x2="21" y2="28.8" stroke="#6B3410" stroke-width="0.9" stroke-linecap="round"/>
+          <path d="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z" fill="#e63946" opacity="0.95">
+            <animate attributeName="d" dur="0.8s" repeatCount="indefinite" values="M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z;M18,29.5 Q15.5,25.5 18,21.5 Q20.5,25 18,29.5 Z;M18,29.5 Q16,25 18,21 Q20,25 18,29.5 Z"/>
+          </path>
+          <path d="M16,29.5 Q14.5,26 17,23 Q17.5,26.5 16.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
+          <path d="M20,29.5 Q21.5,26 19,23 Q18.5,26.5 19.5,29.5 Z" fill="#ff4444" opacity="0.8"/>
+          <path d="M17.8,28.5 Q17.5,26.5 18,25 Q18.5,27 18.2,28.5 Z" fill="#ffaa00" opacity="0.9"/>
+          <ellipse cx="18" cy="28" rx="5" ry="3" fill="#e63946" opacity="0.08"/>
+          <g opacity="0.9">
+            <ellipse cx="14.2" cy="13.2" rx="2.8" ry="2" transform="rotate(-15 14.2 13.2)" fill="#e63946"/>
+            <rect x="16.7" y="5" width="1.6" height="8.5" rx="0.3" fill="#e63946"/>
+            <path d="M18.3,5 Q23,3.5 23,6 Q23,8.5 18.3,7.5 Z" fill="#e63946"/>
+          </g>
+        </svg>
+      </div>
+      <h1 style="font-size:32px;font-weight:700;color:var(--heading);margin-top:20px">The Sound Cave</h1>
+      <p style="font-size:16px;color:var(--secondary);margin-top:8px;max-width:500px;margin-left:auto;margin-right:auto">
+        Discover, track and grow unsigned talent in European underground dance music.
+      </p>
+      <button class="btn-red" style="margin-top:24px;padding:12px 32px;font-size:14px" onclick="switchTab('cave')">Enter The Cave</button>
+    </div>
+
+    <!-- Philosophy -->
+    <div class="card" style="margin-bottom:24px">
+      <h3 class="section-title">What is The Sound Cave?</h3>
+      <p style="font-size:14px;line-height:1.7;color:var(--body)">
+        The Sound Cave is a music discovery engine built for the underground. It automatically scouts SoundCloud for unsigned and emerging artists across 16 dance music genres, tracks their growth over time, and gives you the tools to curate, manage and promote the ones worth watching. Think of it as your personal A&R assistant for the European underground scene.
+      </p>
+    </div>
+
+    <!-- Terminology -->
+    <div style="margin-bottom:24px">
+      <h3 class="section-title">Terminology</h3>
+      <div class="home-terms-grid">
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">🏹</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Foraging</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Live artist search. Hunt for new talent by genre, follower count and more. Schedule automated searches to run while you sleep.</p>
+        </div>
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">🦴</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Clan</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your roster of tracked artists. View profiles, link platforms, star favourites and monitor their growth from one place.</p>
+        </div>
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">🔥</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">The Cave</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your dashboard. See aggregate stats, genre breakdowns, weekly charts and new track drops from your Clan at a glance.</p>
+        </div>
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">🐾</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Footprints</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Analytics deep dive. Per-artist growth charts, week-over-week metrics and insights on who's rising and who's fading.</p>
+        </div>
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">🪨</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Firepit</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">AI content production. Generate social posts, press releases, event copy and more — powered by Claude, tuned for underground music culture.</p>
+        </div>
+        <div class="card-elevated">
+          <div style="font-size:20px;margin-bottom:6px">✂️</div>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Cut</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Remove an artist from active tracking. Cut artists stop appearing in your dashboard and analytics but their data is preserved.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="card" style="margin-bottom:24px">
+      <h3 class="section-title">How It Works</h3>
+      <div class="home-steps">
+        <div class="home-step">
+          <div class="home-step-num">1</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--heading)">Search</div>
+            <p style="font-size:12px;color:var(--secondary);margin-top:2px">Use Foraging to search SoundCloud by genre, follower range and keywords. Get results instantly or schedule recurring hunts.</p>
+          </div>
+        </div>
+        <div class="home-step">
+          <div class="home-step-num">2</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--heading)">Curate</div>
+            <p style="font-size:12px;color:var(--secondary);margin-top:2px">Add promising artists to your Clan. Link their other platforms, star your favourites, add notes.</p>
+          </div>
+        </div>
+        <div class="home-step">
+          <div class="home-step-num">3</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--heading)">Track</div>
+            <p style="font-size:12px;color:var(--secondary);margin-top:2px">Daily snapshots automatically collect follower, play and like data. Watch growth rates in The Cave and Footprints.</p>
+          </div>
+        </div>
+        <div class="home-step">
+          <div class="home-step-num">4</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--heading)">Promote</div>
+            <p style="font-size:12px;color:var(--secondary);margin-top:2px">Use the Firepit to generate social media posts, press releases and event copy for your artists. Export reports to share.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video placeholder -->
+    <div class="card" style="margin-bottom:24px">
+      <h3 class="section-title">Demo</h3>
+      <div style="text-align:center;padding:60px 20px;border:2px dashed var(--border);border-radius:8px">
+        <div style="font-size:48px;margin-bottom:12px">🎬</div>
+        <p style="color:var(--secondary);font-size:14px">Video walkthrough coming soon.</p>
+      </div>
+    </div>
+
+    <!-- Why 2 weeks? -->
+    <div class="card" style="margin-bottom:24px">
+      <h3 class="section-title">Why does data take time to appear?</h3>
+      <p style="font-size:14px;line-height:1.7;color:var(--body)">
+        Charts and growth metrics require at least two data points to draw a comparison. The Sound Cave collects daily snapshots via an automated tracker, so you'll start seeing meaningful trends within a few days of adding artists to your Clan. Weekly scout reports add additional depth. The more time passes, the richer and more accurate your analytics become.
+      </p>
+    </div>
+  </div>
+
   <!-- ─── THE CAVE TAB ────────────────────────────────── -->
-  <div id="tab-cave">
+  <div id="tab-cave" style="display:none">
     <div id="caveWelcome"></div>
+    <!-- Dashboard Filters -->
+    <div class="dash-filters">
+      <select class="input" id="dashGenreFilter" style="width:auto" onchange="renderCave()">
+        <option value="">All genres</option>
+      </select>
+      <input class="input" id="dashNameFilter" placeholder="Filter by artist..." style="max-width:180px" oninput="renderCave()">
+      <input class="input" id="dashMinFollow" type="number" placeholder="Min followers" style="max-width:130px" oninput="renderCave()">
+      <input class="input" id="dashMaxFollow" type="number" placeholder="Max followers" style="max-width:130px" oninput="renderCave()">
+      <button class="btn-outline" onclick="resetDashFilters()">Reset</button>
+      <div class="dash-export">
+        <button class="btn-outline" onclick="exportDashPDF()">📄 PDF</button>
+        <button class="btn-outline" onclick="exportDashEmail()">📧 Email</button>
+      </div>
+    </div>
     <div id="caveStats" class="stats-row"></div>
     <div id="caveChart" class="card" style="margin-bottom:24px"></div>
     <div class="two-col">
@@ -556,43 +268,73 @@
       </div>
     </div>
 
-    <div class="filter-panel" id="filterPanel">
-      <button class="filter-toggle" onclick="toggleFilters()">
-        <span>Filters &amp; Search</span>
-        <span class="arrow" id="filterArrow">▾</span>
-      </button>
-      <div class="filter-body" id="filterBody">
-        <div class="filter-modes">
-          <button class="mode-btn active" onclick="setSearchMode('quick', this)">⚡ Quick Search</button>
-          <button class="mode-btn" onclick="setSearchMode('scheduled', this)">📅 Scheduled Search</button>
-        </div>
-        <div class="filter-grid">
-          <input class="input" id="filterName" placeholder="Artist name...">
+    <!-- Sub-tabs -->
+    <div class="forage-tabs">
+      <button class="forage-tab active" onclick="setForageSubTab('manual', this)">🔍 Manual Search</button>
+      <button class="forage-tab" onclick="setForageSubTab('scheduled', this)">📅 Scheduled</button>
+      <button class="forage-tab" onclick="setForageSubTab('running', this)">⚡ Running</button>
+    </div>
+
+    <!-- Manual Search Sub-tab -->
+    <div id="forage-manual">
+      <div class="forage-search-form">
+        <div class="forage-search-grid">
+          <input class="input" id="filterName" placeholder="Artist name or keyword...">
           <select class="input" id="filterGenre"><option value="">All genres</option></select>
           <input class="input" id="filterMinFollow" type="number" placeholder="Min followers">
           <input class="input" id="filterMaxFollow" type="number" placeholder="Max followers">
         </div>
-        <div id="searchActions">
-          <button class="btn-red" onclick="runSearch()">Run Search</button>
-        </div>
-        <div id="scheduleActions" style="display:none">
-          <div class="schedule-row">
-            <span style="font-size:12px;color:var(--secondary)">Run every:</span>
-            <select class="input" id="scheduleFreq" style="width:auto;padding:7px 12px">
-              <option value="daily">Daily</option>
-              <option value="weekly" selected>Weekly</option>
-              <option value="biweekly">Bi-weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-            <button class="btn-red" style="padding:7px 16px;font-size:12px">Save Schedule</button>
-            <span class="schedule-badge">✅ Active · Next run: Apr 4</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div class="forage-limit-group">
+            <span style="font-size:12px;color:var(--secondary)">Max results:</span>
+            <button class="forage-limit-btn active" onclick="setSearchLimit(20, this)">20</button>
+            <button class="forage-limit-btn" onclick="setSearchLimit(50, this)">50</button>
+            <button class="forage-limit-btn" onclick="setSearchLimit(100, this)">100</button>
           </div>
+          <button class="btn-red" onclick="runLiveSearch()">🔍 Search SoundCloud</button>
         </div>
       </div>
+      <div id="liveSearchStatus" style="display:none"></div>
+      <div id="foragingRotation"></div>
+      <div id="foragingPrevious"></div>
     </div>
 
-    <div id="foragingRotation"></div>
-    <div id="foragingPrevious"></div>
+    <!-- Scheduled Sub-tab -->
+    <div id="forage-scheduled" style="display:none">
+      <div class="forage-search-form">
+        <h3 class="section-title" style="margin-bottom:14px">Create Scheduled Search</h3>
+        <div class="forage-search-grid">
+          <input class="input" id="schedName" placeholder="Search name (e.g. UK Techno Hunt)">
+          <select class="input" id="schedGenre"><option value="">All genres</option></select>
+          <input class="input" id="schedMinFollow" type="number" placeholder="Min followers">
+          <input class="input" id="schedMaxFollow" type="number" placeholder="Max followers">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--secondary)">Frequency:</span>
+          <select class="input" id="schedFreq" style="width:auto">
+            <option value="daily">Daily</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <div class="forage-limit-group" style="margin-bottom:0">
+            <span style="font-size:12px;color:var(--secondary)">Max results:</span>
+            <select class="input" id="schedLimit" style="width:auto">
+              <option value="20">20</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <button class="btn-red" onclick="saveScheduledSearch()">Save Schedule</button>
+        </div>
+      </div>
+      <div id="scheduledSearchList"></div>
+    </div>
+
+    <!-- Running Sub-tab -->
+    <div id="forage-running" style="display:none">
+      <div id="runningSearchList"></div>
+    </div>
   </div>
 
   <!-- ─── CLAN TAB ────────────────────────────────────── -->
@@ -608,6 +350,20 @@
       </div>
     </div>
     <div class="report-notice" id="reportNotice" style="display:none"></div>
+    <!-- Filters & Sort -->
+    <div class="clan-filters">
+      <input class="input" id="clanNameFilter" placeholder="Search artists..." style="max-width:200px" oninput="renderClan()">
+      <select class="input" id="clanGenreFilter" style="width:auto" onchange="renderClan()">
+        <option value="">All genres</option>
+      </select>
+      <div class="clan-sort-group">
+        <button class="clan-sort-btn active" data-sort="name" onclick="setClanSort('name', this)">Name</button>
+        <button class="clan-sort-btn" data-sort="followers" onclick="setClanSort('followers', this)">Followers</button>
+        <button class="clan-sort-btn" data-sort="plays" onclick="setClanSort('plays', this)">Plays</button>
+        <button class="clan-sort-btn" data-sort="likes" onclick="setClanSort('likes', this)">Likes</button>
+        <button class="clan-sort-btn" data-sort="genre" onclick="setClanSort('genre', this)">Genre</button>
+      </div>
+    </div>
     <div id="clanList"></div>
   </div>
 
@@ -811,1449 +567,13 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════
-     JAVASCRIPT
+     JAVASCRIPT — loaded per-tab for token efficiency
      ═══════════════════════════════════════════════════════ -->
-<script>
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STATE
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let allReports  = [];
-let currentData = null;
-let currentTab  = 'cave';
-let activeArtist = null;
-let reportMode  = false;
-let reportSelected = [];
-let filtersOpen = true;
-let searchMode  = 'quick';
-
-// Daily snapshots (loaded from data/snapshots/)
-let allSnapshots = []; // [{date, artists: {username: {followers, plays, ...}}}]
-
-// Foraging state
-let forageDismissed = []; // cut from foraging
-let forageWatching  = []; // watching list
-
-// Footprints state
-let fpSelectedArtist = null;
-let fpActiveMetric   = 'followers';
-
-// Clan detail
-let clanSelectedId = null;
-
-const PLATFORMS = ['spotify','youtube','instagram','tiktok','beatport','bandcamp','discogs'];
-const PLAT_LABELS = { spotify:'Spotify', youtube:'YouTube', instagram:'Instagram', tiktok:'TikTok', beatport:'Beatport', bandcamp:'Bandcamp', discogs:'Discogs' };
-const PLAT_ICONS  = { spotify:'🟢', youtube:'▶️', instagram:'📸', tiktok:'🎵', beatport:'🎧', bandcamp:'🎸', discogs:'💿' };
-const GENRE_COLORS = ['#e63946','#d62839','#c1121f','#a4161a','#850e14','#6a0b10','#54080c','#3d0508'];
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// LOCALSTORAGE
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function getFavourites()  { return JSON.parse(localStorage.getItem('sc_favs') || '{}'); }
-function saveFavourites(d){ localStorage.setItem('sc_favs', JSON.stringify(d)); }
-function getDismissed()   { return JSON.parse(localStorage.getItem('sc_dismissed') || '[]'); }
-function saveDismissed(d) { localStorage.setItem('sc_dismissed', JSON.stringify(d)); }
-function getWatching()    { return JSON.parse(localStorage.getItem('sc_watching') || '[]'); }
-function saveWatching(d)  { localStorage.setItem('sc_watching', JSON.stringify(d)); }
-
-function isFavourited(username) { return !!getFavourites()[username]; }
-function isCut(username) {
-  const favs = getFavourites();
-  return favs[username] ? favs[username].status === 'cut' : false;
-}
-function isWatching(username) { return getWatching().includes(username); }
-function isDismissedForage(username) { return getDismissed().includes(username); }
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FAVOURITES MANAGEMENT
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function addFavourite(track) {
-  const favs = getFavourites();
-  const user = track.user || {};
-  const username = track.artist_username || user.username || track.artist || '';
-  if (!username) return;
-  if (!favs[username]) {
-    favs[username] = {
-      username,
-      display_name: track.artist || username,
-      genre:        track.genre || '',
-      avatar_url:   track.avatar_url || user.avatar_url || '',
-      artist_url:   track.artist_url || user.permalink_url || '',
-      added_date:   today(),
-      status:       'active',
-      notes:        '',
-      platforms:    { spotify:'', youtube:'', instagram:'', tiktok:'', beatport:'', bandcamp:'', discogs:'' },
-      playlist_adds:     null,
-      preferred_tracks:  [],
-      snapshots:    [],
-      tracks_seen:  [],
-    };
-  }
-  addSnapshot(favs, username, track);
-  addTrackSeen(favs, username, track);
-  saveFavourites(favs);
-  // Remove from watching if present
-  const w = getWatching().filter(u => u !== username);
-  saveWatching(w);
-  updateCounts();
-}
-
-function addSnapshot(favs, username, track) {
-  const snap = {
-    date:          today(),
-    followers:     track.followers || 0,
-    plays:         track.plays || 0,
-    likes:         track.likes || 0,
-    reposts:       track.reposts || 0,
-    playlist_adds: favs[username].playlist_adds || null,
-    score:         track.score || 0,
-    source:        'scout',
-  };
-  const snaps = favs[username].snapshots;
-  if (!snaps.find(s => s.date === snap.date)) snaps.push(snap);
-}
-
-function addTrackSeen(favs, username, track) {
-  const seen = favs[username].tracks_seen;
-  if (!seen.find(t => t.url === track.url)) {
-    seen.push({ title: track.title, url: track.url, date: today(), score: track.score });
-  }
-}
-
-function removeFavourite() {
-  if (!activeArtist) return;
-  if (!confirm(`Remove ${activeArtist} from favourites?`)) return;
-  const favs = getFavourites();
-  delete favs[activeArtist];
-  saveFavourites(favs);
-  closePanel();
-  updateCounts();
-  refreshCurrentTab();
-}
-
-function toggleCut() {
-  if (!activeArtist) return;
-  const favs = getFavourites();
-  if (!favs[activeArtist]) return;
-  favs[activeArtist].status = favs[activeArtist].status === 'cut' ? 'active' : 'cut';
-  saveFavourites(favs);
-  document.getElementById('cutBtn').textContent = favs[activeArtist].status === 'cut' ? '♻️ Restore to tracking' : '✂️ Cut from tracking';
-  refreshCurrentTab();
-}
-
-function savePlatform(username, platform, value) {
-  const favs = getFavourites();
-  if (!favs[username]) return;
-  favs[username].platforms[platform] = value.trim();
-  saveFavourites(favs);
-}
-
-function saveNotes() {
-  if (!activeArtist) return;
-  const favs = getFavourites();
-  if (!favs[activeArtist]) return;
-  favs[activeArtist].notes = document.getElementById('artistNotes').value;
-  saveFavourites(favs);
-}
-
-function saveManualData() {
-  if (!activeArtist) return;
-  const favs = getFavourites();
-  if (!favs[activeArtist]) return;
-  const snaps = favs[activeArtist].snapshots;
-  const followers = parseInt(document.getElementById('manualFollowers').value);
-  const playlists = parseInt(document.getElementById('manualPlaylists').value);
-  if (!isNaN(followers)) {
-    favs[activeArtist].followers_override = followers;
-    if (snaps.length) snaps[snaps.length-1].followers = followers;
-  }
-  if (!isNaN(playlists)) {
-    favs[activeArtist].playlist_adds = playlists;
-    if (snaps.length) snaps[snaps.length-1].playlist_adds = playlists;
-  }
-  saveFavourites(favs);
-  renderPanel(activeArtist);
-  refreshCurrentTab();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// UTILITIES
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function today() { return new Date().toISOString().slice(0,10); }
-function fmt(n) {
-  if (n == null || isNaN(n)) return '0';
-  n = Number(n);
-  if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
-  if (n >= 1000) return (n/1000).toFixed(1)+'K';
-  return String(n);
-}
-function esc(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function daysBetween(d1, d2) {
-  return Math.round((new Date(d2) - new Date(d1)) / (1000*60*60*24));
-}
-function getTrend(first, latest) {
-  if (first == null || latest == null || first === latest) return { cls:'flat', arrow:'→', label:'Stable', pct:0 };
-  const pct = ((latest - first) / Math.max(first, 0.001)) * 100;
-  if (pct > 5)  return { cls:'up',   arrow:'↑', label:`+${pct.toFixed(0)}%`, pct };
-  if (pct < -5) return { cls:'down', arrow:'↓', label:`${pct.toFixed(0)}%`,  pct };
-  return { cls:'flat', arrow:'→', label:'Stable', pct };
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SVG CHART BUILDERS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildSparkline(data, w=80, h=28, color='#e63946') {
-  if (!data || data.length < 2) return '';
-  const min = Math.min(...data), max = Math.max(...data);
-  const range = max - min || 1;
-  const pad = 3;
-  const pts = data.map((v,i) => {
-    const x = pad + (i/(data.length-1))*(w-pad*2);
-    const y = h-pad - ((v-min)/range)*(h-pad*2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const uid = 'sp'+Math.random().toString(36).slice(2,8);
-  const first = pts[0].split(','), last = pts[pts.length-1].split(',');
-  const area = `M ${first[0]},${h} L ${pts.join(' L ')} L ${last[0]},${h} Z`;
-  return `<svg width="${w}" height="${h}" style="display:block">
-    <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-    </linearGradient></defs>
-    <path d="${area}" fill="url(#${uid})"/>
-    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-
-function buildLineChart(datasets, labels, width=600, height=220) {
-  const pl=52, pr=16, pt=12, pb=32;
-  const cw=width-pl-pr, ch=height-pt-pb;
-  const all = datasets.flatMap(d=>d.data);
-  if (!all.length) return '';
-  const maxV = Math.max(...all), minV = Math.min(...all)*0.92;
-  const range = maxV-minV||1;
-  const toX = i => pl+(i/(labels.length-1))*cw;
-  const toY = v => pt+ch-((v-minV)/range)*ch;
-  const uid = 'lc'+Math.random().toString(36).slice(2,8);
-
-  let svg = `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block">`;
-  svg += '<defs>';
-  datasets.forEach((ds,di) => {
-    svg += `<linearGradient id="${uid}-a${di}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${ds.color}" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="${ds.color}" stop-opacity="0.01"/>
-    </linearGradient>`;
-  });
-  svg += '</defs>';
-
-  // Y grid (5 lines)
-  for (let i=0; i<5; i++) {
-    const v = minV + (range*i)/4;
-    const y = toY(v).toFixed(1);
-    svg += `<line x1="${pl}" y1="${y}" x2="${pl+cw}" y2="${y}" stroke="#3a3a3a" stroke-width="1"/>`;
-    svg += `<text x="${pl-6}" y="${parseFloat(y)+4}" fill="#888" font-size="9" text-anchor="end" font-family="DM Mono,monospace">${fmt(Math.round(v))}</text>`;
-  }
-  // X labels
-  labels.forEach((l,i) => {
-    svg += `<text x="${toX(i).toFixed(1)}" y="${pt+ch+18}" fill="#aaa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif">${esc(l)}</text>`;
-  });
-  // Area + line + dots
-  datasets.forEach((ds,di) => {
-    const pts = ds.data.map((v,i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`);
-    const areaD = `M ${toX(0).toFixed(1)},${(pt+ch).toFixed(1)} L ${pts.join(' L ')} L ${toX(ds.data.length-1).toFixed(1)},${(pt+ch).toFixed(1)} Z`;
-    svg += `<path d="${areaD}" fill="url(#${uid}-a${di})"/>`;
-    const lineD = ds.data.map((v,i) => `${i===0?'M':'L'} ${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
-    svg += `<path d="${lineD}" fill="none" stroke="${ds.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-    ds.data.forEach((v,i) => {
-      svg += `<circle cx="${toX(i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="3" fill="#545454" stroke="${ds.color}" stroke-width="1.5"/>`;
-    });
-  });
-  svg += '</svg>';
-  return svg;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TAB SWITCHING
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-document.querySelectorAll('.htab').forEach(btn => {
-  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-});
-
-function switchTab(name) {
-  currentTab = name;
-  ['cave','foraging','clan','footprints','firepit'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = t === name ? 'block' : 'none';
-  });
-  document.querySelectorAll('.htab').forEach(el => {
-    el.classList.toggle('active', el.dataset.tab === name);
-  });
-  if (name === 'cave')       renderCave();
-  if (name === 'foraging')   renderForaging();
-  if (name === 'clan')       renderClan();
-  if (name === 'footprints') renderFootprints();
-  if (name === 'firepit')    renderFirepit();
-}
-
-function refreshCurrentTab() {
-  switchTab(currentTab);
-}
-
-function updateCounts() {
-  const favs = Object.values(getFavourites());
-  const active = favs.filter(a => a.status !== 'cut');
-  document.getElementById('clanCount').textContent = active.length || '';
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// DATA LOADING
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function fetchJSON(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
-
-async function init() {
-  let manifest = null;
-  try { manifest = await fetchJSON('data/manifest.json'); } catch(e) {}
-
-  // Load weekly reports
-  if (manifest && manifest.weeks && manifest.weeks.length) {
-    for (const file of [...manifest.weeks].reverse()) {
-      try { const d = await fetchJSON(`data/${file}`); if (d) allReports.push(d); } catch(e) {}
-    }
-  }
-  if (allReports.length) {
-    currentData = allReports[0];
-    syncFavouriteSnapshots();
-  }
-
-  // Load daily snapshots
-  if (manifest && manifest.snapshots && manifest.snapshots.length) {
-    for (const file of manifest.snapshots) {
-      try { const d = await fetchJSON(`data/snapshots/${file}`); if (d) allSnapshots.push(d); } catch(e) {}
-    }
-    if (allSnapshots.length) {
-      syncDailySnapshots();
-      console.log(`Loaded ${allSnapshots.length} daily snapshot(s)`);
-    }
-  }
-
-  // Populate genre filter
-  const genres = new Set();
-  allReports.forEach(r => (r.tracks||[]).forEach(t => { if (t.genre) genres.add(t.genre); }));
-  const sel = document.getElementById('filterGenre');
-  [...genres].sort().forEach(g => {
-    sel.innerHTML += `<option value="${esc(g)}">${esc(g)}</option>`;
-  });
-  updateCounts();
-  renderCave();
-}
-
-function syncFavouriteSnapshots() {
-  const favs = getFavourites();
-  if (!Object.keys(favs).length) return;
-  for (const report of allReports) {
-    for (const track of (report.tracks||[])) {
-      const u = track.artist_username;
-      if (favs[u]) {
-        addSnapshot(favs, u, track);
-        addTrackSeen(favs, u, track);
-      }
-    }
-  }
-  saveFavourites(favs);
-}
-
-function syncDailySnapshots() {
-  // Merge daily snapshot data into favourites as additional datapoints.
-  // This gives us daily granularity instead of just weekly.
-  const favs = getFavourites();
-  if (!Object.keys(favs).length) return;
-
-  for (const snapshot of allSnapshots) {
-    const date = snapshot.date;
-    const artists = snapshot.artists || {};
-
-    for (const [username, data] of Object.entries(artists)) {
-      if (!favs[username]) continue;
-      const snaps = favs[username].snapshots;
-
-      // Skip if we already have a snapshot for this date
-      if (snaps.find(s => s.date === date)) continue;
-
-      snaps.push({
-        date:          date,
-        followers:     data.followers || 0,
-        plays:         data.total_plays || 0,
-        likes:         data.total_likes || 0,
-        reposts:       data.total_reposts || 0,
-        playlist_adds: favs[username].playlist_adds || null,
-        score:         0, // daily snapshots don't have a discovery score
-        source:        'daily',
-      });
-    }
-
-    // Sort snapshots by date
-    for (const a of Object.values(favs)) {
-      if (a.snapshots) {
-        a.snapshots.sort((a, b) => a.date.localeCompare(b.date));
-      }
-    }
-  }
-  saveFavourites(favs);
-}
-
-// Helper: get snapshot time series for any artist from daily data
-// (works even if they're not favourited yet)
-function getArtistTimeSeries(username) {
-  return allSnapshots
-    .filter(s => s.artists && s.artists[username])
-    .map(s => ({ date: s.date, ...s.artists[username] }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TAB: THE CAVE (Dashboard)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function renderCave() {
-  const favs = getFavourites();
-  const clan = Object.values(favs).filter(a => a.status !== 'cut');
-
-  // Welcome
-  document.getElementById('caveWelcome').innerHTML = `
-    <div style="margin-bottom:28px">
-      <h1 style="font-size:26px;font-weight:700;color:var(--heading)">Welcome back, Caveman 🔥</h1>
-      <p style="color:var(--secondary);margin-top:6px;font-size:14px">Here's what's echoing through the cave.</p>
-    </div>`;
-
-  // Aggregate stats from all clan snapshots
-  let totalFollowers=0, totalLikes=0, totalPlays=0, totalPlAdds=0;
-  let prevFollowers=0, prevLikes=0, prevPlays=0, prevPlAdds=0;
-  const followerSeries=[], likesSeries=[], playsSeries=[], plAddsSeries=[];
-
-  if (clan.length) {
-    // Gather per-week aggregates across reports
-    const weekAggs = allReports.slice(0,6).reverse().map(report => {
-      let wf=0, wl=0, wp=0, wpa=0;
-      (report.tracks||[]).forEach(t => {
-        if (favs[t.artist_username]) {
-          wf += t.followers||0;
-          wl += t.likes||0;
-          wp += t.plays||0;
-        }
-      });
-      clan.forEach(a => { wpa += a.playlist_adds||0; });
-      return { followers:wf, likes:wl, plays:wp, playlistAdds:wpa };
-    });
-    weekAggs.forEach(w => {
-      followerSeries.push(w.followers);
-      likesSeries.push(w.likes);
-      playsSeries.push(w.plays);
-      plAddsSeries.push(w.playlistAdds);
-    });
-    const latest = weekAggs[weekAggs.length-1] || {};
-    const prev   = weekAggs[weekAggs.length-2] || latest;
-    totalFollowers = latest.followers; totalLikes = latest.likes;
-    totalPlays = latest.plays; totalPlAdds = latest.playlistAdds;
-    prevFollowers = prev.followers; prevLikes = prev.likes;
-    prevPlays = prev.plays; prevPlAdds = prev.playlistAdds;
-  }
-
-  const diff = (a,b) => a-b;
-
-  document.getElementById('caveStats').innerHTML = [
-    buildStatCard('Followers Gained', fmt(diff(totalFollowers,prevFollowers)||0), `${fmt(Math.abs(diff(totalFollowers,prevFollowers)))} this week`, diff(totalFollowers,prevFollowers)>=0, followerSeries),
-    buildStatCard('Likes Gained', fmt(diff(totalLikes,prevLikes)||0), `${fmt(Math.abs(diff(totalLikes,prevLikes)))} this week`, diff(totalLikes,prevLikes)>=0, likesSeries),
-    buildStatCard('Listens Gained', fmt(diff(totalPlays,prevPlays)||0), `${fmt(Math.abs(diff(totalPlays,prevPlays)))} this week`, diff(totalPlays,prevPlays)>=0, playsSeries),
-    buildStatCard('Playlist Adds', fmt(totalPlAdds), `${fmt(totalPlAdds)} total`, true, plAddsSeries),
-  ].join('');
-
-  // Weekly chart
-  const chartLabels = allReports.slice(0,6).reverse().map(r => r.date ? r.date.slice(5) : `Wk${r.week}`);
-  const chartEl = document.getElementById('caveChart');
-  if (followerSeries.length >= 2) {
-    chartEl.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 class="section-title" style="margin:0">Weekly Stats</h3>
-        <div style="display:flex;gap:16px">
-          ${[{l:'Followers',c:'#e63946'},{l:'Likes',c:'#c1121f'},{l:'Listens',c:'#a4161a'},{l:'Pl. Adds',c:'#7a0c10'}]
-            .map(x=>`<div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:2px;background:${x.c};border-radius:1px"></div><span style="font-size:11px;color:var(--secondary)">${x.l}</span></div>`).join('')}
-        </div>
-      </div>
-      ${buildLineChart([
-        {label:'Followers',color:'#e63946',data:followerSeries},
-        {label:'Likes',color:'#c1121f',data:likesSeries},
-        {label:'Listens',color:'#a4161a',data:playsSeries},
-        {label:'Pl. Adds',color:'#7a0c10',data:plAddsSeries},
-      ], chartLabels)}`;
-  } else {
-    chartEl.innerHTML = `<div class="empty"><div class="ico">📊</div><p>Charts will appear once you have 2+ weeks of data and favourited artists.</p></div>`;
-  }
-
-  // Genre breakdown
-  const genreCounts = {};
-  clan.forEach(a => { const g = a.genre || 'Unknown'; genreCounts[g] = (genreCounts[g]||0)+1; });
-  const genreTotal = clan.length || 1;
-  const genreSorted = Object.entries(genreCounts).sort((a,b) => b[1]-a[1]);
-  document.getElementById('caveGenre').innerHTML = `
-    <h3 class="section-title">Genre Breakdown</h3>
-    ${genreSorted.length ? genreSorted.map(([g, count], i) => {
-      const pct = Math.round((count/genreTotal)*100);
-      return `<div class="genre-row">
-        <div class="genre-row-header">
-          <span class="genre-name">${esc(g)}</span>
-          <span class="genre-pct">${pct}%</span>
-        </div>
-        <div class="genre-bar-bg"><div class="genre-bar-fill" style="width:${pct}%;background:${GENRE_COLORS[i%GENRE_COLORS.length]}"></div></div>
-      </div>`;
-    }).join('') : '<p style="color:var(--muted);font-size:13px">No genres yet — add artists to your Clan.</p>'}`;
-
-  // New track drops
-  const recentTracks = [];
-  if (currentData) {
-    (currentData.tracks||[]).forEach(t => {
-      if (favs[t.artist_username]) {
-        recentTracks.push({ artist: t.artist, title: t.title, date: currentData.date, url: t.url });
-      }
-    });
-  }
-  document.getElementById('caveTracks').innerHTML = `
-    <h3 class="section-title">New Track Drops 🎵</h3>
-    ${recentTracks.length ? recentTracks.slice(0,6).map(t => `
-      <div class="track-drop">
-        <div>
-          <div class="track-drop-title">${esc(t.title)}</div>
-          <div class="track-drop-artist">${esc(t.artist)}</div>
-        </div>
-        <div class="track-drop-right">
-          <span class="track-drop-date">${t.date||''}</span>
-          ${t.url ? `<a class="sc-link" href="${t.url}" target="_blank" rel="noopener">▶</a>` : ''}
-        </div>
-      </div>`).join('') : '<p style="color:var(--muted);font-size:13px">No new drops from Clan artists this week.</p>'}`;
-
-  // Artists being followed
-  document.getElementById('caveArtists').innerHTML = `
-    <h3 class="section-title">Artists Being Followed</h3>
-    ${clan.length ? `<div class="artist-grid">${clan.map(a => {
-      const snaps = a.snapshots||[];
-      const latest = snaps[snaps.length-1]||{};
-      const first  = snaps[0]||{};
-      const trend  = getTrend(first.score, latest.score);
-      return `<div class="artist-tile" onclick="openPanel('${esc(a.username)}')">
-        <div>
-          <div class="artist-tile-name">${esc(a.display_name)}</div>
-          <div class="artist-tile-genre">${esc(a.genre)}</div>
-          <div class="artist-tile-followers">${fmt(a.followers_override!=null ? a.followers_override : (latest.followers||0))}</div>
-        </div>
-        <span class="trend-arrow ${trend.cls==='up'?'up':'down'}">${trend.cls==='up'?'↑':'↓'}</span>
-      </div>`;
-    }).join('')}</div>` : '<p style="color:var(--muted);font-size:13px">No artists yet — discover some in Foraging.</p>'}`;
-}
-
-function buildStatCard(label, value, trendText, trendUp, sparkData) {
-  return `<div class="stat-card">
-    <div class="stat-label">${label}</div>
-    <div class="stat-row">
-      <div>
-        <div class="stat-value">${value}</div>
-        <div class="stat-trend ${trendUp?'up':'down'}">${trendUp?'▲':'▼'} ${trendText}</div>
-      </div>
-      <div>${buildSparkline(sparkData)}</div>
-    </div>
-  </div>`;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TAB: FORAGING (Discovery)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function toggleFilters() {
-  filtersOpen = !filtersOpen;
-  document.getElementById('filterBody').style.display = filtersOpen ? 'block' : 'none';
-  document.getElementById('filterArrow').classList.toggle('open', filtersOpen);
-}
-
-function setSearchMode(mode, btn) {
-  searchMode = mode;
-  document.querySelectorAll('.filter-modes .mode-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('searchActions').style.display = mode==='quick' ? 'block' : 'none';
-  document.getElementById('scheduleActions').style.display = mode==='scheduled' ? 'block' : 'none';
-}
-
-function runSearch() {
-  // Re-render with filters applied
-  renderForaging();
-}
-
-function renderForaging() {
-  if (!allReports.length) {
-    document.getElementById('foragingRotation').innerHTML = `
-      <div class="empty"><div class="ico">🏹</div><p>No reports yet. Run <code>scout.py</code> to generate the first weekly report.</p></div>`;
-    document.getElementById('foragingPrevious').innerHTML = '';
-    return;
-  }
-
-  const favs = getFavourites();
-  const dismissed = getDismissed();
-  const watching = getWatching();
-  const autoCutDays = parseInt(document.getElementById('autoCutSelect').value) || 90;
-
-  // Get filter values
-  const nameFilter  = (document.getElementById('filterName').value||'').toLowerCase();
-  const genreFilter = document.getElementById('filterGenre').value;
-  const minF = parseInt(document.getElementById('filterMinFollow').value) || 0;
-  const maxF = parseInt(document.getElementById('filterMaxFollow').value) || Infinity;
-
-  function matchesFilters(t) {
-    if (nameFilter && !(t.artist||'').toLowerCase().includes(nameFilter)) return false;
-    if (genreFilter && t.genre !== genreFilter) return false;
-    if ((t.followers||0) < minF) return false;
-    if ((t.followers||0) > maxF) return false;
-    return true;
-  }
-
-  // Current week rotation = latest report tracks not yet actioned
-  const currentTracks = (currentData ? currentData.tracks||[] : [])
-    .filter(t => !favs[t.artist_username] && !dismissed.includes(t.artist_username) && !watching.includes(t.artist_username))
-    .filter(matchesFilters);
-
-  // Watching: artists in watching list, pull latest data from any report
-  const watchingArtists = [];
-  watching.forEach(username => {
-    for (const r of allReports) {
-      const t = (r.tracks||[]).find(t => t.artist_username === username);
-      if (t) { watchingArtists.push({...t, discoveredDate: r.date}); break; }
-    }
-  });
-
-  // Pending: artists from older reports, not actioned, not in current week
-  const currentUsernames = new Set((currentData ? currentData.tracks||[] : []).map(t => t.artist_username));
-  const pendingArtists = [];
-  allReports.slice(1).forEach(report => {
-    (report.tracks||[]).forEach(t => {
-      if (!favs[t.artist_username] && !dismissed.includes(t.artist_username) &&
-          !watching.includes(t.artist_username) && !currentUsernames.has(t.artist_username) &&
-          !pendingArtists.find(p => p.artist_username === t.artist_username)) {
-        const daysOld = daysBetween(report.date, today());
-        if (daysOld < autoCutDays) {
-          pendingArtists.push({...t, discoveredDate: report.date, daysLeft: autoCutDays - daysOld});
-        }
-      }
-    });
-  });
-
-  // Render rotation
-  document.getElementById('foragingRotation').innerHTML = `
-    <div style="margin-bottom:28px">
-      <h3 class="section-title">This Week's Rotation</h3>
-      ${currentTracks.length ? currentTracks.map(t => buildForageCard(t, 'rotation')).join('') :
-        '<p style="color:var(--muted);font-size:13px;padding:12px 0">No artists in current rotation. Run <code>scout.py</code> for fresh discoveries.</p>'}
-    </div>`;
-
-  // Render previously discovered
-  let prevHTML = '<h3 class="section-title">Previously Discovered</h3>';
-  if (watchingArtists.length) {
-    prevHTML += `<div style="margin-bottom:18px">
-      <div class="section-label">👁️ Watching</div>
-      ${watchingArtists.map(t => buildForageCard(t, 'watching')).join('')}
-    </div>`;
-  }
-  if (pendingArtists.length) {
-    prevHTML += `<div>
-      <div class="section-label">⏳ Pending</div>
-      ${pendingArtists.map(t => buildForageCard(t, 'pending')).join('')}
-    </div>`;
-  }
-  if (!watchingArtists.length && !pendingArtists.length) {
-    prevHTML += '<p style="color:var(--muted);font-size:13px">No previously discovered artists.</p>';
-  }
-  document.getElementById('foragingPrevious').innerHTML = prevHTML;
-}
-
-function buildForageCard(t, source) {
-  const username = t.artist_username || '';
-  const timerHTML = source === 'pending' && t.daysLeft != null ?
-    `<div class="forage-timer ${t.daysLeft < 14 ? 'urgent' : 'normal'}">⏳ ${t.daysLeft} days until auto-cut</div>` : '';
-
-  const clanBtn = `<button class="action-btn clan-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','clan')"><span class="icon">🦴</span>Clan</button>`;
-  const watchBtn = source !== 'watching' ?
-    `<button class="action-btn watch-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','watch')"><span class="icon">👁️</span>Watch</button>` : '';
-  const cutBtn = `<button class="action-btn cut-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','cut')"><span class="icon">✂️</span>Cut</button>`;
-
-  return `<div class="forage-card" onclick="openPanel('${esc(username)}')">
-    <div class="forage-info">
-      <div class="forage-name">${esc(t.artist)}</div>
-      <div class="forage-meta">${esc(t.genre)} · ${fmt(t.followers)} followers</div>
-      <div class="forage-track">🎵 ${esc(t.title)}</div>
-      ${timerHTML}
-    </div>
-    <div class="forage-actions">
-      ${clanBtn}${watchBtn}${cutBtn}
-    </div>
-  </div>`;
-}
-
-function forageAction(username, action) {
-  if (action === 'clan') {
-    // Find in reports and add as favourite
-    for (const r of allReports) {
-      const track = (r.tracks||[]).find(t => t.artist_username === username);
-      if (track) { addFavourite(track); break; }
-    }
-    // Remove from watching
-    saveWatching(getWatching().filter(u => u !== username));
-  } else if (action === 'watch') {
-    const w = getWatching();
-    if (!w.includes(username)) { w.push(username); saveWatching(w); }
-  } else if (action === 'cut') {
-    const d = getDismissed();
-    if (!d.includes(username)) { d.push(username); saveDismissed(d); }
-    saveWatching(getWatching().filter(u => u !== username));
-  }
-  updateCounts();
-  renderForaging();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TAB: CLAN (Favourites)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function toggleReportMode() {
-  reportMode = !reportMode;
-  reportSelected = [];
-  clanSelectedId = null;
-  const btn = document.getElementById('reportBtn');
-  btn.textContent = reportMode ? '✓ Building Report' : '📋 Report Builder';
-  btn.classList.toggle('active', reportMode);
-  renderClan();
-}
-
-function renderClan() {
-  const favs = getFavourites();
-  const clan = Object.values(favs).filter(a => a.status !== 'cut');
-
-  document.getElementById('clanSubtitle').textContent = `${clan.length} artists in your roster.`;
-
-  // Report mode notice
-  const notice = document.getElementById('reportNotice');
-  const exportBtn = document.getElementById('exportReportBtn');
-  if (reportMode) {
-    notice.style.display = 'block';
-    notice.textContent = `Click artists to select them for the report. ${reportSelected.length} selected.`;
-    if (reportSelected.length) {
-      exportBtn.style.display = 'inline-block';
-      exportBtn.textContent = `⬇ Export ${reportSelected.length} Artists`;
-    } else {
-      exportBtn.style.display = 'none';
-    }
-  } else {
-    notice.style.display = 'none';
-    exportBtn.style.display = 'none';
-  }
-
-  if (!clan.length) {
-    document.getElementById('clanList').innerHTML = `
-      <div class="empty"><div class="ico">🦴</div><p>No Clan members yet.<br>Discover artists in Foraging and add them to your Clan.</p></div>`;
-    return;
-  }
-
-  document.getElementById('clanList').innerHTML = clan.map(a => {
-    const snaps   = a.snapshots||[];
-    const latest  = snaps[snaps.length-1]||{};
-    const first   = snaps[0]||{};
-    const trend   = getTrend(first.score, latest.score);
-    const isSelected = clanSelectedId === a.username;
-    const inReport = reportSelected.includes(a.username);
-    const followers = a.followers_override != null ? a.followers_override : (latest.followers||0);
-
-    let html = `<div class="clan-row ${isSelected?'selected':''} ${inReport?'in-report':''}" onclick="clanRowClick('${esc(a.username)}')">`;
-
-    if (reportMode) {
-      html += `<div class="clan-check ${inReport?'checked':''}">${inReport?'<span style="color:#fff;font-size:10px">✓</span>':''}</div>`;
-    }
-
-    html += `<div class="clan-row-info">
-      <div>
-        <div style="font-size:14px;font-weight:600;color:var(--body)">${esc(a.display_name)}</div>
-        <div style="font-size:11px;color:var(--secondary)">${esc(a.genre)}</div>
-      </div>
-      <div class="data-pill"><div class="data-pill-value">${fmt(followers)}</div><div class="data-pill-label">Followers</div></div>
-      <div class="data-pill"><div class="data-pill-value">${fmt(latest.plays||0)}</div><div class="data-pill-label">Plays</div></div>
-      <div class="data-pill"><div class="data-pill-value">${latest.playlist_adds!=null?latest.playlist_adds:'—'}</div><div class="data-pill-label">Pl. Adds</div></div>
-      <div class="data-pill"><div class="data-pill-value">${fmt(latest.likes||0)}</div><div class="data-pill-label">Likes</div></div>
-      <div class="clan-trend">
-        <span class="clan-trend-pct" style="color:${trend.cls==='up'?'var(--red)':'var(--muted)'}">${trend.label}</span>
-        <span class="trend-arrow ${trend.cls==='up'?'up':'down'}">${trend.arrow}</span>
-      </div>
-    </div></div>`;
-
-    // Expanded detail (Clan-specific: preferred tracks, export)
-    if (isSelected && !reportMode) {
-      const prefs = a.preferred_tracks || [];
-      html += `<div class="clan-detail">
-        <div class="detail-grid">
-          <div>
-            <div class="detail-section-label">Contact &amp; Links</div>
-            ${['spotify','instagram','youtube','bandcamp','discogs','beatport'].map(p => `
-              <div class="detail-field">
-                <label>${PLAT_LABELS[p]||p}</label>
-                <input class="input input-sm" placeholder="${PLAT_LABELS[p]||p} URL or handle..."
-                  value="${esc((a.platforms||{})[p]||'')}"
-                  onblur="savePlatform('${esc(a.username)}','${p}',this.value)">
-              </div>`).join('')}
-          </div>
-          <div>
-            <div class="detail-section-label">Preferred Tracks</div>
-            ${prefs.length ? prefs.map((t,i) => `
-              <div class="preferred-track">
-                <span>🎵 ${esc(t)}</span>
-                <span class="remove" onclick="removePreferredTrack('${esc(a.username)}',${i})">✕</span>
-              </div>`).join('') : '<p style="font-size:12px;color:var(--muted);margin-bottom:8px">No tracks added yet.</p>'}
-            <div class="add-track-row">
-              <input class="input input-sm" id="addTrackInput" placeholder="Add track name..."
-                onkeydown="if(event.key==='Enter'){addPreferredTrack('${esc(a.username)}')}">
-              <button class="btn-red" style="padding:7px 12px;font-size:12px" onclick="addPreferredTrack('${esc(a.username)}')">+</button>
-            </div>
-            <div style="margin-top:16px">
-              <div class="detail-section-label">Notes</div>
-              <textarea class="notes-area" style="min-height:60px" placeholder="Personal notes..."
-                onblur="saveClanNotes('${esc(a.username)}',this.value)">${esc(a.notes||'')}</textarea>
-            </div>
-            <button class="btn-outline" style="margin-top:12px" onclick="exportSingleArtist('${esc(a.username)}')">⬇ Export Artist</button>
-          </div>
-        </div>
-      </div>`;
-    }
-    return html;
-  }).join('');
-}
-
-function clanRowClick(username) {
-  if (reportMode) {
-    const idx = reportSelected.indexOf(username);
-    if (idx >= 0) reportSelected.splice(idx, 1);
-    else reportSelected.push(username);
-    renderClan();
-  } else {
-    clanSelectedId = clanSelectedId === username ? null : username;
-    renderClan();
-  }
-}
-
-function addPreferredTrack(username) {
-  const input = document.getElementById('addTrackInput');
-  const track = (input.value||'').trim();
-  if (!track) return;
-  const favs = getFavourites();
-  if (!favs[username]) return;
-  if (!favs[username].preferred_tracks) favs[username].preferred_tracks = [];
-  favs[username].preferred_tracks.push(track);
-  saveFavourites(favs);
-  input.value = '';
-  renderClan();
-}
-
-function removePreferredTrack(username, idx) {
-  const favs = getFavourites();
-  if (!favs[username] || !favs[username].preferred_tracks) return;
-  favs[username].preferred_tracks.splice(idx, 1);
-  saveFavourites(favs);
-  renderClan();
-}
-
-function saveClanNotes(username, value) {
-  const favs = getFavourites();
-  if (!favs[username]) return;
-  favs[username].notes = value;
-  saveFavourites(favs);
-}
-
-function exportSingleArtist(username) {
-  const favs = getFavourites();
-  const a = favs[username];
-  if (!a) return;
-  const snaps = a.snapshots||[];
-  const latest = snaps[snaps.length-1]||{};
-  const rows = [
-    ['Field','Value'],
-    ['Name', a.display_name],
-    ['Genre', a.genre],
-    ['Followers', a.followers_override!=null ? a.followers_override : (latest.followers||0)],
-    ['Plays', latest.plays||0],
-    ['Likes', latest.likes||0],
-    ['Playlist Adds', latest.playlist_adds!=null ? latest.playlist_adds : ''],
-    ['Score', latest.score||0],
-    ['Spotify', (a.platforms||{}).spotify||''],
-    ['Instagram', (a.platforms||{}).instagram||''],
-    ['YouTube', (a.platforms||{}).youtube||''],
-    ['Bandcamp', (a.platforms||{}).bandcamp||''],
-    ['Discogs', (a.platforms||{}).discogs||''],
-    ['Preferred Tracks', (a.preferred_tracks||[]).join('; ')],
-    ['Notes', a.notes||''],
-  ];
-  downloadCSV(rows, `${a.display_name.replace(/ /g,'_')}_SoundCave.csv`);
-}
-
-function exportReport() {
-  const favs = getFavourites();
-  const headers = ['Name','Genre','Followers','Plays','Likes','Score','Trend','Playlist Adds','Platforms Linked','Preferred Tracks','Notes'];
-  const rows = [headers];
-  reportSelected.forEach(username => {
-    const a = favs[username];
-    if (!a) return;
-    const snaps = a.snapshots||[];
-    const latest = snaps[snaps.length-1]||{};
-    const first  = snaps[0]||{};
-    const trend  = getTrend(first.score, latest.score);
-    const linked = Object.values(a.platforms||{}).filter(v=>v).length;
-    rows.push([
-      a.display_name, a.genre,
-      a.followers_override!=null ? a.followers_override : (latest.followers||0),
-      latest.plays||0, latest.likes||0, (latest.score||0).toFixed(1),
-      trend.label, latest.playlist_adds!=null?latest.playlist_adds:'',
-      `${linked}/${PLATFORMS.length}`,
-      (a.preferred_tracks||[]).join('; '), a.notes||''
-    ]);
-  });
-  downloadCSV(rows, 'SoundCave_Report.csv');
-}
-
-function downloadCSV(rows, filename) {
-  const csv = rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// TAB: FOOTPRINTS (Tracking)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const FP_METRICS = [
-  { key:'followers', label:'Followers' },
-  { key:'plays',     label:'Plays' },
-  { key:'likes',     label:'Likes' },
-  { key:'score',     label:'Score' },
-];
-
-function renderFootprints() {
-  const favs = getFavourites();
-  const clan = Object.values(favs).filter(a => a.status !== 'cut');
-
-  if (!clan.length) {
-    document.getElementById('fpSummary').innerHTML = '';
-    document.getElementById('fpLayout').innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="ico">🐾</div><p>No tracked artists yet. Add some from Foraging.</p></div>`;
-    document.getElementById('fpInsights').innerHTML = '';
-    return;
-  }
-
-  if (!fpSelectedArtist || !favs[fpSelectedArtist]) fpSelectedArtist = clan[0].username;
-
-  // Calculate movers
-  const movers = clan.map(a => {
-    const snaps = a.snapshots||[];
-    if (snaps.length < 2) return { ...a, gain: 0 };
-    const first = snaps[0].followers||1;
-    const last  = snaps[snaps.length-1].followers||1;
-    return { ...a, gain: ((last-first)/first*100) };
-  }).sort((a,b) => b.gain - a.gain);
-
-  const declining = movers.filter(a => a.gain < 0);
-
-  // Summary
-  const avgGain = movers.reduce((s,a) => s+a.gain, 0) / movers.length;
-  document.getElementById('fpSummary').innerHTML = `
-    <div class="stat-card summary-card"><div class="stat-label">Total Tracked</div>
-      <div class="stat-value">${clan.length}</div><div class="summary-suffix">artists</div></div>
-    <div class="stat-card summary-card"><div class="stat-label">Avg. Growth</div>
-      <div class="stat-value red">${avgGain>=0?'+':''}${avgGain.toFixed(1)}%</div><div class="summary-suffix">across all snapshots</div></div>
-    <div class="stat-card summary-card"><div class="stat-label">Top Mover</div>
-      <div class="stat-value red">${esc(movers[0]?.display_name||'—')}</div><div class="summary-suffix">+${(movers[0]?.gain||0).toFixed(1)}%</div></div>
-    <div class="stat-card summary-card"><div class="stat-label">Declining</div>
-      <div class="stat-value">${declining.length}</div><div class="summary-suffix">flagged</div></div>`;
-
-  // Sidebar
-  document.getElementById('fpSidebar').innerHTML = `
-    <div class="fp-sidebar-head">Artists</div>
-    ${clan.map(a => {
-      const snaps = a.snapshots||[];
-      const latest = snaps[snaps.length-1]||{};
-      return `<div class="fp-artist-item ${fpSelectedArtist===a.username?'active':''}" onclick="fpSelectArtist('${esc(a.username)}')">
-        <div class="fp-artist-name">${esc(a.display_name)}</div>
-        <div class="fp-artist-meta">${esc(a.genre)} · ${fmt(a.followers_override!=null?a.followers_override:(latest.followers||0))}</div>
-      </div>`;
-    }).join('')}`;
-
-  // Chart area
-  const artist = favs[fpSelectedArtist];
-  if (artist) {
-    const snaps = artist.snapshots||[];
-    const trend = snaps.length >= 2 ? getTrend(snaps[0].score, snaps[snaps.length-1].score) : {cls:'flat',label:'Stable',arrow:'→'};
-    const labels = snaps.map((s,i) => s.date ? s.date.slice(5) : `S${i+1}`);
-    const metricData = snaps.map(s => s[fpActiveMetric]||0);
-
-    document.getElementById('fpChart').innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div>
-          <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--heading)">${esc(artist.display_name)}</h3>
-          <span style="font-size:12px;color:var(--secondary)">${esc(artist.genre)}</span>
-        </div>
-        <span style="font-family:'DM Mono',monospace;font-size:14px;color:${trend.cls==='up'?'var(--red)':'var(--muted)'}">
-          ${trend.label} ${trend.arrow}
-        </span>
-      </div>
-      <div class="metric-tabs">
-        ${FP_METRICS.map(m => `<button class="metric-tab ${fpActiveMetric===m.key?'active':''}" onclick="fpSetMetric('${m.key}')">${m.label}</button>`).join('')}
-      </div>
-      ${snaps.length >= 2 ? buildLineChart([{label:fpActiveMetric, color:'#e63946', data:metricData}], labels) :
-        '<div style="text-align:center;padding:40px;color:var(--muted)">Need 2+ snapshots for charts. Run scout.py again next week.</div>'}
-      <div class="wow-grid">
-        ${FP_METRICS.map(m => {
-          const vals = snaps.map(s => s[m.key]||0);
-          const last = vals[vals.length-1]||0;
-          const prev = vals[vals.length-2]||last;
-          const pct = prev ? (((last-prev)/prev)*100).toFixed(1) : '0.0';
-          const up = parseFloat(pct) >= 0;
-          return `<div class="wow-card">
-            <div class="wow-label">${m.label}</div>
-            <div class="wow-value">${m.key==='score'?last.toFixed(1):fmt(last)}</div>
-            <div class="wow-change" style="color:${up?'var(--red)':'var(--muted)'}">${up?'▲':'▼'} ${Math.abs(parseFloat(pct))}% WoW</div>
-          </div>`;
-        }).join('')}
-      </div>`;
-  }
-
-  // Insights
-  document.getElementById('fpInsights').innerHTML = `
-    <h3 class="section-title">Key Insights</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${movers.filter(a=>a.gain>0).slice(0,2).map(a => `
-        <div class="insight-row">
-          <span class="insight-icon">🚀</span>
-          <div>
-            <div class="insight-name">${esc(a.display_name)}</div>
-            <div class="insight-detail" style="color:var(--red)">+${a.gain.toFixed(1)}% follower growth</div>
-          </div>
-        </div>`).join('')}
-      ${declining.slice(0,2).map(a => `
-        <div class="insight-row">
-          <span class="insight-icon">⚠️</span>
-          <div>
-            <div class="insight-name">${esc(a.display_name)}</div>
-            <div class="insight-detail" style="color:var(--muted)">Declining — worth reviewing</div>
-          </div>
-        </div>`).join('')}
-      ${!movers.filter(a=>a.gain>0).length && !declining.length ? '<p style="color:var(--muted);font-size:13px;grid-column:1/-1">Insights will appear once you have more data.</p>' : ''}
-    </div>`;
-}
-
-function fpSelectArtist(username) {
-  fpSelectedArtist = username;
-  renderFootprints();
-}
-
-function fpSetMetric(key) {
-  fpActiveMetric = key;
-  renderFootprints();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FIREPIT — CONTENT PRODUCTION
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let firepitMode = 'forge';
-let forgeGeneratedContent = '';
-let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
-
-const CONTENT_TYPES = {
-  ig_reel:      { label:'IG Reel Caption',     icon:'📸', fields:['artist','freeform'], maxLength:2200 },
-  ig_carousel:  { label:'IG Carousel',         icon:'📸', fields:['artist','freeform'], maxLength:2200 },
-  tiktok:       { label:'TikTok Caption',      icon:'🎵', fields:['artist','freeform'], maxLength:300 },
-  x_post:       { label:'X/Twitter Post',      icon:'𝕏',  fields:['artist','freeform'], maxLength:280 },
-  yt_short:     { label:'YouTube Short Desc',  icon:'▶️', fields:['artist','freeform'], maxLength:5000 },
-  lineup_copy:  { label:'Lineup Poster Copy',  icon:'🎪', fields:['event','artist_list','freeform'] },
-  aftermovie:   { label:'Aftermovie Script',   icon:'🎬', fields:['event','freeform'] },
-  teaser:       { label:'Event Teaser',        icon:'🔥', fields:['event','artist','freeform'] },
-  pre_release:  { label:'Pre-Release Teaser',  icon:'💿', fields:['artist','release','freeform'] },
-  premiere:     { label:'Premiere Pitch Email', icon:'📧', fields:['artist','release','freeform'] },
-  dj_support:   { label:'DJ Support Roundup',  icon:'🎧', fields:['release','freeform'] },
-  artist_bio:   { label:'Artist Spotlight/Bio', icon:'✨', fields:['artist','freeform'] },
-  press:        { label:'Press Release',       icon:'📰', fields:['artist','release','event','freeform'] },
-  newsletter:   { label:'Newsletter Roundup',  icon:'📬', fields:['freeform'] },
-  mix_desc:     { label:'Mix Description',     icon:'🎛️', fields:['artist','freeform'] },
-  playlist_desc:{ label:'Playlist Description', icon:'📋', fields:['freeform'] },
-};
-
-function getContentLibrary() { return JSON.parse(localStorage.getItem('sc_content_library') || '[]'); }
-function saveContentLibrary(d) { localStorage.setItem('sc_content_library', JSON.stringify(d)); }
-
-function setFirepitMode(mode, btn) {
-  firepitMode = mode;
-  document.querySelectorAll('.firepit-mode').forEach(el => el.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  ['forge','stash','trailmap'].forEach(m => {
-    const el = document.getElementById(`firepit-${m}`);
-    if (el) el.style.display = m === mode ? 'block' : 'none';
-  });
-  if (mode === 'stash') renderStash();
-}
-
-function renderFirepit() {
-  updateForgeFields();
-  updateStashCount();
-  populateStashTypeFilter();
-  checkApiStatus();
-}
-
-function updateForgeFields() {
-  const type = document.getElementById('forgeContentType').value;
-  const ct = CONTENT_TYPES[type];
-  if (!ct) return;
-  const container = document.getElementById('forgeDynamicFields');
-  const favs = getFavourites();
-  const artists = Object.entries(favs).filter(([,a]) => a.status !== 'cut').map(([u,a]) => ({username:u, name:a.display_name||u}));
-  let html = '';
-
-  if (ct.fields.includes('artist')) {
-    html += `<div class="forge-input-group">
-      <label class="forge-label">Artist</label>
-      <select class="input" id="forgeArtist">
-        <option value="">Select artist...</option>
-        ${artists.map(a => `<option value="${esc(a.username)}">${esc(a.name)}</option>`).join('')}
-        <option value="__custom">Custom (type below)</option>
-      </select>
-    </div>`;
-  }
-  if (ct.fields.includes('artist_list')) {
-    html += `<div class="forge-input-group">
-      <label class="forge-label">Artists (lineup)</label>
-      <textarea class="input" id="forgeArtistList" rows="2" placeholder="One artist per line, or comma-separated"></textarea>
-    </div>`;
-  }
-  if (ct.fields.includes('event')) {
-    html += `<div class="forge-input-group">
-      <label class="forge-label">Event</label>
-      <input class="input" id="forgeEvent" placeholder="Event name, venue, date...">
-    </div>`;
-  }
-  if (ct.fields.includes('release')) {
-    html += `<div class="forge-input-group">
-      <label class="forge-label">Release</label>
-      <input class="input" id="forgeRelease" placeholder="Track/EP/album title, catalogue number...">
-    </div>`;
-  }
-  container.innerHTML = html;
-
-  // Update char count display
-  updateCharCount();
-}
-
-function updateCharCount() {
-  const type = document.getElementById('forgeContentType').value;
-  const ct = CONTENT_TYPES[type];
-  const el = document.getElementById('forgeCharCount');
-  if (!ct || !ct.maxLength) { el.textContent = ''; return; }
-  const len = forgeGeneratedContent.length;
-  if (len === 0) { el.textContent = `Max ${ct.maxLength.toLocaleString()} chars`; return; }
-  el.textContent = `${len.toLocaleString()} / ${ct.maxLength.toLocaleString()}`;
-  el.classList.toggle('over', len > ct.maxLength);
-}
-
-async function checkApiStatus() {
-  const el = document.getElementById('apiStatus');
-  try {
-    const r = await fetch(`${forgeApiUrl}/api/health`, {method:'GET', signal: AbortSignal.timeout(3000)});
-    if (r.ok) { el.textContent = '🟢 Connected'; el.style.color = 'var(--green)'; }
-    else { el.textContent = '🔴 Error'; el.style.color = 'var(--red)'; }
-  } catch(e) {
-    el.textContent = '⚫ Not running'; el.style.color = 'var(--muted)';
-  }
-}
-
-function gatherForgeContext() {
-  const type = document.getElementById('forgeContentType').value;
-  const ct = CONTENT_TYPES[type];
-  const ctx = { content_type: type };
-
-  if (ct.fields.includes('artist')) {
-    const sel = document.getElementById('forgeArtist');
-    if (sel) {
-      ctx.artist_username = sel.value === '__custom' ? '' : sel.value;
-      if (ctx.artist_username) {
-        const favs = getFavourites();
-        const a = favs[ctx.artist_username];
-        if (a) ctx.artist_data = { name: a.display_name, genre: a.genre, followers: a.snapshots?.slice(-1)[0]?.followers };
-      }
-    }
-  }
-  if (ct.fields.includes('artist_list')) {
-    const el = document.getElementById('forgeArtistList');
-    if (el) ctx.artist_list = el.value;
-  }
-  if (ct.fields.includes('event')) {
-    const el = document.getElementById('forgeEvent');
-    if (el) ctx.event = el.value;
-  }
-  if (ct.fields.includes('release')) {
-    const el = document.getElementById('forgeRelease');
-    if (el) ctx.release = el.value;
-  }
-  ctx.freeform = document.getElementById('forgeFreeform')?.value || '';
-  ctx.voice = document.getElementById('forgeVoice')?.value || 'default';
-  return ctx;
-}
-
-async function generateContent(variation) {
-  const ctx = gatherForgeContext();
-  if (variation) ctx.variation = variation;
-
-  const outputArea = document.getElementById('forgeOutputArea');
-  const actionsEl = document.getElementById('forgeActions');
-  outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px">
-    <span>Generating<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
-  </div>`;
-  actionsEl.style.display = 'none';
-
-  try {
-    const r = await fetch(`${forgeApiUrl}/api/generate`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(ctx)
-    });
-    if (!r.ok) throw new Error(`API error: ${r.status}`);
-    const data = await r.json();
-    forgeGeneratedContent = data.content || '';
-    outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
-    actionsEl.style.display = 'block';
-    updateCharCount();
-  } catch(e) {
-    outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
-      <span style="font-size:20px">⚠️</span>
-      <span style="color:var(--red)">${e.message}</span>
-      <span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>
-    </div>`;
-  }
-}
-
-function generateVariation(type) { generateContent(type); }
-
-async function copyForgeOutput() {
-  try {
-    await navigator.clipboard.writeText(forgeGeneratedContent);
-    const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = '✅ Copied!';
-    setTimeout(() => btn.textContent = orig, 1500);
-  } catch(e) {}
-}
-
-function saveToStash() {
-  if (!forgeGeneratedContent) return;
-  const type = document.getElementById('forgeContentType').value;
-  const ct = CONTENT_TYPES[type];
-  const lib = getContentLibrary();
-  lib.unshift({
-    id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-    type: type,
-    label: ct ? ct.label : type,
-    icon: ct ? ct.icon : '📝',
-    content: forgeGeneratedContent,
-    context: gatherForgeContext(),
-    status: 'draft',
-    created: new Date().toISOString(),
-    modified: new Date().toISOString()
-  });
-  saveContentLibrary(lib);
-  updateStashCount();
-  const btn = event.target;
-  const orig = btn.innerHTML;
-  btn.innerHTML = '✅ Saved!';
-  setTimeout(() => btn.innerHTML = orig, 1500);
-}
-
-function updateStashCount() {
-  const lib = getContentLibrary();
-  const el = document.getElementById('stashCount');
-  if (el) el.textContent = lib.length || '';
-  const fp = document.getElementById('firepitCount');
-  if (fp) fp.textContent = lib.filter(i => i.status === 'draft').length || '';
-}
-
-function populateStashTypeFilter() {
-  const sel = document.getElementById('stashTypeFilter');
-  if (!sel) return;
-  const types = new Set(getContentLibrary().map(i => i.type));
-  const existing = sel.value;
-  sel.innerHTML = '<option value="">All types</option>' +
-    [...types].map(t => {
-      const ct = CONTENT_TYPES[t];
-      return `<option value="${t}">${ct ? ct.icon + ' ' + ct.label : t}</option>`;
-    }).join('');
-  sel.value = existing;
-}
-
-function renderStash() {
-  const lib = getContentLibrary();
-  const search = (document.getElementById('stashSearch')?.value || '').toLowerCase();
-  const typeFilter = document.getElementById('stashTypeFilter')?.value || '';
-  const statusFilter = document.getElementById('stashStatusFilter')?.value || '';
-
-  let items = lib;
-  if (search) items = items.filter(i => i.content.toLowerCase().includes(search) || (i.label||'').toLowerCase().includes(search));
-  if (typeFilter) items = items.filter(i => i.type === typeFilter);
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
-
-  const el = document.getElementById('stashList');
-  if (!items.length) {
-    el.innerHTML = `<div class="empty"><div class="ico">📦</div><p>${lib.length ? 'No content matches your filters.' : 'Your stash is empty. Generate content in the Forge and save it here.'}</p></div>`;
-    return;
-  }
-  el.innerHTML = items.map(item => {
-    const preview = item.content.slice(0, 100).replace(/\n/g, ' ');
-    const date = new Date(item.created).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-    return `<div class="stash-item">
-      <div class="stash-info">
-        <div class="stash-type">${item.icon || '📝'} ${item.label || item.type}</div>
-        <div class="stash-preview">${esc(preview)}</div>
-        <div class="stash-date">${date}</div>
-      </div>
-      <span class="stash-status ${item.status}">${item.status}</span>
-      <div class="stash-actions">
-        <button class="action-btn" onclick="editStashItem('${item.id}')" title="Edit in Forge"><span class="icon">✏️</span></button>
-        <button class="action-btn" onclick="copyStashItem('${item.id}')" title="Copy"><span class="icon">📋</span></button>
-        <button class="action-btn" onclick="deleteStashItem('${item.id}')" title="Delete"><span class="icon">🗑️</span></button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function editStashItem(id) {
-  const lib = getContentLibrary();
-  const item = lib.find(i => i.id === id);
-  if (!item) return;
-  // Switch to forge and populate
-  setFirepitMode('forge', document.querySelector('.firepit-mode'));
-  document.getElementById('forgeContentType').value = item.type;
-  updateForgeFields();
-  // Populate context fields
-  const ctx = item.context || {};
-  if (ctx.artist_username) { const el = document.getElementById('forgeArtist'); if (el) el.value = ctx.artist_username; }
-  if (ctx.event) { const el = document.getElementById('forgeEvent'); if (el) el.value = ctx.event; }
-  if (ctx.release) { const el = document.getElementById('forgeRelease'); if (el) el.value = ctx.release; }
-  if (ctx.artist_list) { const el = document.getElementById('forgeArtistList'); if (el) el.value = ctx.artist_list; }
-  if (ctx.freeform) document.getElementById('forgeFreeform').value = ctx.freeform;
-  // Load content into output
-  forgeGeneratedContent = item.content;
-  document.getElementById('forgeOutputArea').innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(item.content)}</textarea>`;
-  document.getElementById('forgeActions').style.display = 'block';
-  updateCharCount();
-}
-
-async function copyStashItem(id) {
-  const lib = getContentLibrary();
-  const item = lib.find(i => i.id === id);
-  if (!item) return;
-  try { await navigator.clipboard.writeText(item.content); } catch(e) {}
-}
-
-function deleteStashItem(id) {
-  let lib = getContentLibrary();
-  lib = lib.filter(i => i.id !== id);
-  saveContentLibrary(lib);
-  renderStash();
-  updateStashCount();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ARTIST DETAIL PANEL (slide-out)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function openPanel(username) {
-  const favs = getFavourites();
-  if (!favs[username]) {
-    // Auto-add from reports
-    for (const r of allReports) {
-      const track = (r.tracks||[]).find(t => t.artist_username === username);
-      if (track) { addFavourite(track); break; }
-    }
-  }
-  activeArtist = username;
-  renderPanel(username);
-  document.getElementById('panelOverlay').classList.add('open');
-  document.getElementById('artistPanel').classList.add('open');
-}
-
-function closePanel() {
-  document.getElementById('panelOverlay').classList.remove('open');
-  document.getElementById('artistPanel').classList.remove('open');
-  activeArtist = null;
-}
-
-function renderPanel(username) {
-  const favs = getFavourites();
-  const a = favs[username];
-  if (!a) return;
-
-  // Header
-  const avatarHTML = a.avatar_url
-    ? `<img src="${a.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='🎵'">`
-    : '🎵';
-  document.getElementById('panelAvatar').innerHTML = avatarHTML;
-  document.getElementById('panelName').textContent = a.display_name;
-  document.getElementById('panelGenre').textContent = a.genre;
-  document.getElementById('panelSCLink').href = a.artist_url;
-
-  // Platforms
-  document.getElementById('platformGrid').innerHTML = PLATFORMS.map(p => `
-    <div class="plat-row ${(a.platforms||{})[p]?'linked':''}">
-      <div class="plat-label">${PLAT_ICONS[p]} ${PLAT_LABELS[p]}</div>
-      <input class="plat-input" placeholder="Paste URL or handle"
-        value="${esc((a.platforms||{})[p]||'')}"
-        onblur="savePlatform('${username}','${p}',this.value);this.closest('.plat-row').classList.toggle('linked',!!this.value)">
-    </div>`).join('');
-
-  // Snapshots
-  const snaps = a.snapshots||[];
-  document.getElementById('snapBody').innerHTML = snaps.length
-    ? [...snaps].reverse().map(s => `
-        <tr>
-          <td>${s.date}</td>
-          <td>${fmt(s.followers)}</td>
-          <td>${fmt(s.plays)}</td>
-          <td>${fmt(s.likes)}</td>
-          <td>${fmt(s.reposts)}</td>
-          <td>${s.playlist_adds!=null?s.playlist_adds:'—'}</td>
-          <td style="color:var(--red)">${(s.score||0).toFixed(1)}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="7" style="color:var(--muted);padding:10px">No snapshots yet.</td></tr>';
-
-  // Manual data
-  const latest = snaps[snaps.length-1]||{};
-  document.getElementById('manualFollowers').value = a.followers_override != null ? a.followers_override : (latest.followers||'');
-  document.getElementById('manualPlaylists').value = latest.playlist_adds != null ? latest.playlist_adds : '';
-
-  // Tracks seen
-  const tracks = a.tracks_seen||[];
-  document.getElementById('tracksSeen').innerHTML = tracks.length
-    ? tracks.map(t => `
-        <div style="background:var(--elevated);border-radius:8px;padding:10px 12px;margin-bottom:6px">
-          <div style="font-size:13px;font-weight:bold;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
-          <div style="font-size:11px;color:var(--secondary)">${t.date} · Score ${t.score?.toFixed(1)||'—'} · <a href="${t.url}" target="_blank" rel="noopener" style="color:var(--red)">Listen ↗</a></div>
-        </div>`).join('')
-    : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>';
-
-  // Notes
-  document.getElementById('artistNotes').value = a.notes||'';
-
-  // Cut button
-  document.getElementById('cutBtn').textContent = a.status === 'cut' ? '♻️ Restore to tracking' : '✂️ Cut from tracking';
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// INIT
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-init();
-</script>
+<script src="js/app.js"></script>
+<script src="js/cave.js"></script>
+<script src="js/foraging.js"></script>
+<script src="js/clan.js"></script>
+<script src="js/footprints.js"></script>
+<script src="js/firepit.js"></script>
 </body>
 </html>

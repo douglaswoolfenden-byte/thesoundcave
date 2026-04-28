@@ -99,10 +99,7 @@
   </div>
   <nav class="header-tabs">
     <button class="htab active" data-tab="home">🏠 <span>Home</span></button>
-    <button class="htab" data-tab="cave">🕳️ <span>The Cave</span></button>
-    <button class="htab" data-tab="foraging">🏹 <span>Foraging</span></button>
-    <button class="htab" data-tab="clan">🦴 <span>Clan</span> <span class="count" id="clanCount"></span></button>
-    <button class="htab" data-tab="footprints"><span class="fp-ico">👣</span> <span>Footprints</span></button>
+    <button class="htab" data-tab="cave" data-group="cave">🕳️ <span>The Cave</span></button>
     <button class="htab" data-tab="firepit">🔥 <span>Firepit</span> <span class="count" id="firepitCount"></span></button>
   </nav>
 </header>
@@ -111,6 +108,14 @@
      MAIN CONTENT
      ═══════════════════════════════════════════════════════ -->
 <div class="container">
+
+  <!-- ─── CAVE SUB-NAV (visible only when in Cave group) ── -->
+  <nav class="cave-subnav" id="caveSubnav" style="display:none">
+    <button class="cave-subtab active" data-tab="cave">📊 <span>Dashboard</span></button>
+    <button class="cave-subtab" data-tab="foraging">🏹 <span>Foraging</span></button>
+    <button class="cave-subtab" data-tab="clan">🦴 <span>Clan</span> <span class="count" id="clanCount"></span></button>
+    <button class="cave-subtab" data-tab="footprints"><span class="fp-ico">👣</span> <span>Footprints</span></button>
+  </nav>
 
   <!-- ─── HOME TAB ────────────────────────────────────── -->
   <div id="tab-home">

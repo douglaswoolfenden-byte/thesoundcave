@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Wiki-first (read before coding)
+
+**Before writing or editing code, read `wiki/index.md` and the relevant pages it links to** — at minimum `wiki/spec/overview.md` and any `wiki/features/<x>.md` you're touching.
+
+If the wiki is silent on what's being built, STOP. Write the spec/decision page first, get Doug's approval, then code. After any non-trivial change: append `wiki/log.md` and update relevant pages BEFORE saying done.
+
+This file describes *what the code currently is*. The wiki describes *what we're building, why, and for whom*. Both matter.
+
 ## What this project is
 
 The Sound Cave is a music discovery platform that finds unsigned/emerging artists in European underground dance music via the SoundCloud API. It has two automated pipelines and a static frontend dashboard, all hosted on GitHub Pages.
@@ -13,7 +21,8 @@ Four Python scripts + a multi-file static frontend (no build step):
 - **`scout.py`** — Weekly artist discovery engine. Searches SoundCloud across 16 dance music genres, filters by follower/play thresholds, scores tracks by engagement-to-follower ratio with recency bonuses, deduplicates by artist, and saves a top-20 JSON report to `data/YYYY-MM-DD.json`.
 - **`clan_tracker.py`** — Daily stats tracker. Reads all previously discovered artists from weekly reports (and optional `data/clan_artists.json`), fetches their current SoundCloud profiles and recent tracks, saves daily snapshots to `data/snapshots/YYYY-MM-DD.json`, then updates the manifest.
 - **`update_manifest.py`** — Rebuilds `data/manifest.json` (index of all weekly reports and daily snapshots). The frontend reads this to know which data files exist.
-- **`content_api.py`** — Flask server for AI content generation. Calls Claude API (Haiku) to produce social posts, event copy, press releases, etc. Run locally during dev, deploy to Vercel/Railway for prod.
+- **`content_api.py`** — Flask server for AI content generation. Calls Claude API (Haiku) to produce social posts, event copy, press releases, etc. Also serves `/api/generate-image` for AI image generation via Fal AI / Replicate. Run locally during dev, deploy to Vercel/Railway for prod.
+- **`image_gen.py`** — Image generation module. Claude builds optimised image prompts, then routes to Fal AI (FLUX schnell, primary) or Replicate (fallback). Saves images to `data/generated_images/`.
 
 ### Frontend structure
 
@@ -35,7 +44,8 @@ SoundCloud API → scout.py → data/YYYY-MM-DD.json (weekly)
                  clan_tracker.py → data/snapshots/YYYY-MM-DD.json (daily)
                  update_manifest.py → data/manifest.json
                  index.html reads manifest.json → renders dashboard
-Claude API     → content_api.py → index.html Firepit tab (real-time generation)
+Claude API     → content_api.py → index.html Firepit tab (real-time text generation)
+Fal AI / Replicate → image_gen.py → content_api.py → Firepit tab (image generation)
 ```
 
 ## Commands
@@ -64,10 +74,12 @@ There are no tests or linting configured.
 
 - Python 3.11+ (GitHub Actions uses 3.11)
 - Dependencies: `requests`, `python-dotenv`, `flask`, `flask-cors`, `anthropic`
-- `.env` file lives one directory up (`../`) from the project root — this is the workspace-level master `.env`
+- `.env` file lives two directories up (`../../`) from the project root — this is the workspace-level master `.env`
 - Required env vars: `SOUNDCLOUD_CLIENT_ID`, `SOUNDCLOUD_CLIENT_SECRET`, `ANTHROPIC_API_KEY`
 - Optional: `SOUNDCLOUD_OAUTH_TOKEN` (skips client_credentials grant if set)
 - Optional: `CONTENT_API_PORT` (defaults to 8000)
+- Optional: `FAL_KEY` (Fal AI image generation — primary provider)
+- Optional: `REPLICATE_API_TOKEN` (Replicate image generation — fallback provider)
 
 ## GitHub Actions
 

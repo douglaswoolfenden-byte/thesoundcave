@@ -5,3 +5,6 @@ secrets.json
 config.local.js
 __pycache__/
 *.pyc
+data/generated_images/
+venv/
+.DS_Store

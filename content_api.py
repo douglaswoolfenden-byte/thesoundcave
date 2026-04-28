@@ -6,14 +6,15 @@ Run: python content_api.py
 import os
 import json
 from datetime import datetime, timezone
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
 import requests as http_requests
+from image_gen import build_image_prompt, generate_image, save_image, IMAGE_DIMENSIONS, provider_status
 
 # Load .env from workspace root (one level up from project)
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 app = Flask(__name__)
 CORS(app)
@@ -155,7 +156,12 @@ def build_user_prompt(ctx):
 @app.route('/api/health', methods=['GET'])
 def health():
     has_key = bool(os.getenv('ANTHROPIC_API_KEY'))
-    return jsonify({'status': 'ok', 'has_api_key': has_key})
+    img_providers = provider_status()
+    return jsonify({
+        'status': 'ok',
+        'has_api_key': has_key,
+        'image_providers': img_providers,
+    })
 
 
 @app.route('/api/generate', methods=['POST'])
@@ -185,6 +191,40 @@ def generate():
         })
     except anthropic.APIError as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ── Image generation ───────────────────────────────────────
+
+@app.route('/api/generate-image', methods=['POST'])
+def generate_image_endpoint():
+    ctx = request.get_json()
+    if not ctx:
+        return jsonify({'error': 'No JSON body provided'}), 400
+
+    content_type = ctx.get('content_type', 'ig_reel')
+    generated_text = ctx.get('generated_text', '')
+
+    try:
+        image_prompt = build_image_prompt(content_type, ctx, generated_text)
+        w, h = IMAGE_DIMENSIONS.get(content_type, (1200, 675))
+        image_bytes, provider, model = generate_image(image_prompt, w, h)
+        filename = save_image(image_bytes, content_type)
+
+        return jsonify({
+            'image_url': f'/api/images/{filename}',
+            'image_prompt': image_prompt,
+            'provider': provider,
+            'model': model,
+            'dimensions': {'width': w, 'height': h},
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/images/<filename>')
+def serve_image(filename):
+    img_dir = os.path.join(os.path.dirname(__file__), 'data', 'generated_images')
+    return send_from_directory(img_dir, filename)
 
 
 # ── SoundCloud search (reuses scout.py patterns) ──────────
@@ -359,7 +399,10 @@ def search():
 
 if __name__ == '__main__':
     port = int(os.getenv('CONTENT_API_PORT', 8000))
-    print(f"🪨 Sound Cave API running on http://localhost:{port}")
+    print(f"🔥 Sound Cave API running on http://localhost:{port}")
     print(f"   Anthropic key: {'✅' if os.getenv('ANTHROPIC_API_KEY') else '❌'}")
     print(f"   SoundCloud:    {'✅' if SC_CLIENT_ID else '❌'}")
+    img = provider_status()
+    print(f"   Fal AI:        {'✅' if img['fal_ai'] else '❌'}")
+    print(f"   Replicate:     {'✅' if img['replicate'] else '❌'}")
     app.run(host='0.0.0.0', port=port, debug=True)

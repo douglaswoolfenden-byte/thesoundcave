@@ -293,7 +293,9 @@ function buildLineChart(datasets, labels, width=600, height=220) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // TAB SWITCHING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-document.querySelectorAll('.htab').forEach(btn => {
+const CAVE_TABS = ['cave','foraging','clan','footprints'];
+
+document.querySelectorAll('.htab, .cave-subtab').forEach(btn => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
@@ -307,9 +309,19 @@ function switchTab(name) {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
+  // Top-level nav: Cave group stays "active" for any cave sub-section
+  const topGroup = CAVE_TABS.includes(name) ? 'cave' : name;
   document.querySelectorAll('.htab').forEach(el => {
-    el.classList.toggle('active', el.dataset.tab === name);
+    el.classList.toggle('active', el.dataset.tab === topGroup);
   });
+  // Cave sub-nav visibility + active state
+  const subnav = document.getElementById('caveSubnav');
+  if (subnav) {
+    subnav.style.display = CAVE_TABS.includes(name) ? 'flex' : 'none';
+    subnav.querySelectorAll('.cave-subtab').forEach(el => {
+      el.classList.toggle('active', el.dataset.tab === name);
+    });
+  }
   if (name === 'home')       renderHome();
   if (name === 'cave')       renderCave();
   if (name === 'foraging')   renderForaging();

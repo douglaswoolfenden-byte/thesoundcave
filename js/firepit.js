@@ -3,6 +3,8 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let firepitMode = 'forge';
 let forgeGeneratedContent = '';
+let forgeGeneratedImageUrl = '';
+let forgeImageMode = false;
 let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
 
 const CONTENT_TYPES = {
@@ -164,6 +166,8 @@ async function generateContent(variation) {
     outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
     actionsEl.style.display = 'block';
     updateCharCount();
+    // Trigger image gen after text is ready (sequential — image prompt uses the text)
+    if (forgeImageMode) generateImage(ctx);
   } catch(e) {
     outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
       <span style="font-size:20px">⚠️</span>
@@ -174,6 +178,66 @@ async function generateContent(variation) {
 }
 
 function generateVariation(type) { generateContent(type); }
+
+function toggleImageMode() {
+  forgeImageMode = !forgeImageMode;
+  const btn = document.getElementById('imageModeToggle');
+  btn.textContent = forgeImageMode ? '🖼️ Text + Image' : '📝 Text Only';
+  btn.classList.toggle('active', forgeImageMode);
+}
+
+async function generateImage(ctx) {
+  const imgArea = document.getElementById('forgeImageArea');
+  imgArea.style.display = 'block';
+  imgArea.innerHTML = `<div class="forge-image-loading">
+    <div class="forge-image-skeleton"></div>
+    <span>Generating image<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
+  </div>`;
+
+  const body = { ...ctx };
+  if (forgeGeneratedContent) body.generated_text = forgeGeneratedContent;
+
+  try {
+    const r = await fetch(`${forgeApiUrl}/api/generate-image`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || `Image API error: ${r.status}`);
+    }
+    const data = await r.json();
+    forgeGeneratedImageUrl = `${forgeApiUrl}${data.image_url}`;
+
+    imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">
+      <div class="forge-image-meta">
+        ${data.dimensions.width}x${data.dimensions.height} | ${data.provider}/${data.model}
+      </div>`;
+
+    document.getElementById('btnRegenImage').style.display = '';
+    document.getElementById('btnDownloadImage').style.display = '';
+  } catch(e) {
+    imgArea.innerHTML = `<div class="forge-image-loading" style="flex-direction:column;gap:8px">
+      <span style="font-size:20px">⚠️</span>
+      <span style="color:var(--red);font-size:12px">${e.message}</span>
+      <span style="color:var(--muted);font-size:11px">Check FAL_KEY / REPLICATE_API_TOKEN in .env</span>
+    </div>`;
+  }
+}
+
+async function regenerateImage() {
+  const ctx = gatherForgeContext();
+  await generateImage(ctx);
+}
+
+function downloadForgeImage() {
+  if (!forgeGeneratedImageUrl) return;
+  const a = document.createElement('a');
+  a.href = forgeGeneratedImageUrl;
+  a.download = `soundcave_${Date.now()}.png`;
+  a.click();
+}
 
 async function copyForgeOutput() {
   try {
@@ -196,6 +260,7 @@ function saveToStash() {
     label: ct ? ct.label : type,
     icon: ct ? ct.icon : '📝',
     content: forgeGeneratedContent,
+    imageUrl: forgeGeneratedImageUrl || null,
     context: gatherForgeContext(),
     status: 'draft',
     created: new Date().toISOString(),
@@ -249,7 +314,9 @@ function renderStash() {
   el.innerHTML = items.map(item => {
     const preview = item.content.slice(0, 100).replace(/\n/g, ' ');
     const date = new Date(item.created).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+    const thumb = item.imageUrl ? `<img src="${item.imageUrl}" class="stash-thumb" alt="">` : '';
     return `<div class="stash-item">
+      ${thumb}
       <div class="stash-info">
         <div class="stash-type">${item.icon || '📝'} ${item.label || item.type}</div>
         <div class="stash-preview">${esc(preview)}</div>
@@ -279,8 +346,20 @@ function editStashItem(id) {
   if (ctx.artist_list) { const el = document.getElementById('forgeArtistList'); if (el) el.value = ctx.artist_list; }
   if (ctx.freeform) document.getElementById('forgeFreeform').value = ctx.freeform;
   forgeGeneratedContent = item.content;
+  forgeGeneratedImageUrl = item.imageUrl || '';
   document.getElementById('forgeOutputArea').innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(item.content)}</textarea>`;
   document.getElementById('forgeActions').style.display = 'block';
+  // Restore image if present
+  const imgArea = document.getElementById('forgeImageArea');
+  if (forgeGeneratedImageUrl) {
+    imgArea.style.display = 'block';
+    imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">`;
+    document.getElementById('btnRegenImage').style.display = '';
+    document.getElementById('btnDownloadImage').style.display = '';
+  } else {
+    imgArea.style.display = 'none';
+    imgArea.innerHTML = '';
+  }
   updateCharCount();
 }
 

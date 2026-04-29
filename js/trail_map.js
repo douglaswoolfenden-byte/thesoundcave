@@ -4,7 +4,7 @@
 // sync render functions; mutations call the API and refresh the cache.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const PLATFORMS = [
+const TRAIL_PLATFORMS = [
   { id: 'ig',       label: 'Instagram' },
   { id: 'tiktok',   label: 'TikTok' },
   { id: 'x',        label: 'X' },
@@ -309,7 +309,7 @@ function openTrailModal(id) {
 
   // Platform pills
   const wrap = document.getElementById('trailModalPlatforms');
-  wrap.innerHTML = PLATFORMS.map(p => `
+  wrap.innerHTML = TRAIL_PLATFORMS.map(p => `
     <button type="button" class="trail-platform-pill ${post.platforms.includes(p.id) ? 'selected' : ''}" data-platform="${p.id}">
       ${esc(p.label)}
     </button>`).join('');

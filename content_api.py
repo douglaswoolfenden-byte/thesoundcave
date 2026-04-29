@@ -11,7 +11,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
 import requests as http_requests
-from image_gen import build_image_prompt, generate_image, save_image, IMAGE_DIMENSIONS, provider_status
+from media_gen import build_image_prompt, generate_image, save_image, IMAGE_DIMENSIONS, provider_status
 
 # Load .env from workspace root (one level up from project)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -305,7 +305,7 @@ def public_config():
 
 # ── Stash (Supabase-backed) ───────────────────────────────
 # Service-role proxy. Phase B will replace user_id with auth.uid() from JWT.
-from image_gen import DEV_USER_ID
+from media_gen import DEV_USER_ID
 _stash_sb = None
 def _stash_client():
     global _stash_sb

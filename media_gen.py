@@ -1,15 +1,30 @@
 """
-The Sound Cave — Image Generation Module
-Generates images for content using Fal AI (primary) and Replicate (fallback).
-Claude builds optimised image prompts from content context.
+The Sound Cave — Media Generation Module
+Generates images and videos for content. Successor to image_gen.py.
+
+Tiers (per wiki/decisions/0003_saas_architecture.md):
+  - image            — Fal AI FLUX schnell, Replicate fallback
+  - video_composite  — FFmpeg: still image + audio waveform + Ken Burns (Tier 1)
+  - video_standard   — Fal LTX / Hunyuan text-to-video (Tier 2)
+  - video_premium    — Fal Kling / Replicate Veo (Tier 3)
+
+Claude builds optimised prompts from content context.
 """
 import os
 import time
 import hashlib
 import uuid
+from enum import Enum
 import requests as http_requests
 from dotenv import load_dotenv
 import anthropic
+
+
+class MediaType(str, Enum):
+    IMAGE = 'image'
+    VIDEO_COMPOSITE = 'video_composite'  # Tier 1 — FFmpeg
+    VIDEO_STANDARD = 'video_standard'    # Tier 2 — Fal LTX/Hunyuan
+    VIDEO_PREMIUM = 'video_premium'      # Tier 3 — Kling/Veo
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -31,6 +46,8 @@ def _get_supabase():
 # Matches the seeded row in public.users.
 DEV_USER_ID = os.getenv('DEV_USER_ID', '00000000-0000-0000-0000-000000000001')
 IMAGE_BUCKET = 'generated_images'
+VIDEO_BUCKET = 'generated_videos'
+AUDIO_BUCKET = 'audio_tracks'
 
 # ── Per-content-type image dimensions ──────────────────────
 IMAGE_DIMENSIONS = {
@@ -276,9 +293,57 @@ def save_image(image_bytes, content_type, user_id=None):
     return public_url
 
 
+def save_video(video_bytes, content_type, user_id=None, ext='mp4'):
+    """Upload video to Supabase Storage. Returns public URL.
+
+    If LOCAL_IMAGE_FALLBACK=1, also writes to data/generated_videos/ for offline dev.
+    Same fallback flag as images — keeps offline dev one-switch.
+    """
+    user_id = user_id or DEV_USER_ID
+    ts = int(time.time())
+    short_hash = hashlib.md5(video_bytes[:1024]).hexdigest()[:8]
+    filename = f"{content_type}_{ts}_{short_hash}_{uuid.uuid4().hex[:6]}.{ext}"
+    object_path = f"{user_id}/{filename}"
+
+    content_type_header = 'video/mp4' if ext == 'mp4' else f'video/{ext}'
+    sb = _get_supabase()
+    sb.storage.from_(VIDEO_BUCKET).upload(
+        path=object_path,
+        file=video_bytes,
+        file_options={'content-type': content_type_header, 'upsert': 'true'},
+    )
+    public_url = sb.storage.from_(VIDEO_BUCKET).get_public_url(object_path)
+
+    if os.getenv('LOCAL_IMAGE_FALLBACK') == '1':
+        vid_dir = os.path.join(os.path.dirname(__file__), 'data', 'generated_videos')
+        os.makedirs(vid_dir, exist_ok=True)
+        with open(os.path.join(vid_dir, filename), 'wb') as f:
+            f.write(video_bytes)
+
+    return public_url
+
+
 def provider_status():
-    """Check which providers have API keys configured."""
+    """Check which providers have API keys configured.
+
+    Nested by media type so the frontend can show per-tier health.
+    Phase 1 only reports image providers; video tiers fill in as Phases 2–4 land.
+    """
+    fal = bool(os.getenv('FAL_KEY'))
+    replicate = bool(os.getenv('REPLICATE_API_TOKEN'))
     return {
-        'fal_ai': bool(os.getenv('FAL_KEY')),
-        'replicate': bool(os.getenv('REPLICATE_API_TOKEN')),
+        # Flat keys for backward compat with the existing /api/health consumer.
+        'fal_ai': fal,
+        'replicate': replicate,
+        # Nested view — preferred shape going forward.
+        'image': {'fal': fal, 'replicate': replicate},
+        'video_composite': {'ffmpeg': _ffmpeg_available()},
+        'video_standard': {'fal': fal},
+        'video_premium': {'fal': fal, 'replicate': replicate},
     }
+
+
+def _ffmpeg_available():
+    """Best-effort check that ffmpeg binary is on PATH. Cheap, ~5ms."""
+    import shutil
+    return shutil.which('ffmpeg') is not None

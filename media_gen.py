@@ -34,7 +34,17 @@ client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 # All set conservatively for v1; Phase H or a dedicated decision lifts them.
 MAX_VIDEO_DURATION_SECONDS = 10        # Tier 2/3 cost scales linearly; cap is the brake
 MAX_AUDIO_FILE_BYTES = 25 * 1024 * 1024  # 25MB
-POLL_TIMEOUT_SECONDS = 120             # kills runaway provider polls
+# Per-model poll timeouts. Video models are genuinely slow:
+#   LTX     ~60–180s warm, ~3 min cold
+#   Hunyuan ~3–5 min routinely
+#   Kling   ~2–4 min
+#   Veo     ~2–4 min
+# Tuned to "long enough for normal cold-start, short enough that a stuck job dies cleanly".
+POLL_TIMEOUT_LTX = 240        # 4 min
+POLL_TIMEOUT_HUNYUAN = 420    # 7 min
+POLL_TIMEOUT_KLING = 300      # 5 min
+POLL_TIMEOUT_VEO = 300        # 5 min
+POLL_VERBOSE = os.getenv('MEDIA_GEN_POLL_VERBOSE') == '1'  # set to log each poll status
 
 # DRY_RUN short-circuits all paid video providers (Fal LTX/Hunyuan/Kling, Replicate Veo).
 # Returns a tiny FFmpeg-generated placeholder mp4 instead of calling the API.
@@ -415,16 +425,18 @@ def _aspect_ratio_str(width, height):
     return '1:1'
 
 
-def _fal_queue_generate(model_path, payload):
+def _fal_queue_generate(model_path, payload, poll_timeout):
     """Submit to Fal queue, poll until COMPLETED, return final response JSON.
 
-    Single submission, single poll loop, no retries. POLL_TIMEOUT_SECONDS is the brake.
+    Single submission, single poll loop, no retries. `poll_timeout` is the brake;
+    set per-model since LTX, Hunyuan, Kling each have different latency profiles.
     """
     api_key = os.getenv('FAL_KEY')
     if not api_key:
         raise RuntimeError('FAL_KEY not set')
     headers = {'Authorization': f'Key {api_key}', 'Content-Type': 'application/json'}
 
+    started = time.time()
     submit = http_requests.post(
         f'https://queue.fal.run/{model_path}', headers=headers, json=payload, timeout=30,
     )
@@ -433,30 +445,36 @@ def _fal_queue_generate(model_path, payload):
     status_url = data.get('status_url') or f"https://queue.fal.run/{model_path}/requests/{data['request_id']}/status"
     response_url = data.get('response_url') or f"https://queue.fal.run/{model_path}/requests/{data['request_id']}"
 
-    deadline = time.time() + POLL_TIMEOUT_SECONDS
+    deadline = started + poll_timeout
+    last_status = None
     while time.time() < deadline:
         time.sleep(3)
         s = http_requests.get(status_url, headers=headers, timeout=10)
         s.raise_for_status()
         sd = s.json()
         status = sd.get('status')
+        if POLL_VERBOSE and status != last_status:
+            queue_pos = sd.get('queue_position')
+            elapsed = int(time.time() - started)
+            print(f"[fal poll {model_path} t+{elapsed}s] status={status} queue_pos={queue_pos}", flush=True)
+            last_status = status
         if status == 'COMPLETED':
             r = http_requests.get(response_url, headers=headers, timeout=30)
             r.raise_for_status()
             return r.json()
         if status in ('FAILED', 'ERROR'):
             raise RuntimeError(f"Fal {model_path} failed: {sd}")
-    raise RuntimeError(f"Fal {model_path} poll timed out after {POLL_TIMEOUT_SECONDS}s")
+    raise RuntimeError(f"Fal {model_path} poll timed out after {poll_timeout}s (last status: {last_status})")
 
 
 def _generate_fal_ltx(prompt, width, height, duration_seconds):
-    """Fal LTX-Video. Cheap, fast, lower quality — Tier 2 default."""
+    """Fal LTX-Video. Cheap (~$0.05–0.10), fast (~60–180s), lower quality — Tier 2 default."""
     out = _fal_queue_generate('fal-ai/ltx-video', {
         'prompt': prompt,
         'aspect_ratio': _aspect_ratio_str(width, height),
         'num_frames': max(24, min(int(duration_seconds * 24), 240)),
         'resolution': '720p',
-    })
+    }, poll_timeout=POLL_TIMEOUT_LTX)
     video_url = out['video']['url']
     v = http_requests.get(video_url, timeout=60)
     v.raise_for_status()
@@ -464,13 +482,13 @@ def _generate_fal_ltx(prompt, width, height, duration_seconds):
 
 
 def _generate_fal_hunyuan(prompt, width, height, duration_seconds):
-    """Fal Hunyuan-Video. Slower, higher quality — Tier 2 fallback."""
+    """Fal Hunyuan-Video. Slower (~3–5 min), higher quality, ~$0.40–0.50 — Tier 2 fallback."""
     out = _fal_queue_generate('fal-ai/hunyuan-video', {
         'prompt': prompt,
         'aspect_ratio': _aspect_ratio_str(width, height),
         'num_frames': max(24, min(int(duration_seconds * 24), 240)),
         'resolution': '720p',
-    })
+    }, poll_timeout=POLL_TIMEOUT_HUNYUAN)
     video_url = out['video']['url']
     v = http_requests.get(video_url, timeout=60)
     v.raise_for_status()
@@ -516,18 +534,19 @@ def generate_video_standard(prompt, audio_path, width, height, duration_seconds=
         mp4 = _dry_run_video(width, height, duration_seconds, 'tier2/dryrun')
         return mp4, 'dry-run', 'placeholder', duration_seconds
 
+    # LTX primary, Hunyuan fallback. Each has its own per-model timeout.
     errors = []
     video_bytes = None
     used_provider, used_model = None, None
-    for fn, name, model in [
-        (_generate_fal_ltx, 'fal-ai', 'ltx-video'),
-        (_generate_fal_hunyuan, 'fal-ai', 'hunyuan-video'),
+    for fn, name in [
+        (_generate_fal_ltx, 'ltx-video'),
+        (_generate_fal_hunyuan, 'hunyuan-video'),
     ]:
         try:
             video_bytes, used_provider, used_model = fn(prompt, width, height, duration_seconds)
             break
         except Exception as e:
-            errors.append(f"{model}: {e}")
+            errors.append(f"{name}: {e}")
     if video_bytes is None:
         raise RuntimeError(f"All Tier 2 providers failed: {'; '.join(errors)}")
 

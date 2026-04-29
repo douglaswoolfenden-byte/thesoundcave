@@ -66,10 +66,10 @@ Phase C — Credits engine
 - [x] Frontend widget: "You have X credits" in nav (account dropdown updates live from gen response)
 
 Phase D — Stripe
-- [ ] Create products in Stripe (Solo £29, Label £79, Agency £199, credit packs)
-- [ ] Stripe Checkout integration
-- [ ] Webhook handler → top up credits on `invoice.payment_succeeded`
-- [ ] Customer portal link for cancellations
+- [x] Create products in Stripe (Solo £29, Label £79, Agency £199, credit packs) — `scripts/stripe_bootstrap.py`, run 2026-04-29 against test mode
+- [x] Stripe Checkout integration — `/api/billing/checkout` + pricing modal in account dropdown (with `[hidden]` CSS fix on 2026-04-29)
+- [x] Webhook handler → top up credits on subscription create + `invoice.payment_succeeded` (renewal). Fixed 2026-04-29 after first live test surfaced `StripeObject.get()` AttributeError + API `2026-04-22.dahlia` `current_period_end` move-to-item.
+- [x] Customer portal link for cancellations — `/api/billing/portal`, "Manage billing" link in dropdown
 
 Phase G — Ayrshare integration (depends on B)
 - [ ] Ayrshare account + dev API key
@@ -162,7 +162,7 @@ for review.
 - [x] Edit / delete scheduled item
 - [x] Mobile responsive
 - [x] Define mock-data shape that backbone stream will fulfil (`wiki/features/firepit_trail_map.md` + `wiki/spec/firepit_trail_map_ui.md`)
-- [ ] Open PR to main: "feat(firepit): Trail Map calendar UI"
+- [x] Open PR to main: "feat(firepit): Trail Map calendar UI" — landed direct on main as part of commit `ca30c31` (post repo-extraction); no separate PR opened. Stream 3 closed 2026-04-29.
 
 ---
 

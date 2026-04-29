@@ -6,8 +6,21 @@ SQL migrations for Sound Cave's Supabase project.
 
 - `0001_init.sql` — schema (tables, enums, indexes)
 - `0002_rls.sql` — Row Level Security policies
+- `0003_storage.sql` — RLS on `storage.objects` for `generated_images` + `generated_videos` buckets
+- `0004_auth_sync.sql` — auth.users → public.users sync trigger (Phase B)
+- `0005_credits.sql` — credits ledger helpers (Phase C)
+- `0006_billing.sql` — Stripe billing + subscriptions (Phase D)
+- `0007_audio_tracks.sql` — audio_tracks table + clipping-ready columns on stash_items (Stream 2)
 
-Both are idempotent — safe to re-run.
+All idempotent — safe to re-run.
+
+## Buckets (created via REST or dashboard, not SQL)
+
+- `generated_images` — public read
+- `generated_videos` — public read
+- `audio_tracks` — **private** (owner-only read; user uploads stay scoped). Create
+  with `supabase.storage.create_bucket('audio_tracks', options={'public': False})`
+  or via the Supabase dashboard before running 0007.
 
 ## Apply
 

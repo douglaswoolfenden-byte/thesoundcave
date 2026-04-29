@@ -263,6 +263,158 @@ def generate_image(prompt, width, height):
     raise RuntimeError(f"All image providers failed: {'; '.join(errors)}")
 
 
+# ── Tier 1: FFmpeg composite video ─────────────────────────
+# Audio + still image + Ken Burns + waveform overlay → mp4. No AI touches user audio.
+# Audio is muxed at 320kbps AAC (sonically transparent). Video is h264 yuv420p.
+
+def probe_audio_duration(audio_path):
+    """Return audio duration in seconds via ffprobe. Raises on failure."""
+    import subprocess
+    r = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+         '-of', 'default=noprint_wrappers=1:nokey=1', audio_path],
+        capture_output=True, text=True, timeout=10,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"ffprobe failed: {r.stderr.strip()}")
+    return float(r.stdout.strip())
+
+
+def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, fps=30):
+    """Run the FFmpeg pipeline. Returns mp4 bytes.
+
+    Pipeline:
+      [image] scale + Ken Burns zoompan
+      [audio] showwaves overlay (bottom strip, semi-transparent white)
+      mux: h264 + aac@320k, yuv420p, -shortest
+
+    Notes:
+      - waveform_height = 12% of video height, capped 200px (visual balance)
+      - zoompan goes 1.00 → 1.15 over the duration (slow Ken Burns)
+      - -shortest stops at the shorter of audio/video tracks
+    """
+    import subprocess
+    import tempfile
+
+    waveform_h = min(200, int(height * 0.12))
+    total_frames = int(duration_seconds * fps)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        img_path = os.path.join(tmp, 'cover.png')
+        out_path = os.path.join(tmp, 'out.mp4')
+        with open(img_path, 'wb') as f:
+            f.write(image_bytes)
+
+        # zoompan needs an integer 'd' (frames). z grows linearly toward 1.15.
+        # showwaves rate must match output fps so frames line up; cline = filled line.
+        filter_graph = (
+            f"[0:v]scale={width}:{height},"
+            f"zoompan=z='min(zoom+{(0.15/total_frames):.6f},1.15)':"
+            f"d={total_frames}:s={width}x{height}:fps={fps}[bg];"
+            f"[1:a]showwaves=s={width}x{waveform_h}:mode=cline:colors=white@0.7:rate={fps},"
+            f"format=yuva420p[wave];"
+            f"[bg][wave]overlay=0:H-h:format=auto[v]"
+        )
+
+        cmd = [
+            'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
+            '-loop', '1', '-i', img_path,
+            '-i', audio_path,
+            '-filter_complex', filter_graph,
+            '-map', '[v]', '-map', '1:a',
+            '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
+            '-c:a', 'aac', '-b:a', '320k',
+            '-pix_fmt', 'yuv420p',
+            '-t', str(duration_seconds),
+            '-shortest',
+            out_path,
+        ]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if r.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {r.stderr.strip()[-500:]}")
+
+        with open(out_path, 'rb') as f:
+            return f.read()
+
+
+def generate_video_composite(prompt, audio_path, width, height, duration_seconds=15):
+    """Tier 1: FFmpeg composite video. Returns (mp4_bytes, provider, model, duration_seconds).
+
+    Generates a cover image via the existing image router, then muxes the user's
+    audio underneath with Ken Burns motion and a waveform overlay.
+
+    `audio_path` is a local file path (caller is responsible for fetching the
+    track from Supabase Storage and writing to a temp file before calling).
+    """
+    if duration_seconds <= 0 or duration_seconds > 30:
+        raise ValueError('duration_seconds must be 0 < d <= 30 (Phase H lifts the cap)')
+    if not _ffmpeg_available():
+        raise RuntimeError('ffmpeg not on PATH — install via `brew install ffmpeg`')
+
+    img_bytes, img_provider, img_model = generate_image(prompt, width, height)
+    mp4_bytes = _ffmpeg_composite(img_bytes, audio_path, width, height, duration_seconds)
+    return mp4_bytes, 'ffmpeg', f'composite+{img_provider}/{img_model}', duration_seconds
+
+
+# ── Audio storage ──────────────────────────────────────────
+
+def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg'):
+    """Upload an audio file to Supabase Storage + insert audio_tracks row.
+
+    Returns dict: {id, bucket_path, local_path, duration_seconds, bytes}.
+    `local_path` is always populated (a tempfile cached for the FFmpeg run);
+    callers should clean it up when done.
+
+    If LOCAL_IMAGE_FALLBACK=1, skips the Supabase upload and DB insert — returns
+    the local-only shape so offline dev / smoke tests don't need cloud access.
+    """
+    import tempfile
+    user_id = user_id or DEV_USER_ID
+    ts = int(time.time())
+    safe_name = filename.replace('/', '_').replace('\\', '_')
+    object_filename = f"{ts}_{uuid.uuid4().hex[:8]}_{safe_name}"
+    bucket_path = f"{user_id}/{object_filename}"
+
+    # Write to a temp file so callers can hand the path to ffmpeg/ffprobe.
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(safe_name)[1] or '.mp3')
+    tmp.write(file_bytes)
+    tmp.close()
+    local_path = tmp.name
+    duration = probe_audio_duration(local_path)
+
+    if os.getenv('LOCAL_IMAGE_FALLBACK') == '1':
+        return {
+            'id': None,
+            'bucket_path': None,
+            'local_path': local_path,
+            'duration_seconds': duration,
+            'bytes': len(file_bytes),
+        }
+
+    sb = _get_supabase()
+    sb.storage.from_(AUDIO_BUCKET).upload(
+        path=bucket_path,
+        file=file_bytes,
+        file_options={'content-type': mime_type, 'upsert': 'true'},
+    )
+    row = sb.table('audio_tracks').insert({
+        'user_id': user_id,
+        'filename': safe_name,
+        'bucket_path': bucket_path,
+        'mime_type': mime_type,
+        'duration_seconds': duration,
+        'bytes': len(file_bytes),
+    }).execute()
+    track_id = row.data[0]['id'] if row.data else None
+    return {
+        'id': track_id,
+        'bucket_path': bucket_path,
+        'local_path': local_path,
+        'duration_seconds': duration,
+        'bytes': len(file_bytes),
+    }
+
+
 # ── Storage ────────────────────────────────────────────────
 
 def save_image(image_bytes, content_type, user_id=None):

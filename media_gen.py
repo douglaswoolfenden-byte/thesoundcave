@@ -30,6 +30,25 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
+# ── Cost + safety guardrails ───────────────────────────────
+# All set conservatively for v1; Phase H or a dedicated decision lifts them.
+MAX_VIDEO_DURATION_SECONDS = 10        # Tier 2/3 cost scales linearly; cap is the brake
+MAX_AUDIO_FILE_BYTES = 25 * 1024 * 1024  # 25MB
+POLL_TIMEOUT_SECONDS = 120             # kills runaway provider polls
+
+# DRY_RUN short-circuits all paid video providers (Fal LTX/Hunyuan/Kling, Replicate Veo).
+# Returns a tiny FFmpeg-generated placeholder mp4 instead of calling the API.
+# Image generation (Flux schnell, ~$0.003) is NOT dry-runned — too cheap to bother.
+DRY_RUN = os.getenv('MEDIA_GEN_DRY_RUN') == '1'
+
+# Estimated USD per call — surfaced in API responses for cost transparency.
+# Tune from real invoices; these are upper-bound public list prices as of 2026-04.
+COST_USD = {
+    'video_composite': 0.003,   # only the cover image (Flux schnell)
+    'video_standard':  0.10,    # Fal LTX 5s @ 720p
+    'video_premium':   2.00,    # Fal Kling 5s
+}
+
 # Supabase Storage client (service role — server-side only, bypasses RLS)
 _supabase = None
 def _get_supabase():
@@ -356,6 +375,167 @@ def generate_video_composite(prompt, audio_path, width, height, duration_seconds
     return mp4_bytes, 'ffmpeg', f'composite+{img_provider}/{img_model}', duration_seconds
 
 
+# ── Dry-run fixture ────────────────────────────────────────
+# Used when MEDIA_GEN_DRY_RUN=1 to bypass paid providers during dev/CI.
+
+def _dry_run_video(width, height, duration_seconds, label):
+    """Return a tiny FFmpeg-generated placeholder mp4. `label` is logged, not drawn
+    (drawtext requires freetype-enabled ffmpeg, which isn't guaranteed)."""
+    import subprocess, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, 'dry.mp4')
+        # Solid magenta block — instantly recognisable as a placeholder.
+        cmd = [
+            'ffmpeg','-y','-hide_banner','-loglevel','error',
+            '-f','lavfi','-i', f'color=c=#ff00ff:s={width}x{height}:d={duration_seconds}:r=24',
+            '-f','lavfi','-i', f'sine=frequency=220:duration={duration_seconds}',
+            '-c:v','libx264','-preset','ultrafast','-crf','28',
+            '-c:a','aac','-b:a','128k','-pix_fmt','yuv420p',
+            '-shortest', out,
+        ]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            raise RuntimeError(f"dry-run ffmpeg failed [{label}]: {r.stderr.strip()[-300:]}")
+        return open(out, 'rb').read()
+
+
+# ── Tier 2: Fal text-to-video (LTX primary, Hunyuan fallback) ──
+# Calls Fal's queue API. POLL_TIMEOUT_SECONDS bounds total wait.
+# DRY_RUN=1 returns a placeholder mp4 — no API spend.
+
+def _aspect_ratio_str(width, height):
+    """Map dims to Fal's aspect_ratio enum strings."""
+    ratio = width / height
+    if abs(ratio - 1.0) < 0.1:
+        return '1:1'
+    if ratio > 1.5:
+        return '16:9'
+    if ratio < 0.7:
+        return '9:16'
+    return '1:1'
+
+
+def _fal_queue_generate(model_path, payload):
+    """Submit to Fal queue, poll until COMPLETED, return final response JSON.
+
+    Single submission, single poll loop, no retries. POLL_TIMEOUT_SECONDS is the brake.
+    """
+    api_key = os.getenv('FAL_KEY')
+    if not api_key:
+        raise RuntimeError('FAL_KEY not set')
+    headers = {'Authorization': f'Key {api_key}', 'Content-Type': 'application/json'}
+
+    submit = http_requests.post(
+        f'https://queue.fal.run/{model_path}', headers=headers, json=payload, timeout=30,
+    )
+    submit.raise_for_status()
+    data = submit.json()
+    status_url = data.get('status_url') or f"https://queue.fal.run/{model_path}/requests/{data['request_id']}/status"
+    response_url = data.get('response_url') or f"https://queue.fal.run/{model_path}/requests/{data['request_id']}"
+
+    deadline = time.time() + POLL_TIMEOUT_SECONDS
+    while time.time() < deadline:
+        time.sleep(3)
+        s = http_requests.get(status_url, headers=headers, timeout=10)
+        s.raise_for_status()
+        sd = s.json()
+        status = sd.get('status')
+        if status == 'COMPLETED':
+            r = http_requests.get(response_url, headers=headers, timeout=30)
+            r.raise_for_status()
+            return r.json()
+        if status in ('FAILED', 'ERROR'):
+            raise RuntimeError(f"Fal {model_path} failed: {sd}")
+    raise RuntimeError(f"Fal {model_path} poll timed out after {POLL_TIMEOUT_SECONDS}s")
+
+
+def _generate_fal_ltx(prompt, width, height, duration_seconds):
+    """Fal LTX-Video. Cheap, fast, lower quality — Tier 2 default."""
+    out = _fal_queue_generate('fal-ai/ltx-video', {
+        'prompt': prompt,
+        'aspect_ratio': _aspect_ratio_str(width, height),
+        'num_frames': max(24, min(int(duration_seconds * 24), 240)),
+        'resolution': '720p',
+    })
+    video_url = out['video']['url']
+    v = http_requests.get(video_url, timeout=60)
+    v.raise_for_status()
+    return v.content, 'fal-ai', 'ltx-video'
+
+
+def _generate_fal_hunyuan(prompt, width, height, duration_seconds):
+    """Fal Hunyuan-Video. Slower, higher quality — Tier 2 fallback."""
+    out = _fal_queue_generate('fal-ai/hunyuan-video', {
+        'prompt': prompt,
+        'aspect_ratio': _aspect_ratio_str(width, height),
+        'num_frames': max(24, min(int(duration_seconds * 24), 240)),
+        'resolution': '720p',
+    })
+    video_url = out['video']['url']
+    v = http_requests.get(video_url, timeout=60)
+    v.raise_for_status()
+    return v.content, 'fal-ai', 'hunyuan-video'
+
+
+def _mux_audio_onto_video(video_bytes, audio_path, duration_seconds):
+    """Stream-copy audio onto AI-generated video. Bit-perfect on audio side.
+
+    Used by Tier 2/3 to attach user audio after the visuals come back. Video
+    track is copied (no re-encode); audio is re-encoded only once at 320k AAC.
+    """
+    import subprocess, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        vin = os.path.join(tmp, 'in.mp4')
+        out = os.path.join(tmp, 'out.mp4')
+        with open(vin, 'wb') as f:
+            f.write(video_bytes)
+        cmd = [
+            'ffmpeg','-y','-hide_banner','-loglevel','error',
+            '-i', vin, '-i', audio_path,
+            '-map','0:v:0','-map','1:a:0',
+            '-c:v','copy', '-c:a','aac','-b:a','320k',
+            '-t', str(duration_seconds), '-shortest', out,
+        ]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            raise RuntimeError(f"audio mux failed: {r.stderr.strip()[-400:]}")
+        return open(out, 'rb').read()
+
+
+def generate_video_standard(prompt, audio_path, width, height, duration_seconds=5):
+    """Tier 2: Fal text-to-video + user audio mux. Returns (mp4_bytes, provider, model, dur).
+
+    - LTX primary, Hunyuan fallback within Fal.
+    - DRY_RUN=1 returns a placeholder mp4 (no API call).
+    - audio_path optional (None = no audio track muxed).
+    """
+    if duration_seconds <= 0 or duration_seconds > MAX_VIDEO_DURATION_SECONDS:
+        raise ValueError(f'duration_seconds must be 0 < d <= {MAX_VIDEO_DURATION_SECONDS}')
+
+    if DRY_RUN:
+        mp4 = _dry_run_video(width, height, duration_seconds, 'tier2/dryrun')
+        return mp4, 'dry-run', 'placeholder', duration_seconds
+
+    errors = []
+    video_bytes = None
+    used_provider, used_model = None, None
+    for fn, name, model in [
+        (_generate_fal_ltx, 'fal-ai', 'ltx-video'),
+        (_generate_fal_hunyuan, 'fal-ai', 'hunyuan-video'),
+    ]:
+        try:
+            video_bytes, used_provider, used_model = fn(prompt, width, height, duration_seconds)
+            break
+        except Exception as e:
+            errors.append(f"{model}: {e}")
+    if video_bytes is None:
+        raise RuntimeError(f"All Tier 2 providers failed: {'; '.join(errors)}")
+
+    if audio_path:
+        video_bytes = _mux_audio_onto_video(video_bytes, audio_path, duration_seconds)
+    return video_bytes, used_provider, used_model, duration_seconds
+
+
 # ── Audio storage ──────────────────────────────────────────
 
 def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg'):
@@ -490,8 +670,9 @@ def provider_status():
         # Nested view — preferred shape going forward.
         'image': {'fal': fal, 'replicate': replicate},
         'video_composite': {'ffmpeg': _ffmpeg_available()},
-        'video_standard': {'fal': fal},
-        'video_premium': {'fal': fal, 'replicate': replicate},
+        'video_standard': {'fal_ltx': fal, 'fal_hunyuan': fal},
+        'video_premium': {'fal_kling': fal, 'replicate_veo': replicate},
+        'dry_run': DRY_RUN,
     }
 
 

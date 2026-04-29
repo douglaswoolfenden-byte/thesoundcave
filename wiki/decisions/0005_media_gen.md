@@ -65,12 +65,12 @@ Every successful response includes `estimated_cost_usd`. Frontend can show "this
 ## Files this decision touches
 - `media_gen.py` (new — successor to `image_gen.py`)
 - `content_api.py` (new endpoint, new credit costs, /api/health shape)
-- `db/0006_audio_tracks.sql` (new table + clipping-ready columns)
+- `db/0007_audio_tracks.sql` (new table + clipping-ready columns)
 - `wiki/features/firepit_video.md` (feature doc)
 - `tests/sample_inputs/regenerate.sh` (hermetic sample)
 
 ## Open follow-ups
-- Apply `db/0006_audio_tracks.sql` to Supabase + create private `audio_tracks` bucket before merge.
+- Apply `db/0007_audio_tracks.sql` to Supabase + create private `audio_tracks` bucket before merge.
 - Resolve Replicate Veo billing on Doug's account (probably needs spend cap raised or Veo 3 access requested separately).
 - Stream 1: wire the Forge frontend to `/api/generate-media` post-merge. Until then, `/api/generate-image` alias keeps things working.
 - Phase H: auto-clipping + Tracks library + longer-than-30s videos.

@@ -77,11 +77,11 @@ Decision history: `wiki/decisions/0003_saas_architecture.md` (the original three
 ## Files
 - `media_gen.py` — provider routing, FFmpeg pipeline, audio storage, Tier 1/2/3 generators
 - `content_api.py` — `/api/generate-media`, `/api/health`, credit middleware
-- `db/0006_audio_tracks.sql` — `audio_tracks` table + clipping-ready columns on `stash_items`
+- `db/0007_audio_tracks.sql` — `audio_tracks` table + clipping-ready columns on `stash_items`
 - `tests/sample_inputs/regenerate.sh` — reproduces the hermetic 8s sine sample (.mp3 is gitignored repo-wide)
 
 ## Operational notes
-- **Before this PR ships:** apply `db/0006_audio_tracks.sql` to Supabase + create the private `audio_tracks` storage bucket.
+- **Before this PR ships:** apply `db/0007_audio_tracks.sql` to Supabase + create the private `audio_tracks` storage bucket.
 - **Provider configuration:** `FAL_KEY`, `REPLICATE_API_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `ANTHROPIC_API_KEY` all in workspace `.env`.
 - **Verbose poll debugging:** `MEDIA_GEN_POLL_VERBOSE=1` prints each Fal/Replicate status change with queue position and elapsed time.
 - **Fal queue waits routinely 2+ minutes on standard tier** — caching or warm pools come later.

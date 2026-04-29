@@ -540,6 +540,198 @@ def stash_update(item_id):
     return jsonify({'item': res.data[0] if res.data else None})
 
 
+# ── Billing (Phase D — Stripe) ────────────────────────────
+import stripe
+
+STRIPE_KEY            = os.getenv('STRIPE_SECRET_KEY')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
+APP_BASE_URL          = os.getenv('APP_BASE_URL', 'http://localhost:5500')
+
+if STRIPE_KEY:
+    stripe.api_key = STRIPE_KEY
+
+
+def _billing_unavailable():
+    return jsonify({'error': 'billing_not_configured', 'detail': 'STRIPE_SECRET_KEY not set on server'}), 503
+
+
+def _ensure_stripe_customer(uid, email):
+    """Get-or-create the Stripe customer for this user. Caches id on public.users."""
+    sb = _stash_client()
+    row = sb.table('users').select('stripe_customer_id').eq('id', uid).execute()
+    cid = (row.data or [{}])[0].get('stripe_customer_id')
+    if cid:
+        return cid
+    customer = stripe.Customer.create(email=email, metadata={'sound_cave_user_id': uid})
+    sb.table('users').update({'stripe_customer_id': customer.id}).eq('id', uid).execute()
+    return customer.id
+
+
+@app.route('/api/billing/plans', methods=['GET'])
+def billing_plans():
+    """Static plan list — used by the pricing modal. Public (no auth required)."""
+    return jsonify({
+        'plans': [
+            {'lookup_key': 'tier_solo_monthly',   'tier': 'solo',   'name': 'Solo',   'price_pence': 2900,  'credits': 500,  'highlighted': False},
+            {'lookup_key': 'tier_label_monthly',  'tier': 'label',  'name': 'Label',  'price_pence': 7900,  'credits': 2000, 'highlighted': True},
+            {'lookup_key': 'tier_agency_monthly', 'tier': 'agency', 'name': 'Agency', 'price_pence': 19900, 'credits': 6000, 'highlighted': False},
+        ],
+        'pack': {'lookup_key': 'credit_pack_200', 'name': '200 Credit Pack', 'price_pence': 1000, 'credits': 200},
+        'currency': 'gbp',
+        'configured': bool(STRIPE_KEY),
+    })
+
+
+@app.route('/api/billing/checkout', methods=['POST'])
+def billing_checkout():
+    if not STRIPE_KEY:
+        return _billing_unavailable()
+    uid, err = _require_user()
+    if err: return err
+    body = request.get_json() or {}
+    lookup_key = body.get('lookup_key')
+    if not lookup_key:
+        return jsonify({'error': 'lookup_key required'}), 400
+
+    prices = stripe.Price.list(lookup_keys=[lookup_key], active=True, limit=1)
+    if not prices.data:
+        return jsonify({'error': f'unknown lookup_key: {lookup_key} — run scripts/stripe_bootstrap.py'}), 400
+    price = prices.data[0]
+
+    auth_token = request.headers.get('Authorization', '')[7:].strip()
+    user_res = _stash_client().auth.get_user(auth_token)
+    customer_id = _ensure_stripe_customer(uid, user_res.user.email)
+
+    is_subscription = bool(price.recurring)
+    session = stripe.checkout.Session.create(
+        customer=customer_id,
+        line_items=[{'price': price.id, 'quantity': 1}],
+        mode='subscription' if is_subscription else 'payment',
+        success_url=f'{APP_BASE_URL}/?billing=success',
+        cancel_url=f'{APP_BASE_URL}/?billing=cancelled',
+        metadata={'sound_cave_user_id': uid, 'lookup_key': lookup_key},
+        subscription_data={'metadata': {'sound_cave_user_id': uid, 'lookup_key': lookup_key}} if is_subscription else None,
+    )
+    return jsonify({'url': session.url})
+
+
+@app.route('/api/billing/portal', methods=['POST'])
+def billing_portal():
+    if not STRIPE_KEY:
+        return _billing_unavailable()
+    uid, err = _require_user()
+    if err: return err
+    sb = _stash_client()
+    row = sb.table('users').select('stripe_customer_id').eq('id', uid).execute()
+    cid = (row.data or [{}])[0].get('stripe_customer_id')
+    if not cid:
+        return jsonify({'error': 'no_customer', 'detail': 'subscribe to a plan first'}), 400
+    portal = stripe.billing_portal.Session.create(customer=cid, return_url=f'{APP_BASE_URL}/')
+    return jsonify({'url': portal.url})
+
+
+@app.route('/api/billing/webhook', methods=['POST'])
+def billing_webhook():
+    if not STRIPE_KEY or not STRIPE_WEBHOOK_SECRET:
+        return _billing_unavailable()
+    payload = request.data
+    sig = request.headers.get('Stripe-Signature', '')
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+    except Exception as e:
+        print('webhook signature verification failed:', e)
+        return jsonify({'error': 'invalid signature'}), 400
+
+    sb = _stash_client()
+    etype = event['type']
+    # Stripe SDK 15.x StripeObject.get() raises AttributeError; parse raw JSON instead.
+    obj = json.loads(payload)['data']['object']
+    print(f'[billing webhook] {etype}')
+
+    if etype == 'checkout.session.completed':
+        if obj.get('mode') == 'payment':
+            uid = (obj.get('metadata') or {}).get('sound_cave_user_id')
+            lookup_key = (obj.get('metadata') or {}).get('lookup_key')
+            if uid and lookup_key == 'credit_pack_200':
+                sb.rpc('grant_credits', {
+                    'p_user_id': uid, 'p_amount': 200,
+                    'p_reason': f"pack:{obj.get('id')}",
+                }).execute()
+                print(f'  granted 200 credits to {uid}')
+        # Subscription checkouts also fire here; provisioning happens in subscription.created.
+
+    elif etype in ('customer.subscription.created', 'customer.subscription.updated'):
+        uid = (obj.get('metadata') or {}).get('sound_cave_user_id')
+        if not uid:
+            cust = obj.get('customer')
+            row = sb.table('users').select('id').eq('stripe_customer_id', cust).execute()
+            uid = (row.data or [{}])[0].get('id')
+
+        items = (obj.get('items') or {}).get('data') or []
+        if not items:
+            return jsonify({'received': True})
+        first_item = items[0]
+        price_id = (first_item.get('price') or {}).get('id')
+        price = stripe.Price.retrieve(price_id)
+        price_meta = dict(price.metadata or {})
+        tier = price_meta.get('tier') or 'solo'
+
+        # Stripe API 2024-12+ moved current_period_end onto each item.
+        period_end = obj.get('current_period_end') or first_item.get('current_period_end')
+        sb.table('subscriptions').upsert({
+            'user_id': uid,
+            'stripe_subscription_id': obj.get('id'),
+            'stripe_price_id': price_id,
+            'tier': tier,
+            'status': obj.get('status'),
+            'current_period_end': datetime.fromtimestamp(period_end, tz=timezone.utc).isoformat() if period_end else None,
+            'cancel_at_period_end': obj.get('cancel_at_period_end', False),
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }, on_conflict='stripe_subscription_id').execute()
+
+        if obj.get('status') in ('active', 'trialing'):
+            sb.table('users').update({'tier': tier}).eq('id', uid).execute()
+            if etype == 'customer.subscription.created':
+                credits = int(price_meta.get('credits', '0'))
+                if credits > 0 and uid:
+                    sb.rpc('grant_credits', {
+                        'p_user_id': uid, 'p_amount': credits,
+                        'p_reason': f"sub_initial:{obj.get('id')}",
+                    }).execute()
+                    print(f'  granted {credits} initial credits to {uid}')
+
+    elif etype == 'customer.subscription.deleted':
+        sb.table('subscriptions').update({
+            'status': 'canceled',
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }).eq('stripe_subscription_id', obj.get('id')).execute()
+
+    elif etype == 'invoice.payment_succeeded':
+        sub_id = obj.get('subscription')
+        if not sub_id or obj.get('billing_reason') != 'subscription_cycle':
+            return jsonify({'received': True})
+        sub = stripe.Subscription.retrieve(sub_id)
+        sub_dict = sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
+        uid = (sub_dict.get('metadata') or {}).get('sound_cave_user_id')
+        if not uid:
+            cust = obj.get('customer')
+            row = sb.table('users').select('id').eq('stripe_customer_id', cust).execute()
+            uid = (row.data or [{}])[0].get('id')
+        if uid:
+            price_id = sub_dict['items']['data'][0]['price']['id']
+            price = stripe.Price.retrieve(price_id)
+            price_meta = dict(price.metadata or {})
+            credits = int(price_meta.get('credits', '0'))
+            if credits > 0:
+                sb.rpc('grant_credits', {
+                    'p_user_id': uid, 'p_amount': credits,
+                    'p_reason': f"renewal:{sub_id}",
+                }).execute()
+                print(f'  renewed {credits} credits for {uid}')
+
+    return jsonify({'received': True})
+
+
 # ── SoundCloud search (reuses scout.py patterns) ──────────
 
 SC_CLIENT_ID = os.getenv('SOUNDCLOUD_CLIENT_ID')

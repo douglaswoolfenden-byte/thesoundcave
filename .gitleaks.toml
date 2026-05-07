@@ -16,6 +16,9 @@ paths = [
   '''db/README\.md''',
   '''\.gitleaks\.toml''',
   '''\.gitignore''',
+  # Supabase anon key is public-by-design (RLS is the security layer) and is
+  # embedded in the client so login works on the static Vercel deployment.
+  '''js/lib/supabase\.js''',
 ]
 
 # Strings that look like secrets but are documentation/placeholders

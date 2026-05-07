@@ -17,12 +17,15 @@
   let client = null;
   const subscribers = new Set();
 
+  // Hardcoded public Supabase config. Anon key is safe to expose — RLS is the
+  // security layer. Avoids dependency on /api/config (Flask) when the frontend
+  // is deployed on Vercel without the backend.
+  const SUPABASE_URL = 'https://agmmdrqmjywggtsycsri.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnbW1kcnFtanl3Z2d0c3ljc3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczOTIyMTYsImV4cCI6MjA5Mjk2ODIxNn0.-POHp0618Sz1Rd0yb1_cqPyNNtHqpzeCBvqJYCTeC_E';
+
   async function init() {
-    const [{ createClient }, cfg] = await Promise.all([
-      import(SDK_URL),
-      fetch(`${apiBase}/api/config`).then(r => r.json()),
-    ]);
-    client = createClient(cfg.supabase_url, cfg.supabase_anon_key, {
+    const { createClient } = await import(SDK_URL);
+    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
     client.auth.onAuthStateChange((event, session) => {

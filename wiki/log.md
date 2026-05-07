@@ -1,5 +1,10 @@
 # Sound Cave Wiki — Log
 
+## [2026-04-30] [stream-2] db/0007_audio_tracks.sql applied to live Supabase
+- `audio_tracks` private storage bucket created (25MB cap, no public read).
+- Migration 0007 run: `audio_tracks` table + RLS, 5 clipping columns added to `stash_items`, 4 owner-scoped policies on `storage.objects` for the new bucket.
+- Verified via `pg_policies` query — all 4 policies (read/write/update/delete) present. Tier 1 composite video uploads now functional against live Supabase.
+
 ## [2026-04-29] [stream-2] Phase 5 — /api/generate-media endpoint + health
 - New endpoint `POST /api/generate-media` (multipart or JSON). `media_type` ∈ {image, video_composite, video_standard, video_premium}. video_composite requires `audio_file` field (multipart); other types accept it optionally.
 - `_parse_media_request` handles both `application/json` and `multipart/form-data` (JSON in `data` field, audio in `audio_file`). Audio size cap = `MAX_AUDIO_FILE_BYTES` (25MB).

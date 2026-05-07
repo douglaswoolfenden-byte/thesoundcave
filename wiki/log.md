@@ -1,5 +1,11 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-07] frontend live on Vercel 🎉
+- Deploy `thesoundcave-9k9k086px-douglaswoolfenden-bytes-projects.vercel.app` is `READY` (commit `ac967c0`).
+- Fix: added `vercel.json` (framework=null, no build, no install) + `.vercelignore` to suppress Flask auto-detection. Vercel was sniffing `requirements.txt` and demanding an `app.py` entrypoint; the static frontend now bypasses that entirely.
+- ⚠️ Backend (Flask `content_api.py`) still NOT deployed — Firepit→Forge "generate" button will be inert in prod until Railway deploy is done. Tracked as the next deploy task.
+- Set up `VERCEL_TOKEN` in workspace `.env` so future deploy checks/logs are scriptable from chat (no more screenshots).
+
 ## [2026-05-07] design_references library established
 - Formalised `wiki/design_references/` as the home for saved UI/visual inspiration. KVS Studio (kvs.services) was the first entry; structure now standardised around its template (source, why, aesthetic-one-liner, ingredients table, palette, type, replication tiers, how-to-apply, open questions).
 - Added `wiki/design_references/README.md` as the index + how-to-save-new-references guide.

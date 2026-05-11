@@ -1,5 +1,25 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-11] Artist live stats — kill embedded-follower-count bug, add on-view refresh
+- **Why:** Doug spotted Carlos Manaça (signed to Magna Recordings, 21k followers) in Foraging despite the < 5k threshold. Root cause: SoundCloud's track-embedded `user.followers_count` is unreliable — stored as 7 in `data/2026-03-25.json`. The "suspicious → re-fetch" heuristic at `scout.py:163` (`followers < 500 AND plays > 5000`) missed him because plays were only 377. Backfill across the report showed **19 of 20 stored counts were wrong** — three other established artists (DJ S 11,830, dazegxd 15,812, plus several smaller errors) also slipped through.
+- **Tap 1 — scout-time fix (`scout.py`):** dropped the heuristic. `is_eligible()` now always calls `fetch_real_followers(user_id)` for tracks that pass the play/recency gate. Cost: ~50 extra API calls per weekly scout run — invisible.
+- **Tap 2 — on-view refresh (`content_api.py`):** new `GET /api/artist/<username>` route. 10-minute TTL via Supabase `artists` table. Cache hit = 0 SC calls; miss = 2 SC calls (`/resolve` + `/users/{id}/tracks?limit=5`). Helpers `sc_resolve_user`, `sc_fetch_user_profile`, `sc_fetch_user_tracks`. Force-bypass via `?force=1`.
+- **Tap 3 — daily background:** `clan_tracker.py` unchanged. Daily 8am UTC continues feeding trend sparklines. No frequency bump — naive hourly poll would be 4,800 calls/day for a barely-better result.
+- **DB migration (`db/0008_artist_stats.sql`):** added `play_count`, `like_count`, `track_count`, `avatar_url`, `display_name`, `username`, `updated_at` to `public.artists`. Applied to live Supabase.
+- **Frontend (`js/app.js`):** `openPanel()` now fires `refreshArtistLive(username)` in parallel. On success, `renderPanel` prefers live values over stored snapshot. Green "● Live · synced Xm ago" pill in the growth row.
+- **Backfill (`scripts/refresh_clan_stats.py`):** one-shot, iterates every weekly JSON, re-resolves each artist, rewrites with real `followers`. Ran against `data/2026-03-25.json` — Carlos + 3 other false-positives now fall out of Foraging on next load.
+- **Verified:** `curl /api/artist/djcarlosmanaca` → 21,793 followers, `cached: false`. Second call → `cached: true`, zero SC traffic. Supabase row written.
+- **Out of scope (next plan):** signed/label detection. Carlos's "Magna Recordings" affiliation in his bio is still invisible to the scout. Needs its own heuristic (parse `description`, flag "Radio Show" titles).
+- **Files:** `scout.py`, `content_api.py`, `db/0008_artist_stats.sql`, `js/app.js`, `scripts/refresh_clan_stats.py`, `data/2026-03-25.json` (rewritten), `wiki/features/artist_live_stats.md` (new).
+
+## [2026-05-11] Brand mark v2 + wordmark rename → S0UNDCAV3
+- **Why:** Doug brought a new minimalist vector mark in (AI-generated, monochrome on `#0A0A0A` ground). Old logo was a hand-coded cave-mountain-with-fire scene built before tokens locked — visually busy and conceptually heavy. Wordmark also drops "The" and stylises name as `S0UNDCAV3` (zero/three substitutions read as terminal/leet — fits the CRT/cave skin).
+- **Asset home:** new `brand/` folder at project root with `README.md` (palette + type reference) and `logo/` for active + `logo/dormant/` for alternates. Active mark: `brand/logo/soundcave_logo_2026-05-11.svg`. One dormant alt saved alongside.
+- **Wired in:** `index.html` — 3 inline SVG blocks replaced with `<img class="logo-img logo-img--{splash,nav,hero}">` references. Wordmark text updated in 5 places (`<title>`, cave-stamp, cave-logo-text, header logo-text, home h1). Body copy still reads "The Sound Cave" descriptively — brand mark is stylised, the product name in prose is unchanged. **Doug to decide** if prose copy should also flip.
+- **Grit preserved:** the gritty CRT feel was always environmental (`.cave-crt` scanlines + `.cave-grain` overlay on `.cave-entrance`), not on the logo itself. Swap doesn't touch those. Removed the now-obsolete `.cave-logo svg { filter: brightness(2.2) contrast(1.05); }` rule (was a workaround to lift the old grey-palette SVG on the dark bg — new mark is already palette-correct). Vestigial unused `#caveHalftone` SVG filter left in place (not referenced by CSS, harmless).
+- **CSS:** added `.logo-img` + `.logo-img--{splash,nav,hero}` size classes in `css/style.css` next to the old removed rule.
+- **Files:** `index.html`, `css/style.css`, new `brand/` tree.
+
 ## [2026-05-11] Firepit Forge strip-down — 15 → 7 types, 10 → 4 channels
 - **Why:** Doug's call — the Forge content-type menu was too clunky and full of options he doesn't use. Real focus is Meta (IG + FB), TikTok, and Reddit; everything else was noise.
 - **Content types** (locked): `social_post`, `social_carousel`, `social_short`, `event_promo`, `lineup_poster`, `artist_bio`, `press_release`. Captions are baked into the three social types (no standalone "TikTok caption"). Press Release is the safety valve for long-form/editorial oddities — no generic "Other" bucket.

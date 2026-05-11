@@ -9,17 +9,23 @@
   const pwdEl    = document.getElementById('caveLoginPassword');
   const btnEl    = document.getElementById('caveLoginBtn');
   const toggleEl = document.getElementById('caveLoginToggle');
+  const forgotEl = document.getElementById('caveLoginForgot');
   const msgEl    = document.getElementById('caveLoginMsg');
   let mode = 'magic'; // 'magic' | 'password'
 
   function reveal() {
     cave.classList.add('mouth-open');
+    // Halftone overlay snaps on, then resolves to clean as cave opens.
+    appWrap.classList.add('halftoning');
     setTimeout(() => {
       cave.classList.add('entering');
-      appWrap.classList.add('revealed');
-      setTimeout(() => cave.classList.add('hidden'), 2100);
+      appWrap.classList.add('revealed');     // also fades halftone out (CSS)
+      setTimeout(() => {
+        cave.classList.add('hidden');
+        appWrap.classList.remove('halftoning');
+      }, 2600);
       sessionStorage.setItem('sc_splash_done', '1');
-    }, 1400);
+    }, 700);
   }
 
   function showLoginForm() {
@@ -53,10 +59,30 @@
   toggleEl.addEventListener('click', () => {
     mode = mode === 'magic' ? 'password' : 'magic';
     pwdEl.hidden = mode !== 'password';
-    btnEl.textContent = mode === 'password' ? 'Sign in' : 'Email me a link';
-    toggleEl.textContent = mode === 'password' ? 'Use magic link instead' : 'Use password instead';
+    forgotEl.hidden = mode !== 'password';
+    btnEl.textContent = mode === 'password' ? '{SIGN IN}' : '{ENTER THE CAVE}';
+    btnEl.dataset.glitchText = btnEl.textContent;
+    toggleEl.textContent = mode === 'password' ? '{USE MAGIC LINK}' : '{USE PASSWORD}';
     msgEl.textContent = '';
+    msgEl.className = 'cave-login-msg';
     if (mode === 'password') setTimeout(() => pwdEl.focus(), 50);
+  });
+
+  forgotEl.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email) { emailEl.focus(); msgEl.textContent = 'Enter your email above first.'; msgEl.className = 'cave-login-msg error'; return; }
+    forgotEl.disabled = true;
+    msgEl.textContent = 'Sending reset link…';
+    msgEl.className = 'cave-login-msg';
+    const { error } = await window.scAuth.sendPasswordReset(email);
+    forgotEl.disabled = false;
+    if (error) {
+      msgEl.textContent = error;
+      msgEl.className = 'cave-login-msg error';
+    } else {
+      msgEl.textContent = `Reset link sent to ${email}. Click it, then set a new password from the account menu.`;
+      msgEl.className = 'cave-login-msg success';
+    }
   });
 
   form.addEventListener('submit', async (e) => {
@@ -67,13 +93,16 @@
     if (mode === 'password' && !password) { pwdEl.focus(); return; }
     btnEl.disabled = true;
     const originalLabel = btnEl.textContent;
-    btnEl.textContent = mode === 'password' ? 'Signing in…' : 'Sending…';
+    // Glitch the CTA while we wait — KVS-style scramble before the resolve.
+    if (window.caveGlitch) window.caveGlitch(btnEl, mode === 'password' ? '{SIGNING IN…}' : '{SENDING…}');
+    else btnEl.textContent = mode === 'password' ? '{SIGNING IN…}' : '{SENDING…}';
     msgEl.textContent = '';
     const { error } = mode === 'password'
       ? await window.scAuth.signInWithPassword(email, password)
       : await window.scAuth.signInWithEmail(email);
     btnEl.disabled = false;
-    btnEl.textContent = originalLabel;
+    if (window.caveGlitch) window.caveGlitch(btnEl, originalLabel);
+    else btnEl.textContent = originalLabel;
     if (error) {
       msgEl.textContent = error;
       msgEl.className = 'cave-login-msg error';
@@ -532,6 +561,31 @@ function openPanel(username) {
   renderPanel(username);
   document.getElementById('panelOverlay').classList.add('open');
   document.getElementById('artistPanel').classList.add('open');
+  refreshArtistLive(username);
+}
+
+async function refreshArtistLive(username) {
+  const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  try {
+    const r = await fetch(`${apiBase}/api/artist/${encodeURIComponent(username)}`);
+    if (!r.ok) return;
+    const live = await r.json();
+    const favs = getFavourites();
+    if (!favs[username]) return;
+    favs[username].live = {
+      followers: live.follower_count,
+      plays: live.play_count,
+      likes: live.like_count,
+      track_count: live.track_count,
+      avatar_url: live.avatar_url,
+      updated_at: live.updated_at,
+      age_seconds: live.age_seconds || 0,
+    };
+    // In-memory only — don't persist live values to localStorage (they expire).
+    if (activeArtist === username) renderPanel(username);
+  } catch (e) {
+    // Silent fail — panel stays on cached values.
+  }
 }
 
 function closePanel() {
@@ -564,7 +618,14 @@ function renderPanel(username) {
   const latest = snaps[snaps.length-1]||{};
   const first = snaps[0]||{};
   const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
-  const followers = a.followers_override != null ? a.followers_override : (latest.followers||0);
+  const live = a.live || null;
+  const followers = live ? live.followers
+                    : (a.followers_override != null ? a.followers_override : (latest.followers||0));
+  const livePlays = live ? live.plays : (latest.plays||0);
+  const liveLikes = live ? live.likes : (latest.likes||0);
+  const syncedHint = live
+    ? `<span class="panel-growth-tag" style="background:#1a4d2e;color:#a7f3d0">● Live · synced ${live.age_seconds < 60 ? 'just now' : Math.floor(live.age_seconds/60)+'m ago'}</span>`
+    : '';
 
   const growthEl = document.getElementById('panelGrowth');
   if (growthEl) {
@@ -575,11 +636,12 @@ function renderPanel(username) {
     growthEl.innerHTML = `
       <div class="panel-stats-row">
         <div class="panel-stat"><span class="panel-stat-val">${fmt(followers)}</span><span class="panel-stat-label">Followers</span></div>
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.plays||0)}</span><span class="panel-stat-label">Plays</span></div>
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.likes||0)}</span><span class="panel-stat-label">Likes</span></div>
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(livePlays)}</span><span class="panel-stat-label">Plays</span></div>
+        <div class="panel-stat"><span class="panel-stat-val">${fmt(liveLikes)}</span><span class="panel-stat-label">Likes</span></div>
         <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.reposts||0)}</span><span class="panel-stat-label">Reposts</span></div>
       </div>
       <div class="panel-growth-row">
+        ${syncedHint}
         ${daysTracked > 0 ? `<span class="panel-growth-tag">📅 Tracked ${daysTracked} days</span>` : ''}
         ${fGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(fGrowth)>=0?'up':'down'}">Followers ${parseFloat(fGrowth)>=0?'+':''}${fGrowth}%</span>` : ''}
         ${pGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(pGrowth)>=0?'up':'down'}">Plays ${parseFloat(pGrowth)>=0?'+':''}${pGrowth}%</span>` : ''}
@@ -751,11 +813,24 @@ function togglePanelStar(username) {
     }
   });
 
+  function openPasswordPanelForRecovery() {
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    pwdForm.hidden = false;
+    pwdMsg.textContent = 'Set a new password to finish recovery.';
+    pwdMsg.className = 'cave-login-msg';
+    setTimeout(() => pwdInput.focus(), 50);
+  }
+
   scAuth.ready.then(async () => {
     if (await scAuth.session()) hydrate();
     scAuth.onChange((event) => {
       if (event === 'SIGNED_IN') hydrate();
       if (event === 'SIGNED_OUT') wrap.hidden = true;
+      if (event === 'PASSWORD_RECOVERY') {
+        hydrate();
+        openPasswordPanelForRecovery();
+      }
     });
   }).catch(() => {});
 

@@ -154,16 +154,13 @@ def is_eligible(track: dict) -> bool:
         except Exception:
             pass
 
-    # Get follower count — API often returns wrong/low numbers in embedded user objects
-    # Fetch real profile if: followers is 0, OR ratio of plays:followers looks off
-    user      = track.get('user') or {}
-    followers = user.get('followers_count') or 0
-    user_id   = user.get('id')
+    # SoundCloud's track-embedded user.followers_count is unreliable (often 0 or stale).
+    # Always re-fetch from /users/{id} for accuracy. ~50 extra calls per weekly scout = invisible cost.
+    user    = track.get('user') or {}
+    user_id = user.get('id')
 
-    suspicious = (followers == 0) or (followers < 500 and plays > 5000)
-    if suspicious and user_id:
-        followers = fetch_real_followers(user_id)
-        user['followers_count'] = followers
+    followers = fetch_real_followers(user_id) if user_id else (user.get('followers_count') or 0)
+    user['followers_count'] = followers
 
     if followers >= MAX_FOLLOWERS:
         return False

@@ -643,14 +643,15 @@ header {
    from the very top of the header to the bottom of the row, text aligned
    to the bottom-left of the pill. Active = orange accent border + text. */
 .header-tabs { gap: 8px; align-items: stretch; padding: 0; }
-header { padding-left: 28px; padding-right: 28px; gap: 8px; align-items: stretch; }
+header { padding: 10px 28px 0; gap: 8px; align-items: stretch; }
 .htab {
-  background: var(--card);
+  background: var(--elevated);
   border: 1px solid var(--border-lt);
+  border-radius: 10px;
   cursor: pointer;
-  min-height: 84px;
-  min-width: 150px;
-  padding: 12px 16px;
+  min-height: 68px;
+  min-width: 180px;
+  padding: 10px 18px;
   display: inline-flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -670,16 +671,17 @@ header { padding-left: 28px; padding-right: 28px; gap: 8px; align-items: stretch
 .htab.active {
   color: var(--color-accent);
   border-color: var(--color-accent);
-  background: var(--elevated);
+  background: var(--hover);
 }
-/* Brand pill: same tall shape as siblings, but the logo dominates inside
-   and the wordmark sits bottom-left under it. */
+/* Brand pill: same tall shape, but logo + wordmark sit on one row,
+   bottom-left aligned. Wider so they don't crowd. */
 .htab-brand {
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 10px 14px;
+  flex-direction: row;
+  align-items: flex-end;          /* sit on the same baseline as sibling pill labels */
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 18px;
+  min-width: 240px;
   color: var(--heading);
 }
 .htab-brand:hover { color: var(--color-accent); border-color: var(--color-accent); }
@@ -690,8 +692,10 @@ header { padding-left: 28px; padding-right: 28px; gap: 8px; align-items: stretch
 }
 .htab-brand-logo {
   display: block;
-  width: 48px; height: 48px;
+  width: 32px; height: 32px;
   filter: drop-shadow(0 0 8px rgba(255,69,0,0.4));
+  flex-shrink: 0;
+  margin-bottom: -4px;            /* nudge so optical baseline matches the text */
 }
 
 /* Bottom-right corner nav — OVERVIEW + INDEX.
@@ -784,7 +788,8 @@ select, select option {
 .stat-value { font-size: 18px; }
 .summary-card .stat-value { font-size: 14px; }
 .plan-price { font-size: 22px; }
-.artist-tile-name, .clan-card-name, .forage-name, .track-drop-title { font-size: 12px; }
+.artist-tile-name, .clan-card-name, .track-drop-title { font-size: 12px; }
+.forage-name { font-size: 11px; }
 .plan-name, .panel-name { font-size: 14px; }
 .empty p, .panel-stat-val { font-size: 12px; }
 .trend-arrow, .action-btn .icon, .insight-icon, .fp-ico { font-size: 12px; }
@@ -977,9 +982,9 @@ select, select option {
 }
 .forage-card:hover { border-color: var(--border-lt); }
 .forage-info { flex: 1; min-width: 0; }
-.forage-name { font-size: 14px; font-weight: 600; color: var(--body); }
-.forage-meta { font-size: 12px; color: var(--secondary); margin-top: 2px; }
-.forage-track { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.forage-name { font-size: 11px; font-weight: 600; color: var(--body); }
+.forage-meta { font-size: 10px; color: var(--secondary); margin-top: 2px; }
+.forage-track { font-size: 9px; color: var(--muted); margin-top: 3px; }
 .forage-timer { font-size: 11px; margin-top: 3px; }
 .forage-timer.urgent { color: var(--red); }
 .forage-timer.normal { color: var(--secondary); }

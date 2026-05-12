@@ -35,71 +35,96 @@ client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 TEMPLATES = {
     'social_post': {
         'instruction': (
-            'Write a single social post — caption plus a one-line image direction prefixed "IMAGE:". '
-            'Caption is punchy, scroll-stopping, line breaks for readability, 3-5 relevant hashtags at the end. '
-            'Adapt tone to the chosen channel(s): Instagram/Facebook = visual + atmospheric, '
-            'TikTok = short and energetic, Reddit = no hashtags, conversational, no marketing speak.'
+            'Write a single Instagram/Facebook/TikTok post. The first sentence must contain one specific concrete image — '
+            'a piece of kit, a room, a time, a sound, a surface, a person doing something — that earns the second sentence. '
+            'No generic openers. Then 2-4 short lines (line breaks for readability). End with 2-3 scene-literate hashtags '
+            '(specific scene/genre/venue/event tags — not generic ones). For Reddit: drop hashtags, stay conversational.'
         ),
         'max_tokens': 400,
     },
     'social_carousel': {
         'instruction': (
-            'Write a carousel: opening hook caption, then 4–6 slides separated by "---" (slide 1 first), '
-            'closing slide is the CTA. Include 3-5 hashtags after the final slide. '
-            'For Reddit, drop the hashtags and treat slides as numbered points in a text post.'
+            'Write a carousel: opening hook caption, then 4-6 slides separated by "---" (slide 1 first). '
+            'Each slide does ONE job: one fact, one observation, one quote. No filler slides, no "swipe to find out". '
+            'Closing slide is a single concrete CTA (date+venue / link / specific action). 2-3 hashtags after the final slide. '
+            'For Reddit, drop hashtags and number the slides as a text post.'
         ),
-        'max_tokens': 700,
+        'max_tokens': 800,
     },
     'social_short': {
         'instruction': (
             'Write a vertical short-form video caption plus an on-screen-text outline prefixed "ON-SCREEN:" '
-            '(3-5 beats, one line each). Caption short and punchy with 2-3 hashtags. '
-            'TikTok = trend-aware energy; Instagram Reels = same caption rides; Reddit = drop hashtags.'
+            '(3-5 beats, one line each, each readable in under one second). Caption: short, no setup, drop the viewer mid-thought. '
+            '2 specific hashtags max. TikTok = trend-aware but not trend-chasing; Reels = same caption rides; Reddit = drop hashtags.'
         ),
         'max_tokens': 400,
     },
     'event_promo': {
         'instruction': (
-            'Write event promotion copy: a hype caption that builds intrigue plus a one-line image direction prefixed "IMAGE:". '
-            'Dark, moody, minimal. Mention date/venue if given. Urgency without screaming. '
-            'Suits Meta + TikTok; for Reddit drop hashtags and stay conversational.'
+            'Write event promotion copy. MUST include venue + date if given. MUST include one specific sensory detail about '
+            'the night (the soundsystem, the BPM range, the room layout, the temperature, what the floor looks like at 3am). '
+            'Banned openers: "Join us", "Get ready for", "We are excited to announce", "Don\'t miss". 3-5 short lines. '
+            '2-3 specific hashtags. Suits Meta + TikTok; for Reddit drop hashtags and stay conversational.'
         ),
         'max_tokens': 400,
     },
     'lineup_poster': {
         'instruction': (
-            'Write copy paired with a lineup poster: short hype headline, artist list with flair, '
-            'date/venue line, plus a one-line poster direction prefixed "POSTER:" describing the visual treatment.'
+            'Write very short copy paired with a lineup poster. Maximum 6 lines: '
+            '(1) one-line headline (no clichés), (2) lineup as a flowing list with em-dashes, (3) date + venue + door times, '
+            '(4) one descriptive line about the night, (5) ticket line if known. End with a single line prefixed "POSTER:" '
+            'describing the visual treatment in one sentence.'
         ),
         'max_tokens': 500,
     },
     'artist_bio': {
-        'instruction': 'Write an artist bio/spotlight. Third person, 2-3 paragraphs. Cover their sound, journey, and what makes them distinctive. Suitable for press kit or website.',
+        'instruction': (
+            'Write an artist bio. Third person, 2-3 paragraphs. Paragraph 1: where they come from and what they sound like — '
+            'name reference points (other artists, scenes, labels) rather than abstract adjectives. Paragraph 2: a specific '
+            'recent achievement, release, or moment. Paragraph 3: one line about where they\'re heading. Suitable for press kit.'
+        ),
         'max_tokens': 600,
     },
     'press_release': {
-        'instruction': 'Write a press release for a music release or event. Professional format: headline, subhead, 3-4 paragraphs, boilerplate. Include quotes placeholder. Formal but not stiff.',
+        'instruction': (
+            'Write a press release. Format: headline (one line, news-led, not hype), subhead (one line, more detail), '
+            '3-4 paragraphs of body. Lead paragraph = who/what/when/where in one sentence. Include one [QUOTE: …] placeholder '
+            'attributed to a relevant party. End with a 2-line boilerplate. Formal but not stiff. No marketing copy.'
+        ),
         'max_tokens': 800,
     },
 }
 
 VARIATION_PROMPTS = {
-    'shorter': 'Make this significantly shorter while keeping the core message and tone. Cut the fluff.',
-    'longer': 'Expand this with more detail, context, or atmosphere. Keep the same tone and style.',
-    'tone': 'Rewrite this with a different tone — if it was hype, make it understated. If formal, make it casual. Keep the same information.',
+    'shorter': 'Cut this to roughly half the length. Keep the strongest concrete image; drop the rest. Keep the voice.',
+    'longer': 'Expand with one more concrete sensory detail and one more line of context. Do not add hashtags. Do not pad.',
+    'tone': 'Rewrite with a different register. If hype, go understated. If formal, go conversational. Keep the same facts and the same concrete images.',
 }
 
-SYSTEM_PROMPT = """You are a content creator embedded in the European underground electronic music scene. You write for artists, labels, and event promoters.
+ENHANCE_PROMPT = (
+    'Refine this draft. Keep the message, the voice, and any specific references the user wrote. '
+    'Sharpen weak verbs, drop filler ("really", "very", "amazing"), and if you can name one more specific thing without inventing, do. '
+    'Do not add hashtags that weren\'t already there. Do not change the length by more than 20%.'
+)
 
-Your voice:
-- Authentic, never corporate or try-hard
-- You know the difference between techno and tech house
-- You reference the culture naturally — Boiler Room, Resident Advisor, Bandcamp Fridays, dark rooms, 4am moments
-- You write like someone who actually goes to the events, not someone marketing them from outside
-- No cringe, no over-hype, no generic influencer language
-- British English spelling
+SYSTEM_PROMPT = """You are a copywriter embedded in European underground electronic music — clubs, labels, events, artist PR. You write for the audience that already knows the scene.
 
-Adapt your register to the content type and the channel — a TikTok caption hits different from a press release, and Reddit hates marketing speak."""
+WHAT TO DO:
+- Lead with a concrete image. Name a piece of kit, a room, a sound, a surface, a time. "Strobes claw the ceiling" not "atmospheric strobes".
+- Use specific references the user provides. If they wrote artist names, venues, BPMs, dates — use them by name, not paraphrased.
+- If reference images are attached, name what's in them in the writing where it fits naturally.
+- British English: realise, colour, grey, practise. No US idioms.
+- Verbs over adjectives. Specifics over abstractions.
+
+WHAT NOT TO DO:
+- Banned openers: "Join us…", "Get ready for…", "Don't miss…", "We are excited to announce…", "Are you ready to…".
+- Banned filler: "absolute fire", "unmissable", "must-attend", "vibes" (standalone), "energy" (standalone), "iconic", "legendary" (unless literally true), "the way I…", "tell me you're…", "if you know, you know", "no thoughts just…".
+- No 🔥 stacks. No emoji decoration of headlines. One purposeful emoji per piece if at all.
+- No hashtag spam. 2-3 specific, scene-literate hashtags — never 7 generic ones. Reddit = zero.
+- No invented facts. If you don't know a date, a name, a venue — don't make one up.
+
+REGISTER:
+You're writing for someone who reads Resident Advisor, knows what a B2B is, has been to a 12-hour party, owns vinyl. Don't explain culture to them. Don't perform it back at them either."""
 
 
 # ── Voice presets ───────────────────────────────────────────
@@ -268,6 +293,69 @@ def _refund(uid, kind, reason):
         print('refund failed (will need reconciliation):', e)
 
 
+# Content types that support 3-variant generation. Long-form types stay single-shot.
+VARIANT_ENABLED_TYPES = {'social_post', 'social_carousel', 'social_short', 'event_promo', 'lineup_poster'}
+
+# Default angle labels per content type — Claude is asked to return variants with exactly these labels.
+VARIANT_ANGLES = {
+    'social_post':     ['PUNCHY', 'ATMOSPHERIC', 'PERSONAL'],
+    'social_carousel': ['NARRATIVE', 'LISTICLE', 'NAMECHECK'],
+    'social_short':    ['HOOK', 'TEASE', 'COUNTDOWN'],
+    'event_promo':     ['SCENE-SETTER', 'NAMECHECK', 'DARE'],
+    'lineup_poster':   ['SET-TIMES', 'THEME', 'NAMECHECK'],
+}
+
+
+def _variant_prompt_suffix(angles):
+    """Instruction appended when n_variants is requested. Forces strict JSON output."""
+    labels = ', '.join(f'"{a}"' for a in angles)
+    return (
+        f'\n\n---\n'
+        f'Produce THREE distinct variants from THREE different angles. Each angle takes the same brief in a different direction — '
+        f'do not write three near-copies. Angle labels (use EXACTLY): {labels}.\n\n'
+        f'Return STRICT JSON only — no markdown fence, no preamble, no commentary. Shape:\n'
+        f'{{"variants":[{{"angle":"<LABEL>","text":"<full caption>","image_direction":"<one line>"}}]}}\n\n'
+        f'Rules:\n'
+        f'- Exactly 3 variants, in the order of the labels above.\n'
+        f'- "text" is the full caption ready to post, NOT truncated.\n'
+        f'- "image_direction" is one line describing the background image we should generate for this variant.\n'
+        f'- Do NOT escape line breaks as \\\\n inside "text" — use actual JSON \\n strings.\n'
+        f'- Do NOT include any prose outside the JSON object.'
+    )
+
+
+def _parse_variants_response(raw_text, expected_angles):
+    """Parse a strict-JSON 3-variant response. Returns list of variants or None on failure.
+
+    Tolerant of markdown fences around the JSON (rare leak), strips them before parsing.
+    """
+    text = raw_text.strip()
+    if text.startswith('```'):
+        # Strip the first fence + optional language tag, and any trailing fence.
+        text = text.split('\n', 1)[1] if '\n' in text else text
+        if text.rstrip().endswith('```'):
+            text = text.rstrip()[:-3]
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    variants = data.get('variants') if isinstance(data, dict) else None
+    if not isinstance(variants, list) or not variants:
+        return None
+    out = []
+    for v in variants[:3]:
+        if not isinstance(v, dict):
+            continue
+        out.append({
+            'angle': str(v.get('angle', '')).strip() or 'VARIANT',
+            'text': str(v.get('text', '')).strip(),
+            'image_direction': str(v.get('image_direction', '')).strip(),
+        })
+    if len(out) < 1:
+        return None
+    return out
+
+
 @app.route('/api/generate', methods=['POST'])
 def generate():
     uid, err = _require_user()
@@ -287,6 +375,19 @@ def generate():
     voice = ctx.get('voice', 'underground')
     system = _system_prompt_for(voice)
 
+    # Three-angle variant mode: only for short-form content types and not when running a variation.
+    want_variants = (
+        ctx.get('n_variants') == 3
+        and content_type in VARIANT_ENABLED_TYPES
+        and not ctx.get('variation')
+    )
+    if want_variants:
+        angles = VARIANT_ANGLES.get(content_type, ['ANGLE A', 'ANGLE B', 'ANGLE C'])
+        user_prompt = user_prompt + _variant_prompt_suffix(angles)
+        max_tokens = int(template.get('max_tokens', 500) * 2.6)
+    else:
+        max_tokens = template.get('max_tokens', 500)
+
     user_content = (
         image_blocks + [{'type': 'text', 'text': user_prompt}]
         if image_blocks else user_prompt
@@ -298,13 +399,27 @@ def generate():
     try:
         message = client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=template.get('max_tokens', 500),
+            max_tokens=max_tokens,
             system=system,
             messages=[{'role': 'user', 'content': user_content}]
         )
-        content = message.content[0].text
+        raw = message.content[0].text
+
+        if want_variants:
+            variants = _parse_variants_response(raw, VARIANT_ANGLES.get(content_type, []))
+            if variants:
+                return jsonify({
+                    'variants': variants,
+                    'content_type': content_type,
+                    'tokens_used': message.usage.input_tokens + message.usage.output_tokens,
+                    'model': message.model,
+                    'credits_balance': balance,
+                })
+            # Fallback: malformed JSON → degrade to single-block. Don't refund (work was done).
+            print(f'[generate] variant parse failed for {content_type}; falling back to single block')
+
         return jsonify({
-            'content': content,
+            'content': raw,
             'content_type': content_type,
             'tokens_used': message.usage.input_tokens + message.usage.output_tokens,
             'model': message.model,
@@ -312,6 +427,64 @@ def generate():
         })
     except anthropic.APIError as e:
         _refund(uid, 'text', f'refund:gen:{content_type}')
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/enhance', methods=['POST'])
+def enhance():
+    """Refine an existing draft. Same voice/context as the original generation,
+    but the draft text is the seed and ENHANCE_PROMPT directs the rewrite."""
+    uid, err = _require_user()
+    if err: return err
+    ctx = request.get_json() or {}
+    draft = (ctx.get('text') or '').strip()
+    if not draft:
+        return jsonify({'error': 'text is required'}), 400
+
+    image_blocks, ref_err = _ref_images_to_blocks(ctx.get('reference_images'))
+    if ref_err:
+        return jsonify({'error': ref_err}), 400
+
+    voice = ctx.get('voice', 'underground')
+    system = _system_prompt_for(voice)
+    content_type = ctx.get('content_type', 'social_post')
+    template = TEMPLATES.get(content_type, TEMPLATES['social_post'])
+
+    parts = [ENHANCE_PROMPT]
+    # Carry through the original brief so the refiner knows what to preserve.
+    if ctx.get('artist_data'):
+        a = ctx['artist_data']
+        if a.get('name'): parts.append(f"Artist: {a['name']}")
+        if a.get('genre'): parts.append(f"Genre: {a['genre']}")
+    if ctx.get('event'):    parts.append(f"Event: {ctx['event']}")
+    if ctx.get('release'):  parts.append(f"Release: {ctx['release']}")
+    if ctx.get('freeform'): parts.append(f"Additional context: {ctx['freeform']}")
+    parts.append(f'\nDraft to refine:\n"""\n{draft}\n"""')
+
+    user_text = '\n'.join(parts)
+    user_content = (
+        image_blocks + [{'type': 'text', 'text': user_text}]
+        if image_blocks else user_text
+    )
+
+    balance, err = _debit(uid, 'text', f'enhance:{content_type}')
+    if err: return err
+
+    try:
+        message = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=template.get('max_tokens', 500),
+            system=system,
+            messages=[{'role': 'user', 'content': user_content}]
+        )
+        return jsonify({
+            'content': message.content[0].text,
+            'tokens_used': message.usage.input_tokens + message.usage.output_tokens,
+            'model': message.model,
+            'credits_balance': balance,
+        })
+    except anthropic.APIError as e:
+        _refund(uid, 'text', f'refund:enhance:{content_type}')
         return jsonify({'error': str(e)}), 500
 
 

@@ -6,6 +6,10 @@ let forgeGeneratedContent = '';
 let forgeGeneratedImageUrl = '';
 let _brandKits = [];
 let _compositorActive = false;
+// Three-angle variant state (Phase A of Forge text rework)
+let _forgeVariants = [];           // last response's variants, when variant mode fired
+let _forgePickedIndex = null;      // index into _forgeVariants the user picked
+let _forgePickedSnapshot = '';     // textarea content at pick time — used to detect edits on swap
 let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
 
 // Reference images uploaded for the current generation (base64 data URLs).
@@ -265,9 +269,16 @@ function gatherForgeContext() {
   return ctx;
 }
 
+// Short-form content types that support 3-variant generation. Long-form stays single-shot.
+const VARIANT_TYPES = new Set(['social_post','social_carousel','social_short','event_promo','lineup_poster']);
+
 async function generateContent(variation) {
   const ctx = gatherForgeContext();
   if (variation) ctx.variation = variation;
+  // Three-angle variant mode for short-form types — but not on a SHORTER/LONGER/TONE refine.
+  if (!variation && VARIANT_TYPES.has(ctx.content_type)) {
+    ctx.n_variants = 3;
+  }
 
   const outputArea = document.getElementById('forgeOutputArea');
   const actionsEl = document.getElementById('forgeActions');
@@ -275,6 +286,10 @@ async function generateContent(variation) {
     <span>Generating<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
   </div>`;
   actionsEl.style.display = 'none';
+  // Reset variant state — we're starting a fresh generation
+  _forgeVariants = [];
+  _forgePickedIndex = null;
+  _forgePickedSnapshot = '';
 
   try {
     const r = await scAuth.authedFetch(`${forgeApiUrl}/api/generate`, {
@@ -288,14 +303,24 @@ async function generateContent(variation) {
     }
     if (!r.ok) throw new Error(`API error: ${r.status}`);
     const data = await r.json();
-    forgeGeneratedContent = data.content || '';
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
-    outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
-    actionsEl.style.display = 'block';
-    updateCharCount();
-    // Trigger image gen after text is ready (sequential — image prompt uses the text)
-    if (OUTPUT_MEDIA[ctx.content_type] === 'image') generateImage(ctx);
-    else document.getElementById('forgeImageArea').style.display = 'none';
+
+    if (Array.isArray(data.variants) && data.variants.length > 0) {
+      // VARIANT MODE — show picker. Image gen waits for the user to pick one.
+      _forgeVariants = data.variants;
+      renderVariantPicker(ctx);
+      // Hide actions until a variant is picked
+      actionsEl.style.display = 'none';
+      document.getElementById('forgeImageArea').style.display = 'none';
+    } else {
+      // SINGLE-BLOCK MODE — long-form types, variations, or backend fallback.
+      forgeGeneratedContent = data.content || '';
+      outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
+      actionsEl.style.display = 'block';
+      updateCharCount();
+      if (OUTPUT_MEDIA[ctx.content_type] === 'image') generateImage(ctx);
+      else document.getElementById('forgeImageArea').style.display = 'none';
+    }
   } catch(e) {
     outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
       <span style="font-family:var(--font-mono);color:var(--color-accent);font-weight:600">!</span>
@@ -313,6 +338,123 @@ function updateCreditsDisplay(n) {
 }
 
 function generateVariation(type) { generateContent(type); }
+
+// ── Variant picker (Phase A of Forge text rework) ───────────
+function renderVariantPicker(ctx) {
+  const out = document.getElementById('forgeOutputArea');
+  out.replaceChildren();
+
+  const hint = document.createElement('div');
+  hint.className = 'forge-variant-hint';
+  hint.textContent = 'Three takes on the same brief. Pick one to edit and ship.';
+  out.appendChild(hint);
+
+  const cards = document.createElement('div');
+  cards.className = 'forge-variant-cards';
+  _forgeVariants.forEach((v, i) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'forge-variant-card';
+    card.dataset.index = String(i);
+
+    const label = document.createElement('div');
+    label.className = 'forge-variant-label';
+    label.textContent = v.angle || `VARIANT ${i + 1}`;
+    card.appendChild(label);
+
+    const preview = document.createElement('div');
+    preview.className = 'forge-variant-preview';
+    preview.textContent = v.text || '';
+    card.appendChild(preview);
+
+    card.addEventListener('click', () => pickVariant(i, ctx));
+    cards.appendChild(card);
+  });
+  out.appendChild(cards);
+}
+
+function pickVariant(i, ctx) {
+  const v = _forgeVariants[i];
+  if (!v) return;
+  // If the user is swapping after edits, confirm.
+  if (_forgePickedIndex !== null && _forgePickedIndex !== i) {
+    const ta = document.getElementById('forgeOutputText');
+    if (ta && ta.value !== _forgePickedSnapshot) {
+      if (!window.confirm('Discard your edits and load this variant?')) return;
+    }
+  }
+  _forgePickedIndex = i;
+  forgeGeneratedContent = v.text || '';
+  _forgePickedSnapshot = forgeGeneratedContent;
+
+  // Replace the picker contents with the editable textarea, keep the cards visible above.
+  const out = document.getElementById('forgeOutputArea');
+  // Remove previous textarea if present (re-pick path)
+  const old = document.getElementById('forgeOutputText');
+  if (old) old.remove();
+  // Highlight the picked card
+  out.querySelectorAll('.forge-variant-card').forEach((c) => {
+    c.classList.toggle('is-picked', Number(c.dataset.index) === i);
+  });
+  // Append the editable textarea below the cards
+  const ta = document.createElement('textarea');
+  ta.className = 'forge-output';
+  ta.id = 'forgeOutputText';
+  ta.value = forgeGeneratedContent;
+  ta.addEventListener('input', () => {
+    forgeGeneratedContent = ta.value;
+    updateCharCount();
+  });
+  out.appendChild(ta);
+
+  document.getElementById('forgeActions').style.display = 'block';
+  updateCharCount();
+
+  // Fire image gen once per pick, with the chosen text + image_direction in ctx.
+  if (OUTPUT_MEDIA[ctx.content_type] === 'image') {
+    const imageCtx = { ...ctx, generated_text: forgeGeneratedContent };
+    if (v.image_direction) imageCtx.image_direction = v.image_direction;
+    generateImage(imageCtx);
+  } else {
+    document.getElementById('forgeImageArea').style.display = 'none';
+  }
+}
+
+// ── Enhance current draft (Phase A) ─────────────────────────
+async function enhanceDraft(btn) {
+  const ta = document.getElementById('forgeOutputText');
+  const draft = (ta?.value || '').trim();
+  if (!draft) return;
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Enhancing…'; btn.disabled = true; }
+  try {
+    const ctx = gatherForgeContext();
+    const body = { ...ctx, text: draft };
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/enhance`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (r.status === 402) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(`Insufficient credits — enhance costs ${j.cost || 1}.`);
+    }
+    if (!r.ok) throw new Error(`enhance ${r.status}`);
+    const j = await r.json();
+    if (typeof j.credits_balance === 'number') updateCreditsDisplay(j.credits_balance);
+    const refined = j.content || draft;
+    ta.value = refined;
+    forgeGeneratedContent = refined;
+    _forgePickedSnapshot = refined;
+    updateCharCount();
+  } catch (e) {
+    console.error('enhanceDraft failed', e);
+    if (btn) btn.textContent = '❌ Failed';
+    setTimeout(() => { if (btn) { btn.textContent = orig; btn.disabled = false; } }, 1500);
+    return;
+  }
+  if (btn) { btn.textContent = orig; btn.disabled = false; }
+}
 
 // ── Reference image upload ──────────────────────────────────
 function handleRefImagesChange(event) {
@@ -412,10 +554,26 @@ async function generateImage(ctx) {
     forgeGeneratedImageUrl = data.image_url;
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
-    imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">
-      <div class="forge-image-meta">
-        ${data.dimensions.width}x${data.dimensions.height} | ${data.provider}/${data.model}
-      </div>`;
+    const _brand = _selectedBrandKit();
+    if (_brand && window.scCompositor) {
+      _compositorActive = true;
+      imgArea.style.display = 'none';
+      window.scCompositor.show(ctx.content_type);
+      window.scCompositor.applyBrandKit(_brand);
+      window.scCompositor.applyBackground(forgeGeneratedImageUrl);
+      window.scCompositor.applyContent({
+        supporting: forgeGeneratedContent || '',
+        event: ctx.event || '',
+      });
+    } else {
+      _compositorActive = false;
+      const _cmp = document.getElementById('forgeCompositor');
+      if (_cmp) _cmp.style.display = 'none';
+      imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">
+        <div class="forge-image-meta">
+          ${data.dimensions.width}x${data.dimensions.height} | ${data.provider}/${data.model}
+        </div>`;
+    }
 
     document.getElementById('btnRegenImage').style.display = '';
     document.getElementById('btnDownloadImage').style.display = '';

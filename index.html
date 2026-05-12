@@ -409,22 +409,21 @@
 
           <div class="forge-input-group">
             <label class="forge-label">Content Type</label>
-            <input type="hidden" id="forgeContentType" value="social_post" onchange="updateForgeFields()">
-            <div class="forge-picker" id="forgePicker" role="radiogroup" aria-label="Content type">
-              <div class="forge-picker-group" data-label="Social">
-                <button type="button" class="forge-picker-btn active" data-value="social_post"><span class="forge-picker-ico" data-icon="carousel"></span><span>POST</span></button>
-                <button type="button" class="forge-picker-btn" data-value="social_carousel"><span class="forge-picker-ico" data-icon="carousel"></span><span>CAROUSEL</span></button>
-                <button type="button" class="forge-picker-btn" data-value="social_short"><span class="forge-picker-ico" data-icon="lineup"></span><span>SHORT</span></button>
-              </div>
-              <div class="forge-picker-group" data-label="Events">
-                <button type="button" class="forge-picker-btn" data-value="event_promo"><span class="forge-picker-ico" data-icon="event_promo"></span><span>EVENT PROMO</span></button>
-                <button type="button" class="forge-picker-btn" data-value="lineup_poster"><span class="forge-picker-ico" data-icon="lineup"></span><span>LINEUP</span></button>
-              </div>
-              <div class="forge-picker-group" data-label="Editorial">
-                <button type="button" class="forge-picker-btn" data-value="artist_bio"><span class="forge-picker-ico" data-icon="artist_bio"></span><span>BIO</span></button>
-                <button type="button" class="forge-picker-btn" data-value="press_release"><span class="forge-picker-ico" data-icon="press_release"></span><span>PRESS</span></button>
-              </div>
-            </div>
+            <select class="input" id="forgeContentType" onchange="updateForgeFields()">
+              <optgroup label="Social">
+                <option value="social_post">Post</option>
+                <option value="social_carousel">Carousel</option>
+                <option value="social_short">Short</option>
+              </optgroup>
+              <optgroup label="Events">
+                <option value="event_promo">Event Promo</option>
+                <option value="lineup_poster">Lineup Poster</option>
+              </optgroup>
+              <optgroup label="Editorial">
+                <option value="artist_bio">Artist Bio</option>
+                <option value="press_release">Press Release</option>
+              </optgroup>
+            </select>
           </div>
 
           <div id="forgeDynamicFields"></div>
@@ -495,6 +494,7 @@
           <div id="forgeActions" style="display:none">
             <div class="forge-actions">
               <button class="btn-outline" type="button" onclick="generateContent()">REGENERATE</button>
+              <button class="btn-outline" type="button" onclick="enhanceDraft(this)">ENHANCE</button>
               <button class="btn-outline" type="button" onclick="generateVariation('shorter')">SHORTER</button>
               <button class="btn-outline" type="button" onclick="generateVariation('longer')">LONGER</button>
               <button class="btn-outline" type="button" onclick="generateVariation('tone')">CHANGE TONE</button>

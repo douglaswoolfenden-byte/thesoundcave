@@ -158,6 +158,25 @@ function attachStackInteractions() {
   });
 }
 
+// Pick the latest snapshot + the one closest to N days before it.
+// Returns {latest, baseline, spanDays} or null if no snapshots.
+function pickSnapshotPair(snapshots, targetDays = 7) {
+  if (!snapshots || !snapshots.length) return null;
+  const sorted = [...snapshots].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const latest = sorted[sorted.length - 1];
+  if (sorted.length === 1) return { latest, baseline: latest, spanDays: 0 };
+  const latestMs = Date.parse(latest.date + 'T00:00:00Z');
+  const targetMs = latestMs - targetDays * 86400000;
+  let baseline = sorted[0];
+  let bestDelta = Math.abs(Date.parse(sorted[0].date + 'T00:00:00Z') - targetMs);
+  for (let i = 1; i < sorted.length - 1; i++) {
+    const delta = Math.abs(Date.parse(sorted[i].date + 'T00:00:00Z') - targetMs);
+    if (delta < bestDelta) { bestDelta = delta; baseline = sorted[i]; }
+  }
+  const spanDays = Math.round((latestMs - Date.parse(baseline.date + 'T00:00:00Z')) / 86400000);
+  return { latest, baseline, spanDays };
+}
+
 function renderCaveStatPanels(clan) {
   const followersEl = document.getElementById('caveFollowersPanel');
   const likesEl = document.getElementById('caveLikesPanel');
@@ -165,50 +184,68 @@ function renderCaveStatPanels(clan) {
   const playlistEl = document.getElementById('cavePlaylistPanel');
   if (!followersEl || !likesEl) return;
 
-  let curF = 0, prevF = 0, curL = 0, prevL = 0, curP = 0, prevP = 0;
-  if (clan.length && typeof allReports !== 'undefined' && allReports.length) {
-    const clanU = new Set(clan.map(a => a.username));
-    const weekAggs = allReports.slice(0, 6).reverse().map(report => {
-      let f = 0, l = 0, p = 0;
-      (report.tracks || []).forEach(t => {
-        if (clanU.has(t.artist_username)) {
-          f += t.followers || 0;
-          l += t.likes || 0;
-          p += t.plays || 0;
-        }
-      });
-      return { f, l, p };
-    });
-    const latest = weekAggs[weekAggs.length - 1] || { f: 0, l: 0, p: 0 };
-    const prev   = weekAggs[weekAggs.length - 2] || latest;
-    curF = latest.f; prevF = prev.f;
-    curL = latest.l; prevL = prev.l;
-    curP = latest.p; prevP = prev.p;
+  const snapshots = (typeof allSnapshots !== 'undefined') ? allSnapshots : [];
+  const pair = pickSnapshotPair(snapshots, 7);
+
+  // Zero snapshots → tracker hasn't fired yet
+  if (!pair || !clan.length) {
+    const msg = !clan.length
+      ? 'add artists to start tracking'
+      : 'tracking starts when the daily snapshot fires';
+    setHTML(followersEl, `<div class="panel-label">Followers gained</div><div class="panel-empty">${msg}</div>`);
+    setHTML(likesEl,     `<div class="panel-label">Likes gained</div><div class="panel-empty">${msg}</div>`);
+    if (listensEl) setHTML(listensEl, `<div class="panel-label">Listens gained</div><div class="panel-empty">${msg}</div>`);
+    if (playlistEl) setHTML(playlistEl, `<div class="panel-label">Playlist adds</div><div class="panel-empty">coming soon</div>`);
+    window._caveStatDeltas = null;
+    return;
   }
-  const dF = curF - prevF;
-  const dL = curL - prevL;
-  const dP = curP - prevP;
-  const totalAdds = clan.reduce((sum, a) => sum + (a.playlist_adds || 0), 0);
 
-  setHTML(followersEl, `
-    <div class="panel-label">Followers gained</div>
-    <div class="panel-value">${dF >= 0 ? '+' : ''}${fmt(dF)}</div>
-    <div class="panel-trend ${dF >= 0 ? 'up' : 'down'}">${dF >= 0 ? '▲' : '▼'} this week</div>`);
+  // Per-artist deltas, cached for Phase 2 drill-downs.
+  const perArtist = { followers: [], likes: [], listens: [] };
+  let dF = 0, dL = 0, dP = 0;
+  let coveredF = 0, coveredL = 0, coveredP = 0;
+  const latestA = pair.latest.artists || {};
+  const baselineA = pair.baseline.artists || {};
+  clan.forEach(a => {
+    const u = a.username;
+    const cur = latestA[u];
+    const base = baselineA[u];
+    if (!cur) return;
+    const display = cur.display_name || a.display_name || u;
+    if (base) {
+      const f = (cur.followers || 0)   - (base.followers || 0);
+      const l = (cur.total_likes || 0) - (base.total_likes || 0);
+      const p = (cur.total_plays || 0) - (base.total_plays || 0);
+      dF += f; dL += l; dP += p;
+      coveredF++; coveredL++; coveredP++;
+      perArtist.followers.push({ username: u, display, delta: f, current: cur.followers || 0 });
+      perArtist.likes.push    ({ username: u, display, delta: l, current: cur.total_likes || 0 });
+      perArtist.listens.push  ({ username: u, display, delta: p, current: cur.total_plays || 0 });
+    }
+  });
+  ['followers','likes','listens'].forEach(k => perArtist[k].sort((a, b) => b.delta - a.delta));
+  window._caveStatDeltas = { perArtist, spanDays: pair.spanDays, latestDate: pair.latest.date, baselineDate: pair.baseline.date };
 
-  setHTML(likesEl, `
-    <div class="panel-label">Likes gained</div>
-    <div class="panel-value">${dL >= 0 ? '+' : ''}${fmt(dL)}</div>
-    <div class="panel-trend ${dL >= 0 ? 'up' : 'down'}">${dL >= 0 ? '▲' : '▼'} this week</div>`);
+  const trendStr = pair.spanDays === 0 ? 'baseline set today'
+                 : pair.spanDays === 7 ? 'this week'
+                 : `over ${pair.spanDays} day${pair.spanDays === 1 ? '' : 's'}`;
+  const renderStat = (label, delta, covered) => {
+    if (pair.spanDays === 0) {
+      return `<div class="panel-label">${label}</div><div class="panel-empty">baseline set today — deltas appear in 7 days</div>`;
+    }
+    const sign = delta >= 0 ? '+' : '';
+    const arrow = delta >= 0 ? '▲' : '▼';
+    const cls = delta >= 0 ? 'up' : 'down';
+    const cov = covered < clan.length ? ` <span class="panel-coverage">· ${covered}/${clan.length} tracked</span>` : '';
+    return `<div class="panel-label">${label}</div>
+      <div class="panel-value">${sign}${fmt(delta)}</div>
+      <div class="panel-trend ${cls}">${arrow} ${trendStr}${cov}</div>`;
+  };
 
-  if (listensEl) setHTML(listensEl, `
-    <div class="panel-label">Listens gained</div>
-    <div class="panel-value">${dP >= 0 ? '+' : ''}${fmt(dP)}</div>
-    <div class="panel-trend ${dP >= 0 ? 'up' : 'down'}">${dP >= 0 ? '▲' : '▼'} this week</div>`);
-
-  if (playlistEl) setHTML(playlistEl, `
-    <div class="panel-label">Playlist adds</div>
-    <div class="panel-value">${fmt(totalAdds)}</div>
-    <div class="panel-trend up">▲ total</div>`);
+  setHTML(followersEl, renderStat('Followers gained', dF, coveredF));
+  setHTML(likesEl,     renderStat('Likes gained',     dL, coveredL));
+  if (listensEl)  setHTML(listensEl,  renderStat('Listens gained', dP, coveredP));
+  if (playlistEl) setHTML(playlistEl, `<div class="panel-label">Playlist adds</div><div class="panel-empty">coming soon</div>`);
 }
 
 function renderCaveGenrePanel(clan) {

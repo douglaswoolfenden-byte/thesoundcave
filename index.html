@@ -264,7 +264,8 @@
       <div class="forage-search-form">
         <div class="forage-search-grid">
           <input class="input" id="filterName" placeholder="Artist name or keyword...">
-          <select class="input" id="filterGenre"><option value="">All genres</option></select>
+          <input class="input" id="filterGenre" list="genreSuggestions" autocomplete="off" placeholder="All genres — type to filter">
+          <datalist id="genreSuggestions"></datalist>
           <input class="input" id="filterMinFollow" type="number" placeholder="Min followers">
           <input class="input" id="filterMaxFollow" type="number" placeholder="Max followers">
         </div>
@@ -292,7 +293,7 @@
         <h3 class="section-title" style="margin-bottom:14px">Create Scheduled Search</h3>
         <div class="forage-search-grid">
           <input class="input" id="schedName" placeholder="Search name (e.g. UK Techno Hunt)">
-          <select class="input" id="schedGenre"><option value="">All genres</option></select>
+          <input class="input" id="schedGenre" list="genreSuggestions" autocomplete="off" placeholder="All genres — type to filter">
           <input class="input" id="schedMinFollow" type="number" placeholder="Min followers">
           <input class="input" id="schedMaxFollow" type="number" placeholder="Max followers">
         </div>

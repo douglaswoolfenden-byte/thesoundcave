@@ -1,5 +1,49 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-12] Clan tracking dashboard — Phase 1 (snapshot-driven deltas)
+- **Why:** cave dashboard read deltas from `allReports` (the weekly *scout* feed, which only contains an artist when scout surfaces them that week and dedupes one-track-per-artist) → headline showed `+0 THIS WEEK` permanently for every clan member. `data/snapshots/` was also empty: `clan_tracker.py` had never run here.
+- **Spec:** `wiki/spec/clan_tracking_dashboard.md` (Doug signed off three calls: ship without playlist-adds, seed via real tracker run, split into two phases).
+- **Path fix (blocker):** `clan_tracker.py` + `scout.py` both loaded `.env` from `../.env`, but the workspace `.env` lives at `../../.env` (per project CLAUDE.md). Tracker was crashing with "credentials not found" before any HTTP call. Both files corrected.
+- **First snapshot landed:** ran `python clan_tracker.py` → wrote `data/snapshots/2026-05-12.json` (8 of 20 artists tracked; the other 12 failed `fetch_user_by_username` due to SoundCloud display-name vs permalink-name mismatches — separate tracker-quality issue, not blocking Phase 1). Manifest updated to reference the new snapshot.
+- **Schema already had what we needed:** snapshot stores `followers / total_likes / total_plays / total_reposts` per artist → no patch to `clan_tracker.py:131-181` required.
+- **Dashboard rewrite:** `renderCaveStatPanels` (`js/cave.js:161`) now reads `allSnapshots` instead of `allReports`. New helper `pickSnapshotPair(snapshots, 7)` picks the latest snapshot and the snapshot closest to 7 days before it; for each clan artist we diff `cur.followers − base.followers` (same for likes, plays). Missing-in-baseline artists are skipped from the delta (not zeroed) with a "5/8 tracked" coverage badge appended to the trend line.
+- **Explicit empty states (no more misleading +0):**
+  - 0 snapshots → `tracking starts when the daily snapshot fires`
+  - 0 clan members → `add artists to start tracking`
+  - 1 snapshot (baseline=latest, span=0) → `baseline set today — deltas appear in 7 days`
+  - Span <7 days → `over N days` (instead of fake "this week")
+- **Playlist Adds:** SoundCloud's API doesn't expose per-artist playlist-add counts; panel renders `coming soon` until we have a real source.
+- **Phase 2 prep:** per-artist deltas cached on `window._caveStatDeltas` ({perArtist: {followers, likes, listens}, spanDays, latestDate, baselineDate}); pre-sorted descending — drill-down hover + modal in Phase 2 can read directly with zero recompute.
+- **Verified live:** 1-snapshot path renders baseline copy correctly; synthetic 7-days-ago snapshot fabricated in memory → headlines show +216 / +50 / +1.5K with `▲ THIS WEEK` trend.
+- **Files:** `clan_tracker.py`, `scout.py`, `js/cave.js` (`pickSnapshotPair` + rewritten `renderCaveStatPanels`), `css/dashboard.css` (`.panel-coverage`), `data/snapshots/2026-05-12.json` (new), `data/manifest.json` (updated), `wiki/spec/clan_tracking_dashboard.md`.
+- **Open / next:**
+  - Daily GitHub Action (`.github/workflows/daily_tracker.yml`) — confirm it's enabled + has secrets so history accumulates.
+  - Tracker username/display-name mismatch (12/20 not-found) — tracker quality issue, ticketing for separate fix.
+  - Phase 2: hover tooltips + click modals for all four stat panels, plus Genre Mix and New Drops expansion.
+
+## [2026-05-12] Forge text rework — Phase A (sharper prompts + 3-variant picker + ENHANCE)
+- **Why:** Doug ran the Forge for a Sound Cave event-promo and called the result "pathetic" — generic, bland, ignoring the specific context he'd put in. Two stacked issues: (1) the underlying `SYSTEM_PROMPT` + per-type `TEMPLATES` in `content_api.py` were competent but bland — they didn't demand concrete imagery or specific verbs; (2) one-shot output meant no creative choice — you re-rolled the whole thing if it missed.
+- **Spec:** `wiki/spec/forge_text_rework.md` (drafted + signed off this session). Phase B (inline brand templates) parked as a separate plan.
+- **Prompt rewrite (`content_api.py`):**
+  - `SYSTEM_PROMPT` rewritten end-to-end. Now demands: concrete sensory imagery, verbs over adjectives, named references over abstractions, British English. Bans cliché openers ("Join us…", "Get ready for…", "We are excited to announce…") and filler vocab ("vibes", "energy", "unmissable", 🔥-stacks, "the way I…", "if you know, you know"). Reminds the model the reader is a peer in the scene — don't perform culture at them.
+  - `TEMPLATES` rewritten per content type. `event_promo` now demands venue+date if given + one specific sensory detail about the night. `social_post` demands a concrete image in the first 10 words. `lineup_poster` capped to 6 lines + one `POSTER:` direction line. `social_carousel` mandates "each slide does ONE job — no filler". Long-form (`artist_bio`, `press_release`) sharpened but stays single-shot.
+  - New `ENHANCE_PROMPT` constant for the refine path. Says: keep the message + voice, sharpen weak verbs, drop filler, don't add hashtags that weren't there, don't change length by >20%.
+- **3-variant mode (`/api/generate`):** new `n_variants=3` request flag. Short-form types only (`social_post / carousel / short / event_promo / lineup_poster`); long-form ignores it to save tokens. Claude is asked for strict JSON `{variants:[{angle, text, image_direction}, ...]}` with pre-defined angle labels per content type (e.g. event_promo → SCENE-SETTER / NAMECHECK / DARE). `max_tokens` raised ~2.6× for variant calls. New helper `_parse_variants_response()` tolerates markdown-fence leakage; falls back to single-block output if Claude's JSON breaks. One API call, one credit charge.
+- **New `/api/enhance` endpoint:** takes current draft text + same form context, returns one refined version. Reuses the system prompt + voice profile + reference images. Charges 1 text credit like a variation.
+- **Frontend flow change (`js/firepit.js` + `index.html`):**
+  - `generateContent()` now requests `n_variants=3` for short-form types. On variant response, calls `renderVariantPicker(ctx)` instead of dropping straight to a textarea.
+  - Three cards stacked in `#forgeOutputArea` — each shows angle label + 4-line clamp of the caption. Click → loads full text into editable textarea below the cards, highlights picked card, switches `is-picked` state.
+  - **Image gen no longer auto-fires after text gen.** It fires when the user *picks* a variant — and gets `image_direction` from the picked variant in the ctx. For single-block paths (long-form, fallback, SHORTER/LONGER/CHANGE TONE), image fires immediately as before.
+  - Switching variant mid-edit shows a confirm before clobbering edits (compares textarea value to `_forgePickedSnapshot`).
+  - `enhanceDraft(btn)` wired to a new ENHANCE button in the actions row. Reads textarea content + form context → POST `/api/enhance` → swaps textarea content with the refined version.
+- **CSS:** new `.forge-variant-cards` + `.forge-variant-card` + `.forge-variant-label` + `.forge-variant-preview` styles appended to `css/style.css`. Token-driven (dark theme, red accent on hover + picked state, mono labels, 4-line clamp).
+- **Not regressed:** `artist_bio` + `press_release` keep their single-block flow (server skips variant mode when content type isn't in the short-form set). Existing SHORTER / LONGER / CHANGE TONE still operate on the picked draft. SAVE TO STASH still picks up textarea content. Compositor handoff still fires when a brand kit is selected.
+- **Not yet verified end-to-end:** Doug hasn't tested. Restart `content_api.py` to pick up new endpoints; hard-reload to pick up new firepit.js + CSS; generate a social_post or event_promo; confirm 3 variants appear with distinct angles; pick one; confirm image then fires; click ENHANCE on edited text; confirm round-trip.
+- **Quality gate:** if the three variants still read as "pathetic" after this rewrite, a second prompt revision is required before declaring Phase A done. The prompt is now strict; Claude should respect it, but real-world output is the only gate that counts.
+- **Files (new):** `wiki/spec/forge_text_rework.md`.
+- **Files (edited):** `content_api.py`, `js/firepit.js`, `index.html`, `css/style.css`, `wiki/log.md`.
+- **Next:** Phase B — inline "save current draft as a template for this brand" + per-brand template dropdown.
+
 ## [2026-05-12] Foraging — brand-orange custom icons + typeable genre combobox
 - **Why:** the existing 🦴 / 👁️ / ✂️ emoji icons felt generic and off-brand against the S0UNDCAV3 wordmark + dark palette. Separately, the genre dropdown was built from past scout discoveries only, inheriting SoundCloud's free-text duplicates ("Tech House" / "tech house") and limiting Doug to the 16 hardcoded scout buckets — even though SoundCloud's `/tracks` endpoint accepts any genre string.
 - **Icons (Direction A — cave-explorer line set):** inline SVGs at 14×14, `--red` icon fill, label keeps default body colour. Clan = 3 solid dots over an arc (pack). Watch = eye with centered iris. Cut = dagger blade with handle (replaced parallel-slash v1 after Doug asked for "something more like a knife"). Hover bumps border to `--red` + warm-tinted bg.

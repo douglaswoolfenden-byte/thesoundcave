@@ -1697,3 +1697,64 @@ h4 { font-size: 12px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--border-lt); border-radius: 0; }
 *::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+/* ─────────────────────────────────────────────────────────
+   Forge variant picker (Phase A of Forge text rework)
+   Spec: wiki/spec/forge_text_rework.md
+   ───────────────────────────────────────────────────────── */
+.forge-variant-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.forge-variant-cards {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.forge-variant-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--color-bg-warm);
+  border: 1px solid var(--border-lt);
+  color: var(--body);
+  padding: 14px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 180ms ease, background 180ms ease, transform 120ms ease;
+}
+.forge-variant-card:hover {
+  border-color: var(--red);
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+.forge-variant-card.is-picked {
+  border-color: var(--red);
+  background: var(--red-faint);
+}
+.forge-variant-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--tracking-wide);
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.forge-variant-card.is-picked .forge-variant-label {
+  color: var(--color-accent-hot);
+}
+.forge-variant-preview {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--heading);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

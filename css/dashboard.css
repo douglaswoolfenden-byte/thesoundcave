@@ -319,6 +319,7 @@
 }
 .panel-trend.up { color: var(--color-accent); }
 .panel-trend.down { color: var(--color-faint); }
+.panel-coverage { color: var(--color-muted); font-weight: normal; }
 
 /* Genre rows inside panel-bl */
 .panel-genre-list {

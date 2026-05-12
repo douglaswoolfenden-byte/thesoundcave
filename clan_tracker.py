@@ -12,8 +12,8 @@ import requests
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-# Load master .env
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+# Load master .env (workspace root, two levels up)
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 CLIENT_ID     = os.getenv('SOUNDCLOUD_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SOUNDCLOUD_CLIENT_SECRET')

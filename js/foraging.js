@@ -182,17 +182,39 @@ function runSearch() {
 }
 
 function renderForaging() {
-  // Populate genre filters
-  const genres = new Set();
-  allReports.forEach(r => (r.tracks||[]).forEach(t => { if (t.genre) genres.add(t.genre); }));
-  ['filterGenre','schedGenre'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel && sel.options.length <= 1) {
-      [...genres].sort().forEach(g => {
-        sel.innerHTML += `<option value="${esc(g)}">${esc(g)}</option>`;
-      });
-    }
-  });
+  // Seed shared datalist for filterGenre + schedGenre comboboxes.
+  // Curated cross-industry suggestions; merged with case-folded genres
+  // already seen in past scout reports so SoundCloud's free-text dupes
+  // ("Tech House" / "tech house" / "TECH HOUSE") collapse to one.
+  const dl = document.getElementById('genreSuggestions');
+  if (dl && !dl.options.length) {
+    const SEED = [
+      'house','deep house','tech house','afro house','afro tech','melodic house','progressive house',
+      'garage','uk garage','2-step','bassline','speed garage',
+      'drum and bass','jungle','liquid dnb','neurofunk','breaks','breakbeat',
+      'techno','minimal techno','melodic techno','hard techno','industrial techno',
+      'dubstep','dub','140','grime',
+      'ambient','downtempo','idm','electronica','lo-fi','trip-hop',
+      'trance','psytrance','goa','hardcore','gabber','hardstyle',
+      'footwork','juke','jersey club','baltimore club','phonk','vaporwave',
+      'hip-hop','rap','trap','drill','boom bap','cloud rap',
+      'r&b','neo-soul','soul','funk','jazz','nu-jazz',
+      'afrobeats','amapiano','gqom','kuduro','baile funk','dancehall','reggae','reggaeton','dembow','shatta','zouk',
+      'pop','indie','rock','post-punk','shoegaze','experimental','soundtrack','classical'
+    ];
+    const seen = new Map();
+    SEED.forEach(g => seen.set(g.toLowerCase(), g));
+    allReports.forEach(r => (r.tracks||[]).forEach(t => {
+      if (!t.genre) return;
+      const k = t.genre.trim().toLowerCase();
+      if (k && !seen.has(k)) seen.set(k, t.genre.trim());
+    }));
+    [...seen.values()].sort((a,b) => a.localeCompare(b)).forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      dl.appendChild(opt);
+    });
+  }
 
   // Always render the watching column — it's independent of search mode
   renderForagingWatching();
@@ -298,10 +320,13 @@ function buildForageCard(t, source) {
   const timerHTML = source === 'pending' && t.daysLeft != null ?
     `<div class="forage-timer ${t.daysLeft < 14 ? 'urgent' : 'normal'}">⏳ ${t.daysLeft} days until auto-cut</div>` : '';
 
-  const clanBtn = `<button class="action-btn clan-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','clan')"><span class="icon">🦴</span>Clan</button>`;
+  const clanIcon = `<svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="3.5" cy="5.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12.5" cy="5.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8" cy="4" r="1.5" fill="currentColor" stroke="none"/><path d="M1.5 12.5 Q8 8.25 14.5 12.5"/></svg>`;
+  const watchIcon = `<svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.75 8C4 4.75 6 4 8 4s4 .75 6.25 4"/><path d="M1.75 8C4 11.25 6 12 8 12s4-.75 6.25-4"/><circle cx="8" cy="8" r="1.25" fill="currentColor" stroke="none"/></svg>`;
+  const cutIcon = `<svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 2 L6 9.5 L7.5 11 L15 3.5 Z" fill="currentColor" stroke="none"/><path d="M5 10.5 L7 12.5"/><path d="M2.5 13 L5 10.5"/><path d="M1.5 15 L4 12.5"/></svg>`;
+  const clanBtn = `<button class="action-btn clan-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','clan')">${clanIcon}Clan</button>`;
   const watchBtn = source !== 'watching' ?
-    `<button class="action-btn watch-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','watch')"><span class="icon">👁️</span>Watch</button>` : '';
-  const cutBtn = `<button class="action-btn cut-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','cut')"><span class="icon">✂️</span>Cut</button>`;
+    `<button class="action-btn watch-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','watch')">${watchIcon}Watch</button>` : '';
+  const cutBtn = `<button class="action-btn cut-btn" onclick="event.stopPropagation();forageAction('${esc(username)}','cut')">${cutIcon}Cut</button>`;
 
   return `<div class="forage-card" onclick="openPanel('${esc(username)}')">
     <div class="forage-info">

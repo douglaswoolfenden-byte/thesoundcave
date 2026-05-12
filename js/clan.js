@@ -10,16 +10,6 @@ function setClanSort(key, btn) {
   renderClan();
 }
 
-function toggleReportMode() {
-  reportMode = !reportMode;
-  reportSelected = [];
-  clanSelectedId = null;
-  const btn = document.getElementById('reportBtn');
-  btn.textContent = reportMode ? '✓ Building Report' : '📋 Report Builder';
-  btn.classList.toggle('active', reportMode);
-  renderClan();
-}
-
 function getClanFiltered() {
   const favs = getFavourites();
   const nameFilter = (document.getElementById('clanNameFilter')?.value || '').toLowerCase();
@@ -64,21 +54,6 @@ function renderClan() {
     });
   }
 
-  // Report mode
-  const notice = document.getElementById('reportNotice');
-  const exportBtn = document.getElementById('exportReportBtn');
-  if (reportMode) {
-    notice.style.display = 'block';
-    notice.textContent = `Click artists to select them for the report. ${reportSelected.length} selected.`;
-    if (reportSelected.length) {
-      exportBtn.style.display = 'inline-block';
-      exportBtn.textContent = `⬇ Export ${reportSelected.length} Artists`;
-    } else { exportBtn.style.display = 'none'; }
-  } else {
-    notice.style.display = 'none';
-    exportBtn.style.display = 'none';
-  }
-
   if (!clan.length) {
     document.getElementById('clanList').innerHTML = `
       <div class="empty"><div class="ico">🦴</div><p>No Clan members yet.<br>Discover artists in Foraging and add them to your Clan.</p></div>`;
@@ -92,7 +67,6 @@ function renderClan() {
     const first = snaps[0]||{};
     const trend = getTrend(first.followers||0, latest.followers||0);
     const followers = a.followers_override != null ? a.followers_override : (latest.followers||0);
-    const inReport = reportSelected.includes(a.username);
     const isStarred = a.starred;
     const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
 
@@ -100,7 +74,7 @@ function renderClan() {
       ? `<img src="${a.avatar_url}" alt="" onerror="this.parentElement.textContent='·'">`
       : '·';
 
-    return `<div class="clan-card ${inReport ? 'in-report' : ''}" onclick="${reportMode ? `clanRowClick('${esc(a.username)}')` : `openPanel('${esc(a.username)}')`}" style="${inReport ? 'border-color:var(--red)' : ''}">
+    return `<div class="clan-card" onclick="openPanel('${esc(a.username)}')">
       <span class="clan-card-star ${isStarred ? 'starred' : ''}" onclick="event.stopPropagation();toggleStar('${esc(a.username)}')">${isStarred ? '⭐' : '☆'}</span>
       <span class="clan-card-trend" style="color:${trend.cls==='up'?'var(--red)':'var(--muted)'}">${trend.label}</span>
       <div class="clan-card-avatar">${avatarHTML}</div>
@@ -128,17 +102,6 @@ function toggleStar(username) {
   favs[username].starred = !favs[username].starred;
   saveFavourites(favs);
   renderClan();
-}
-
-function clanRowClick(username) {
-  if (reportMode) {
-    const idx = reportSelected.indexOf(username);
-    if (idx >= 0) reportSelected.splice(idx, 1);
-    else reportSelected.push(username);
-    renderClan();
-  } else {
-    openPanel(username);
-  }
 }
 
 function addPreferredTrack(username) {
@@ -193,30 +156,6 @@ function exportSingleArtist(username) {
     ['Notes', a.notes||''],
   ];
   downloadCSV(rows, `${a.display_name.replace(/ /g,'_')}_SoundCave.csv`);
-}
-
-function exportReport() {
-  const favs = getFavourites();
-  const headers = ['Name','Genre','Followers','Plays','Likes','Score','Trend','Playlist Adds','Platforms Linked','Preferred Tracks','Notes'];
-  const rows = [headers];
-  reportSelected.forEach(username => {
-    const a = favs[username];
-    if (!a) return;
-    const snaps = a.snapshots||[];
-    const latest = snaps[snaps.length-1]||{};
-    const first  = snaps[0]||{};
-    const trend  = getTrend(first.score, latest.score);
-    const linked = Object.values(a.platforms||{}).filter(v=>v).length;
-    rows.push([
-      a.display_name, a.genre,
-      a.followers_override!=null ? a.followers_override : (latest.followers||0),
-      latest.plays||0, latest.likes||0, (latest.score||0).toFixed(1),
-      trend.label, latest.playlist_adds!=null?latest.playlist_adds:'',
-      `${linked}/${PLATFORMS.length}`,
-      (a.preferred_tracks||[]).join('; '), a.notes||''
-    ]);
-  });
-  downloadCSV(rows, 'SoundCave_Report.csv');
 }
 
 function downloadCSV(rows, filename) {

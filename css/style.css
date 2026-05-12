@@ -1009,6 +1009,8 @@ select, select option {
 /* ── Clan Tab ──────────────────────────────────────────── */
 .clan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .clan-actions { display: flex; gap: 8px; }
+.fp-header { display: flex; justify-content: space-between; align-items: center; }
+.fp-actions { display: flex; gap: 8px; }
 .report-notice {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 6px; padding: 10px 16px; margin-bottom: 16px;

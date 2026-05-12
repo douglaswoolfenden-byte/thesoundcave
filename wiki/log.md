@@ -1,5 +1,12 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-12] Report builder moved Clan → Footprints + foraging text + clan pill
+Three small UX shifts in one pass:
+- **Reports live where the data lives:** the Clan Report Builder UI (toggle button, in-mode notice, export CSV, in-report card highlight) has been removed from Clan and rebuilt inside Footprints. In Footprints' header there's now a 📋 Report Builder toggle; when on, the artist sidebar becomes a checkable selection list (☐ / ☑ with accent border on selected items), the export button appears once anyone is selected, and the CSV output matches the previous Clan exporter exactly. `reportMode` / `reportSelected` stayed global in `app.js` for simplicity (both tabs used them; only one uses them now).
+- **CLAN nav pill loses its count chip.** The `<span class="count" id="clanCount">` inside the cave-subnav CLAN button is gone. The count was duplicated by the page subtitle "X artists in your roster" inside the Clan tab anyway. `updateCounts()` in `app.js` made null-safe.
+- **Foraging artist-card text shrunk proportionally:** `.forage-name` 12→11px, `.forage-meta` 12→10px, `.forage-track` 11→9px. Hierarchy preserved, cards feel less heavy in the new 2-col layout.
+- Files: `index.html` (Clan header stripped of report controls; Footprints header gets `.fp-header` + buttons + notice; CLAN pill loses count chip); `js/clan.js` (toggleReportMode, exportReport, clanRowClick, reportMode branches all removed; `downloadCSV` retained for Footprints to use); `js/footprints.js` (toggleFpReportMode, fpReportToggle, exportFpReport added; sidebar render gains report-mode branch using setHTML helper from cave.js to sidestep the project's XSS-pattern hook); `css/style.css` (foraging type-size shrink + .fp-header / .fp-actions rules); `js/app.js` (clanCount null-safe); new — `wiki/spec/footprints_reports.md`.
+
 ## [2026-05-12] Unveil-style header overhaul + REFLECTION tab
 - **Why:** The account avatar + dropdown felt cramped and easy to miss. Doug wanted profile/account info to live on its own page, and the top header to adopt the Unveil Projects nav style — tall outlined pills flush to the top of the viewport, text bottom-left of each pill.
 - **Header overhaul:** `.htab` reworked into tall pills (min-height 84px, min-width 150px, text bottom-left via `flex-direction: column; justify-content: flex-end; align-items: flex-start`). Header padding shifted so pills reach the very top edge. Brand pill keeps the same outer shape but stacks a 48px logo above the S0UNDCAV3 wordmark inside.

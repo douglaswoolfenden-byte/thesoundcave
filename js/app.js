@@ -531,7 +531,8 @@ function refreshCurrentTab() {
 function updateCounts() {
   const favs = Object.values(getFavourites());
   const active = favs.filter(a => a.status !== 'cut');
-  document.getElementById('clanCount').textContent = active.length || '';
+  const el = document.getElementById('clanCount');
+  if (el) el.textContent = active.length || '';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

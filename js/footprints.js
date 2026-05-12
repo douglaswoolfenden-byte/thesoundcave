@@ -44,17 +44,37 @@ function renderFootprints() {
     <div class="stat-card summary-card"><div class="stat-label">Declining</div>
       <div class="stat-value">${declining.length}</div><div class="summary-suffix">flagged</div></div>`;
 
+  // Report-mode notice + export button
+  const fpNotice = document.getElementById('fpReportNotice');
+  const fpExportBtn = document.getElementById('fpExportReportBtn');
+  if (reportMode) {
+    fpNotice.style.display = 'block';
+    fpNotice.textContent = `Click artists in the sidebar to select them. ${reportSelected.length} selected.`;
+    if (reportSelected.length) {
+      fpExportBtn.style.display = 'inline-block';
+      fpExportBtn.textContent = `⬇ Export ${reportSelected.length} Artists`;
+    } else { fpExportBtn.style.display = 'none'; }
+  } else {
+    fpNotice.style.display = 'none';
+    fpExportBtn.style.display = 'none';
+  }
+
   // Sidebar
-  document.getElementById('fpSidebar').innerHTML = `
-    <div class="fp-sidebar-head">Artists</div>
+  const sidebarHTML = `
+    <div class="fp-sidebar-head">${reportMode ? 'Select for report' : 'Artists'}</div>
     ${clan.map(a => {
       const snaps = a.snapshots||[];
       const latest = snaps[snaps.length-1]||{};
-      return `<div class="fp-artist-item ${fpSelectedArtist===a.username?'active':''}" onclick="fpSelectArtist('${esc(a.username)}')">
-        <div class="fp-artist-name">${esc(a.display_name)}</div>
+      const sel = reportMode && reportSelected.includes(a.username);
+      const act = !reportMode && fpSelectedArtist === a.username;
+      const click = reportMode ? `fpReportToggle('${esc(a.username)}')` : `fpSelectArtist('${esc(a.username)}')`;
+      return `<div class="fp-artist-item ${act?'active':''} ${sel?'in-report':''}" onclick="${click}" style="${sel ? 'border-color:var(--color-accent);background:rgba(255,69,0,0.08)' : ''}">
+        ${reportMode ? `<span style="font-size:11px;color:${sel?'var(--color-accent)':'var(--color-faint)'};margin-right:6px">${sel?'☑':'☐'}</span>` : ''}
+        <div class="fp-artist-name" style="display:inline-block">${esc(a.display_name)}</div>
         <div class="fp-artist-meta">${esc(a.genre)} · ${fmt(a.followers_override!=null?a.followers_override:(latest.followers||0))}</div>
       </div>`;
     }).join('')}`;
+  setHTML(document.getElementById('fpSidebar'), sidebarHTML);
 
   // Chart area
   const artist = favs[fpSelectedArtist];
@@ -127,4 +147,46 @@ function fpSelectArtist(username) {
 function fpSetMetric(key) {
   fpActiveMetric = key;
   renderFootprints();
+}
+
+function toggleFpReportMode() {
+  reportMode = !reportMode;
+  reportSelected = [];
+  const btn = document.getElementById('fpReportBtn');
+  if (btn) {
+    btn.textContent = reportMode ? '✓ Building Report' : '📋 Report Builder';
+    btn.classList.toggle('active', reportMode);
+  }
+  renderFootprints();
+}
+
+function fpReportToggle(username) {
+  const idx = reportSelected.indexOf(username);
+  if (idx >= 0) reportSelected.splice(idx, 1);
+  else reportSelected.push(username);
+  renderFootprints();
+}
+
+function exportFpReport() {
+  const favs = getFavourites();
+  const headers = ['Name','Genre','Followers','Plays','Likes','Score','Trend','Playlist Adds','Platforms Linked','Preferred Tracks','Notes'];
+  const rows = [headers];
+  reportSelected.forEach(username => {
+    const a = favs[username];
+    if (!a) return;
+    const snaps = a.snapshots||[];
+    const latest = snaps[snaps.length-1]||{};
+    const first  = snaps[0]||{};
+    const trend  = getTrend(first.score, latest.score);
+    const linked = Object.values(a.platforms||{}).filter(v=>v).length;
+    rows.push([
+      a.display_name, a.genre,
+      a.followers_override!=null ? a.followers_override : (latest.followers||0),
+      latest.plays||0, latest.likes||0, (latest.score||0).toFixed(1),
+      trend.label, latest.playlist_adds!=null?latest.playlist_adds:'',
+      `${linked}/${PLATFORMS.length}`,
+      (a.preferred_tracks||[]).join('; '), a.notes||''
+    ]);
+  });
+  downloadCSV(rows, 'SoundCave_Report.csv');
 }

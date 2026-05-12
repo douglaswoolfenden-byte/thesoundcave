@@ -1,6 +1,6 @@
 # Feature: Footprints
 
-> Status: **Built.** Analytics tab on tracked Clan artists.
+> Status: **Built.** Analytics tab on tracked Clan artists. Report Builder lives here (moved from Clan 2026-05-12) — see `wiki/spec/footprints_reports.md`.
 
 ## What it does
 Analytics and charts view over the daily snapshots produced by `clan_tracker.py`. Growth-over-time charts, sparklines, comparisons across Clan artists.

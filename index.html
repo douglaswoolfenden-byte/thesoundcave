@@ -93,7 +93,7 @@
   <nav class="cave-subnav" id="caveSubnav" style="display:none">
     <button class="cave-subtab active" type="button" data-tab="cave">DASHBOARD</button>
     <button class="cave-subtab" type="button" data-tab="foraging">FORAGING</button>
-    <button class="cave-subtab" type="button" data-tab="clan">CLAN <span class="count" id="clanCount"></span></button>
+    <button class="cave-subtab" type="button" data-tab="clan">CLAN</button>
     <button class="cave-subtab" type="button" data-tab="footprints">FOOTPRINTS</button>
   </nav>
 
@@ -328,12 +328,7 @@
         <h2 style="font-size:20px;font-weight:700;color:var(--heading)">CLAN</h2>
         <p class="subtitle" id="clanSubtitle"></p>
       </div>
-      <div class="clan-actions">
-        <button class="btn-outline" id="reportBtn" onclick="toggleReportMode()">📋 Report Builder</button>
-        <button class="btn-red" id="exportReportBtn" style="display:none" onclick="exportReport()"></button>
-      </div>
     </div>
-    <div class="report-notice" id="reportNotice" style="display:none"></div>
     <!-- Filters & Sort -->
     <div class="clan-filters">
       <input class="input" id="clanNameFilter" placeholder="Search artists..." style="max-width:200px" oninput="renderClan()">
@@ -353,9 +348,18 @@
 
   <!-- ─── FOOTPRINTS TAB ─────────────────────────────── -->
   <div id="tab-footprints" style="display:none">
-    <h2 style="font-size:20px;font-weight:700;color:var(--heading);margin-bottom:6px">FOOTPRINTS</h2>
-    <p class="subtitle" style="margin-bottom:24px">Track how your artists move over time.</p>
-    <div id="fpSummary" class="stats-row"></div>
+    <div class="fp-header">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:var(--heading);margin-bottom:6px">FOOTPRINTS</h2>
+        <p class="subtitle" style="margin-bottom:0">Track how your artists move over time.</p>
+      </div>
+      <div class="fp-actions">
+        <button class="btn-outline" id="fpReportBtn" type="button" onclick="toggleFpReportMode()">📋 Report Builder</button>
+        <button class="btn-red" id="fpExportReportBtn" type="button" style="display:none" onclick="exportFpReport()"></button>
+      </div>
+    </div>
+    <div class="report-notice" id="fpReportNotice" style="display:none;margin:16px 0"></div>
+    <div id="fpSummary" class="stats-row" style="margin-top:20px"></div>
     <div class="fp-layout" id="fpLayout">
       <div class="fp-sidebar" id="fpSidebar"></div>
       <div class="card" id="fpChart"></div>

@@ -225,7 +225,8 @@
   async function loadPrimaryKitInto(body, helper) {
     try {
       const r = await E.authedFetch(`${API}/api/brand_kits`);
-      const list = (await r.json()) || [];
+      const j = (await r.json()) || {};
+      const list = Array.isArray(j) ? j : (j.kits || []);
       _primaryKit = list.find(k => k.is_primary) || list[0] || null;
       if (!_primaryKit) {
         body.replaceChildren(h('div', { style: { fontSize: '11px', color: 'var(--muted)' } },

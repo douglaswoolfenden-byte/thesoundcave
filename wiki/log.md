@@ -468,3 +468,12 @@ Three small UX shifts in one pass:
 - **Not visually confirmed**: API endpoints respond correctly to curl; UI compiles; Doug needs to dogfood the EVENTS tab end-to-end to validate the match flow surfaces good candidates.
 - Commits: `979f6a0` (schema + API + backfill), `1939f10` (events UI).
 
+## [2026-05-13] Flyer extraction + Phase 3 v0 (campaign generation)
+- **Flyer drop** (`f0e6884`): drag a flyer onto the EVENTS list → upload to new `event_flyers` Supabase bucket → Claude Sonnet 4.6 vision extracts {name, event_date, venue, lineup, ticketing} → new-event form pre-fills → match pipeline runs. Manual-stub endpoint also wired (name-only artist creation).
+- **Phase 3 v0** (`3e9c070`): `{GENERATE CAMPAIGN}` is real. Click on the event detail page → ~15-30s sync run → vertical timeline of 6-14 captioned posts (announcement → spotlights → countdowns → recap). Haiku for bulk, Sonnet for hero posts (announcement / headliner_spotlight / recap). Voice presets live in `config/voice_presets.py` — single tuning lever.
+- New files: `events_api.py` (extended), `artist_profiles_api.py` (extended), `campaigns_api.py`, `campaign_template.py`, `config/voice_presets.py`, `sb_helpers.py`, `soundcloud_helpers.py`, `js/events.js`, `scripts/migrate_scout_to_profiles.py`, `scripts/create_event_flyers_bucket.py`, 3 SQL migrations.
+- Doug validated Phase 2 end-to-end manually — first event "BUCKING PALACE LAST MAN STANDS" created with real SoundCloud-matched lineup.
+- **Not yet done**: copy-quality dogfood, post-editor modal, image composition (Pillow), async orchestration (threads), Roster rename.
+- Session paused at usage limit. Resumption note in memory.
+
+

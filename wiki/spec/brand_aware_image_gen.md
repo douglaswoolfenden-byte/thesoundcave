@@ -1,6 +1,6 @@
 # Spec — Brand-Aware Image Generation (Phase 3 v0.6)
 
-> Status: **Proposed v2 — 2026-05-13.** Rewritten after Doug's architectural reframe (Firepit-as-asset-factory + "regenerate, don't reuse"). Supersedes v1 of this page. Awaiting sign-off before code.
+> Status: **Approved v2 — 2026-05-13** by Doug (verbally signed off after spec rewrite). Supersedes v1 of this page. Build sequence below is now live.
 >
 > Supersedes the "Fal FLUX abstract backgrounds" idea sketched in [`phase_2_3_pivot.md`](phase_2_3_pivot.md).
 > Related: [`features/campaigns.md`](../features/campaigns.md), [`features/events.md`](../features/events.md).
@@ -205,9 +205,9 @@ No new top-level entity routes; references live inside brand kits.
 
 ## Sign-off
 
-- [ ] Doug — data model approved (`brand_kits` + `events` extensions)
-- [ ] Doug — UI approach approved (reference library in current Brands tab; master-flyer generation modal triggered from events)
-- [ ] Doug — generation pipeline approved (FLUX with style refs; master flyer first, derivatives second; no Sound Cave branding in output)
-- [ ] Doug — copy change approved ("drop media" everywhere it currently says "drop a flyer")
+- [x] **Doug — data model approved** (2026-05-13)
+- [x] **Doug — UI approach approved** (2026-05-13)
+- [x] **Doug — generation pipeline approved** (2026-05-13)
+- [x] **Doug — copy change approved** (2026-05-13)
 
-Once ticked, this page becomes the live spec and the build sequence above kicks off.
+Spec is live. Build sequence above kicks off next session.

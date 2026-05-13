@@ -22,7 +22,7 @@ from flask import Blueprint, jsonify, request
 
 from campaign_template import build_campaign
 from config.voice_presets import VOICE_PRESETS, system_prompt_for
-from sb_helpers import require_user, supabase
+from sb_helpers import maybe_one, require_user, supabase
 
 campaigns_bp = Blueprint('campaigns', __name__)
 
@@ -140,12 +140,11 @@ def _generate_copy_for_post(event, voice, post, profile):
 
 
 def _fetch_event_with_lineup(event_id, owner_id):
-    ev = (
+    ev = maybe_one(
         supabase().table('events')
         .select('*')
         .eq('id', event_id).eq('owner_id', owner_id)
-        .maybe_single().execute()
-    ).data
+    )
     if not ev:
         return None, None, None
     slots = (
@@ -174,9 +173,9 @@ def generate_campaign(event_id):
         return jsonify({'error': 'event not found'}), 404
 
     # Check existing campaign — one-per-event in v0
-    existing = (
-        supabase().table('campaigns').select('*').eq('event_id', event_id).maybe_single().execute()
-    ).data
+    existing = maybe_one(
+        supabase().table('campaigns').select('*').eq('event_id', event_id)
+    )
     if existing and not regenerate:
         return jsonify({'error': 'campaign already exists; pass regenerate=true to rebuild', 'campaign_id': existing['id']}), 409
     if existing and regenerate:
@@ -250,11 +249,11 @@ def get_campaign(campaign_id):
     uid, err = require_user()
     if err:
         return err
-    camp = (
+    camp = maybe_one(
         supabase().table('campaigns')
         .select('*, events(id, owner_id, name, event_date, venue_name, venue_city, ticketing_url)')
-        .eq('id', campaign_id).maybe_single().execute()
-    ).data
+        .eq('id', campaign_id)
+    )
     if not camp:
         return jsonify({'error': 'not found'}), 404
     if not camp.get('events') or camp['events'].get('owner_id') != uid:
@@ -271,15 +270,15 @@ def get_campaign_for_event(event_id):
     if err:
         return err
     # Confirm ownership
-    ev = (
+    ev = maybe_one(
         supabase().table('events').select('id, owner_id')
-        .eq('id', event_id).eq('owner_id', uid).maybe_single().execute()
-    ).data
+        .eq('id', event_id).eq('owner_id', uid)
+    )
     if not ev:
         return jsonify({'error': 'event not found'}), 404
-    camp = (
-        supabase().table('campaigns').select('*').eq('event_id', event_id).maybe_single().execute()
-    ).data
+    camp = maybe_one(
+        supabase().table('campaigns').select('*').eq('event_id', event_id)
+    )
     if not camp:
         return jsonify({'campaign': None, 'posts': []})
     posts = (
@@ -294,11 +293,11 @@ def regenerate_post_copy(post_id):
     if err:
         return err
     # Fetch post + walk up to event for ownership check
-    post = (
+    post = maybe_one(
         supabase().table('posts')
         .select('*, campaigns(id, event_id, voice_preset, events(id, owner_id, name, event_date, venue_name, venue_city, ticketing_url))')
-        .eq('id', post_id).maybe_single().execute()
-    ).data
+        .eq('id', post_id)
+    )
     if not post:
         return jsonify({'error': 'not found'}), 404
     event = post.get('campaigns', {}).get('events') or {}
@@ -308,9 +307,9 @@ def regenerate_post_copy(post_id):
     voice = post['campaigns'].get('voice_preset') or 'professional'
     profile = None
     if post.get('linked_artist_profile_id'):
-        profile = (
-            supabase().table('artist_profiles').select('*').eq('id', post['linked_artist_profile_id']).maybe_single().execute()
-        ).data
+        profile = maybe_one(
+            supabase().table('artist_profiles').select('*').eq('id', post['linked_artist_profile_id'])
+        )
 
     plan_shape = {
         'post_type': post['post_type'],
@@ -341,9 +340,9 @@ def patch_post(post_id):
     body = request.get_json(silent=True) or {}
 
     # Ownership check
-    post = (
-        supabase().table('posts').select('id, campaigns(events(owner_id))').eq('id', post_id).maybe_single().execute()
-    ).data
+    post = maybe_one(
+        supabase().table('posts').select('id, campaigns(events(owner_id))').eq('id', post_id)
+    )
     if not post or post.get('campaigns', {}).get('events', {}).get('owner_id') != uid:
         return jsonify({'error': 'not found'}), 404
 

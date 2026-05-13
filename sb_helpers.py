@@ -45,3 +45,15 @@ def require_user():
     if uid is None:
         return None, (jsonify({'error': 'unauthenticated'}), 401)
     return uid, None
+
+
+def maybe_one(builder):
+    """Run a supabase-py query and return the first row or None.
+
+    supabase-py's `.maybe_single().execute()` returns None (not a response
+    object) when there are zero matching rows, which breaks `.data` access.
+    Use `.limit(1).execute()` + this helper instead.
+    """
+    res = builder.limit(1).execute()
+    rows = getattr(res, 'data', None) or []
+    return rows[0] if rows else None

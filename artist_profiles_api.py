@@ -6,7 +6,7 @@ Spec: projects/thesoundcave/wiki/spec/phase_2_3_pivot.md
 """
 from flask import Blueprint, jsonify, request
 
-from sb_helpers import require_user, supabase
+from sb_helpers import maybe_one, require_user, supabase
 import soundcloud_helpers as sc
 
 artist_profiles_bp = Blueprint('artist_profiles', __name__, url_prefix='/api/artist-profiles')
@@ -88,17 +88,15 @@ def get_profile(profile_id):
     uid, err = require_user()
     if err:
         return err
-    res = (
+    row = maybe_one(
         supabase()
         .table('artist_profiles')
         .select(PROFILE_COLS)
         .eq('id', profile_id)
-        .maybe_single()
-        .execute()
     )
-    if not res.data:
+    if not row:
         return jsonify({'error': 'not found'}), 404
-    return jsonify({'profile': res.data})
+    return jsonify({'profile': row})
 
 
 @artist_profiles_bp.route('/match', methods=['POST'])
@@ -202,14 +200,12 @@ def patch_profile(profile_id):
     # Phase 2: only the claimer can edit. Service role bypasses RLS so we
     # enforce in code. Until claim flow lands (Phase 4), the only writers
     # should be the scrape endpoint (service-role) and admin tools.
-    row = (
+    row = maybe_one(
         supabase()
         .table('artist_profiles')
         .select('claimed_by_user_id')
         .eq('id', profile_id)
-        .maybe_single()
-        .execute()
-    ).data
+    )
     if not row:
         return jsonify({'error': 'not found'}), 404
     if row.get('claimed_by_user_id') and row['claimed_by_user_id'] != uid:

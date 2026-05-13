@@ -13,7 +13,7 @@ import time
 import anthropic
 from flask import Blueprint, jsonify, request
 
-from sb_helpers import require_user, supabase
+from sb_helpers import maybe_one, require_user, supabase
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
@@ -225,16 +225,14 @@ def get_event(event_id):
     if err:
         return err
 
-    ev = (
+    ev_data = maybe_one(
         supabase()
         .table('events')
         .select(EVENT_COLS)
         .eq('id', event_id)
         .eq('owner_id', uid)
-        .maybe_single()
-        .execute()
     )
-    if not ev.data:
+    if not ev_data:
         return jsonify({'error': 'not found'}), 404
 
     slots = (
@@ -248,7 +246,7 @@ def get_event(event_id):
         .order('billing_order')
         .execute()
     )
-    return jsonify({'event': _serialise_event(ev.data, slots.data or [])})
+    return jsonify({'event': _serialise_event(ev_data, slots.data or [])})
 
 
 @events_bp.route('/<event_id>', methods=['PATCH'])

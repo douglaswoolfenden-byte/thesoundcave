@@ -72,6 +72,7 @@
       ]),
       field('TICKETING LINK', inputs.ticketing_url),
       field('VOICE PRESET', inputs.voice_preset),
+      draft.editing_id ? renderFlyerField(draft) : null,
       draft.editing_id ? null : field('LINEUP (ONE NAME PER LINE)', inputs.lineup_names),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '10px' } }, [
         h('button', { class: 'btn-red', type: 'submit' }, draft.editing_id ? '{SAVE CHANGES}' : '{MATCH LINEUP →}'),
@@ -154,6 +155,51 @@
     } catch (e) {
       renderForm(`Save failed: ${e.message}`);
     }
+  }
+
+  function renderFlyerField(draft) {
+    const currentUrl = draft.flyer_image_url || null;
+    const status = h('div', { style: { fontSize: '10px', color: 'var(--muted)', marginTop: '6px' } }, '');
+    const thumb = currentUrl
+      ? h('img', { src: currentUrl, style: { width: '120px', height: '150px', objectFit: 'cover', borderRadius: '2px' } })
+      : h('div', {
+          style: { width: '120px', height: '150px', background: 'var(--elevated)', border: '1px dashed var(--border)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'var(--muted)', textAlign: 'center', padding: '0 8px' },
+        }, 'NO FLYER YET');
+
+    const fileInput = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', style: { display: 'none' } });
+    const btn = h('button', { type: 'button', class: 'btn-outline' }, currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}');
+    btn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      btn.disabled = true; btn.textContent = '{UPLOADING…}';
+      status.textContent = '';
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await E.authedFetch(`${API}/api/events/${draft.editing_id}/flyer`, { method: 'POST', body: fd });
+        const j = await r.json();
+        if (!r.ok) { status.textContent = j.error || `Upload failed (${r.status})`; btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}'; return; }
+        state.draft.flyer_image_url = j.flyer_image_url;
+        renderForm();  // re-render the form so the thumb updates
+      } catch (e) {
+        status.textContent = `Upload failed: ${e.message}`;
+        btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}';
+      }
+    });
+
+    return h('label', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } }, [
+      h('span', { style: E.MONO_LABEL }, 'FLYER'),
+      h('div', { style: { display: 'flex', gap: '14px', alignItems: 'flex-start' } }, [
+        thumb,
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
+          btn,
+          fileInput,
+          h('div', { style: { fontSize: '10px', color: 'var(--muted)' } }, 'PNG / JPG / WEBP, up to 10MB. Used as the visual hero for announcement, countdown, and recap posts.'),
+          status,
+        ]),
+      ]),
+    ]);
   }
 
   E.startNew = startNew;

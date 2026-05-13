@@ -41,16 +41,25 @@
       h('button', { type: 'button', class: 'btn-outline', onClick: () => E.startEdit(e.id) }, '{EDIT}'),
     ]);
 
+    const metaCard = h('div', { class: 'card', style: { flex: 1, marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' } }, [
+      h('div', { style: { ...MONO_LABEL, marginBottom: '4px' } }, `${e.status} · ${e.voice_preset}`),
+      h('div', { style: { fontSize: '13px', marginBottom: '6px' } }, fmtDate(e.event_date)),
+      e.venue_name ? h('div', { style: { fontSize: '12px', color: 'var(--secondary)' } },
+        e.venue_name + (e.venue_city ? ' · ' + e.venue_city : '')) : null,
+      e.ticketing_url ? h('div', { style: { fontSize: '11px', marginTop: '6px' } }, [
+        h('a', { href: e.ticketing_url, target: '_blank', style: { color: 'var(--red)' } }, 'Tickets ↗'),
+      ]) : null,
+    ]);
+
+    const flyerThumb = e.flyer_image_url
+      ? h('img', { src: e.flyer_image_url, style: { width: '160px', height: '200px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 } })
+      : h('div', { style: { width: '160px', height: '200px', background: 'var(--elevated)', border: '1px dashed var(--border)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...MONO_LABEL, fontSize: '9px', textAlign: 'center', padding: '0 8px' } }, 'NO FLYER YET — ADD VIA {EDIT}');
+
     mount(h('div', null, [
       topRow,
-      h('div', { class: 'card', style: { marginBottom: '14px' } }, [
-        h('div', { style: { ...MONO_LABEL, marginBottom: '4px' } }, `${e.status} · ${e.voice_preset}`),
-        h('div', { style: { fontSize: '13px', marginBottom: '6px' } }, fmtDate(e.event_date)),
-        e.venue_name ? h('div', { style: { fontSize: '12px', color: 'var(--secondary)' } },
-          e.venue_name + (e.venue_city ? ' · ' + e.venue_city : '')) : null,
-        e.ticketing_url ? h('div', { style: { fontSize: '11px', marginTop: '6px' } }, [
-          h('a', { href: e.ticketing_url, target: '_blank', style: { color: 'var(--red)' } }, 'Tickets ↗'),
-        ]) : null,
+      h('div', { style: { display: 'flex', gap: '14px', marginBottom: '18px', alignItems: 'stretch' } }, [
+        flyerThumb,
+        metaCard,
       ]),
       h('div', { style: { ...MONO_LABEL, marginBottom: '8px' } }, 'LINEUP'),
       h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '10px', marginBottom: '18px' } },

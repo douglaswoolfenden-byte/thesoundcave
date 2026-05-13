@@ -142,6 +142,54 @@ Rules:
 """
 
 
+@events_bp.route('/<event_id>/flyer', methods=['POST'])
+def attach_flyer(event_id):
+    """Upload a flyer to an existing event (no vision extraction).
+
+    Multipart body: field 'file'.
+    Returns: { flyer_image_url, event }
+    """
+    uid, err = require_user()
+    if err:
+        return err
+    f = request.files.get('file')
+    if f is None:
+        return jsonify({'error': 'file field required'}), 400
+    mime = (f.mimetype or '').lower()
+    if mime not in FLYER_ALLOWED_MIMES:
+        return jsonify({'error': f'unsupported type: {mime}'}), 400
+    data = f.read()
+    if not data:
+        return jsonify({'error': 'empty file'}), 400
+    if len(data) > FLYER_MAX_BYTES:
+        return jsonify({'error': f'file exceeds {FLYER_MAX_BYTES // (1024*1024)}MB'}), 400
+
+    # Ownership gate: confirm the event is the caller's
+    ev = maybe_one(
+        supabase().table('events').select('id, owner_id').eq('id', event_id).eq('owner_id', uid)
+    )
+    if not ev:
+        return jsonify({'error': 'event not found'}), 404
+
+    original = (f.filename or '').lower()
+    ext = '.' + original.rsplit('.', 1)[1][:6] if '.' in original else '.jpg'
+    object_path = f"{uid}/flyer_{int(time.time())}_{os.urandom(3).hex()}{ext}"
+    try:
+        supabase().storage.from_(FLYER_BUCKET).upload(
+            path=object_path, file=data,
+            file_options={'content-type': mime, 'upsert': 'true'},
+        )
+        flyer_image_url = supabase().storage.from_(FLYER_BUCKET).get_public_url(object_path)
+    except Exception as e:
+        return jsonify({'error': f'storage upload failed: {e}'}), 500
+
+    res = (
+        supabase().table('events').update({'flyer_image_url': flyer_image_url})
+        .eq('id', event_id).eq('owner_id', uid).execute()
+    )
+    return jsonify({'flyer_image_url': flyer_image_url, 'event': (res.data or [None])[0]})
+
+
 @events_bp.route('/extract-flyer', methods=['POST'])
 def extract_flyer():
     """Upload a flyer + extract event details via Claude Sonnet vision.

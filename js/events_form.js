@@ -164,10 +164,10 @@
       ? h('img', { src: currentUrl, style: { width: '120px', height: '150px', objectFit: 'cover', borderRadius: '2px' } })
       : h('div', {
           style: { width: '120px', height: '150px', background: 'var(--elevated)', border: '1px dashed var(--border)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'var(--muted)', textAlign: 'center', padding: '0 8px' },
-        }, 'NO FLYER YET');
+        }, 'NO MEDIA YET');
 
     const fileInput = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', style: { display: 'none' } });
-    const btn = h('button', { type: 'button', class: 'btn-outline' }, currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}');
+    const btn = h('button', { type: 'button', class: 'btn-outline' }, currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}');
     btn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files[0];
@@ -179,23 +179,23 @@
         fd.append('file', file);
         const r = await E.authedFetch(`${API}/api/events/${draft.editing_id}/flyer`, { method: 'POST', body: fd });
         const j = await r.json();
-        if (!r.ok) { status.textContent = j.error || `Upload failed (${r.status})`; btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}'; return; }
+        if (!r.ok) { status.textContent = j.error || `Upload failed (${r.status})`; btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}'; return; }
         state.draft.flyer_image_url = j.flyer_image_url;
         renderForm();  // re-render the form so the thumb updates
       } catch (e) {
         status.textContent = `Upload failed: ${e.message}`;
-        btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE FLYER}' : '{UPLOAD FLYER}';
+        btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}';
       }
     });
 
     return h('label', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } }, [
-      h('span', { style: E.MONO_LABEL }, 'FLYER'),
+      h('span', { style: E.MONO_LABEL }, 'MEDIA'),
       h('div', { style: { display: 'flex', gap: '14px', alignItems: 'flex-start' } }, [
         thumb,
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
           btn,
           fileInput,
-          h('div', { style: { fontSize: '10px', color: 'var(--muted)' } }, 'PNG / JPG / WEBP, up to 10MB. Used as the visual hero for announcement, countdown, and recap posts.'),
+          h('div', { style: { fontSize: '10px', color: 'var(--muted)' } }, 'PNG / JPG / WEBP, up to 10MB. Inspires generated post imagery — your brand language carries across all posts.'),
           status,
         ]),
       ]),

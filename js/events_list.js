@@ -1,4 +1,4 @@
-// EVENTS — list view + flyer drop zone
+// EVENTS — list view + media drop zone (flyers, brand references, any visual input)
 (function () {
   const E = window.scEvents;
   const { API, h, mount, mountInto, authedFetch, fmtDate, MONO_LABEL, MONO_HEAD, emptyCard } = E;
@@ -63,7 +63,7 @@
         borderStyle: 'dashed', cursor: 'pointer',
       },
     }, [
-      h('div', { style: { ...MONO_LABEL, marginBottom: '6px' } }, 'DROP A FLYER · AUTO-EXTRACT EVENT'),
+      h('div', { style: { ...MONO_LABEL, marginBottom: '6px' } }, 'DROP MEDIA · AUTO-EXTRACT EVENT'),
       h('div', { style: { fontSize: '11px', color: 'var(--secondary)' } },
         'PNG / JPG / WEBP, up to 10MB. Or click to pick a file.'),
       status,

@@ -53,7 +53,7 @@
 
     const flyerThumb = e.flyer_image_url
       ? h('img', { src: e.flyer_image_url, style: { width: '160px', height: '200px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 } })
-      : h('div', { style: { width: '160px', height: '200px', background: 'var(--elevated)', border: '1px dashed var(--border)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...MONO_LABEL, fontSize: '9px', textAlign: 'center', padding: '0 8px' } }, 'NO FLYER YET — ADD VIA {EDIT}');
+      : h('div', { style: { width: '160px', height: '200px', background: 'var(--elevated)', border: '1px dashed var(--border)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, ...MONO_LABEL, fontSize: '9px', textAlign: 'center', padding: '0 8px' } }, 'NO MEDIA YET — ADD VIA {EDIT}');
 
     mount(h('div', null, [
       topRow,

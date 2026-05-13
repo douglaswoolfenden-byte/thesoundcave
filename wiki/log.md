@@ -455,3 +455,16 @@ Three small UX shifts in one pass:
 - Phase plan: 1) Reframe; 2) Event entity (weeks 2-3); 3) Campaign generation (weeks 4-6); 4) Profile claim (weeks 7-8); 5) Ayrshare publishing (weeks 9-10); 6) Beta launch (weeks 11-12).
 - Code: scaffolded `events_api.py` and `artist_profiles_api.py` as empty Flask Blueprints; registered in `content_api.py`. No routes yet — Day 2 lands migrations and auth wiring.
 - Awaiting Doug sign-off on `phase_2_3_pivot.md` before Day 2.
+- Commit: `8a9ecb0`
+
+## [2026-05-13] Phase 2 — schema + API + Events UI (Days 2–4)
+- **Schema** (`db/0012` + `db/0013` + `db/0014`): events, lineup_slots, artist_profiles (Phase 4 column set), campaigns, posts. All RLS-enabled. Applied to Supabase pooler, verified `rowsecurity=t` on all five tables.
+- **Backfill**: `scripts/migrate_scout_to_profiles.py` reads every `data/YYYY-MM-DD.json` weekly scout report, dedupes by SoundCloud handle, upserts to `artist_profiles` with `claimed=false`. Idempotent (verified re-run). Seeded **20 profiles**.
+- **Shared helpers**: `sb_helpers.py` (require_user + service-role supabase client), `soundcloud_helpers.py` (search_users / resolve_user / fetch_user_tracks / handle_from_url). Extracted to break the events/profile APIs free of circular content_api dependency.
+- **API**: `events_api.py` (GET/POST/PATCH/DELETE /api/events, GET /api/events/<id> with joined lineup+artist_profiles), `artist_profiles_api.py` (list/get/patch, POST /match returning local + SoundCloud candidates with top-track, POST /scrape upserting from a handle). All JWT-gated.
+- **Frontend**: new EVENTS tab pinned as the **first** top-level pill (signalling promoter-first); `js/events.js` is one module with three render modes — list (upcoming + past cards), new (manual form), match-review (per-name candidate picker). Built with a DOM-builder helper (no innerHTML / inline onclick).
+- **Auth**: magic-link login + cave-entrance splash gate were already wired (Phase B work, 2026-05-07). No new code needed.
+- **Not done yet**: Roster rename (Clan → Roster), flyer-upload vision extraction, manual stub endpoint, Day-5 dogfood of 3 real events. All week 2.
+- **Not visually confirmed**: API endpoints respond correctly to curl; UI compiles; Doug needs to dogfood the EVENTS tab end-to-end to validate the match flow surfaces good candidates.
+- Commits: `979f6a0` (schema + API + backfill), `1939f10` (events UI).
+

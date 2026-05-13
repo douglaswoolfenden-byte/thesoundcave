@@ -519,13 +519,13 @@ document.querySelectorAll('.htab[data-action="splash"]').forEach(btn => {
 
 function switchTab(name) {
   currentTab = name;
-  ['home','cave','foraging','clan','footprints','firepit','brands','reflection','index'].forEach(t => {
+  ['home','events','cave','foraging','clan','footprints','firepit','brands','reflection','index'].forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     if (el) el.style.display = t === name ? 'block' : 'none';
   });
   // Top-level nav: Cave group stays "active" for any cave sub-section.
   // Home/Index are reached via the bottom-right corner-nav, not the top pills.
-  const TOP_TABS = ['cave','firepit','brands','reflection'];
+  const TOP_TABS = ['events','cave','firepit','brands','reflection'];
   const topGroup = CAVE_TABS.includes(name) ? 'cave' : (TOP_TABS.includes(name) ? name : null);
   document.querySelectorAll('.htab[data-tab]').forEach(el => {
     el.classList.toggle('active', el.dataset.tab === topGroup);
@@ -548,6 +548,7 @@ function switchTab(name) {
   if (name === 'clan')       renderClan();
   if (name === 'footprints') renderFootprints();
   if (name === 'firepit')    renderFirepit();
+  if (name === 'events' && typeof window.renderEvents === 'function') window.renderEvents();
   if (name === 'brands' && typeof window.refreshBrands === 'function') window.refreshBrands();
   if (name === 'reflection' && typeof window.refreshReflection === 'function') window.refreshReflection();
 }

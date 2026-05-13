@@ -127,7 +127,10 @@ def get_event(event_id):
     slots = (
         supabase()
         .table('lineup_slots')
-        .select('id, artist_profile_id, billing_position, billing_order, set_time, set_notes')
+        .select(
+            'id, artist_profile_id, billing_position, billing_order, set_time, set_notes, '
+            'artist_profiles(id, display_name, soundcloud_handle, hero_image_url, follower_count_soundcloud)'
+        )
         .eq('event_id', event_id)
         .order('billing_order')
         .execute()

@@ -68,11 +68,14 @@
     <img src="brand/logo/soundcave_logo_2026-05-11.svg" alt="" class="htab-brand-logo">
   </button>
   <nav class="header-tabs">
-    <button class="htab active" type="button" data-tab="cave" data-group="cave">
-      <span class="htab-label">THE CAVE</span>
+    <button class="htab" type="button" data-tab="events">
+      <span class="htab-label">EVENTS <span class="count" id="eventsCount"></span></span>
     </button>
     <button class="htab" type="button" data-tab="firepit">
       <span class="htab-label">FIREPIT <span class="count" id="firepitCount"></span></span>
+    </button>
+    <button class="htab active" type="button" data-tab="cave" data-group="cave">
+      <span class="htab-label">THE CAVE</span>
     </button>
     <button class="htab" type="button" data-tab="brands">
       <span class="htab-label">BRANDS</span>
@@ -213,6 +216,11 @@
         Charts and growth metrics require at least two data points to draw a comparison. The Sound Cave collects daily snapshots via an automated tracker, so you'll start seeing meaningful trends within a few days of adding artists to your Clan. Weekly scout reports add additional depth. The more time passes, the richer and more accurate your analytics become.
       </p>
     </div>
+  </div>
+
+  <!-- ─── EVENTS TAB (Phase 2) ────────────────────────── -->
+  <div id="tab-events" style="display:none">
+    <div id="eventsRoot"></div>
   </div>
 
   <!-- ─── THE CAVE TAB ────────────────────────────────── -->
@@ -899,5 +907,6 @@
 <script src="js/firepit.js"></script>
 <script src="js/trail_map.js"></script>
 <script src="js/brands.js"></script>
+<script src="js/events.js"></script>
 </body>
 </html>

@@ -43,6 +43,31 @@ def _scrape_and_upsert(handle):
     return (res.data or [None])[0]
 
 
+@artist_profiles_bp.route('', methods=['POST'])
+def create_manual_stub():
+    """Create a name-only artist_profiles stub for artists with no SoundCloud presence.
+
+    Body: { "display_name": "DJ Anonymous", "genre_tags": ["techno"]?, "location": "..."? }
+    """
+    uid, err = require_user()
+    if err:
+        return err
+    body = request.get_json(silent=True) or {}
+    name = (body.get('display_name') or '').strip()
+    if not name:
+        return jsonify({'error': 'display_name is required'}), 400
+    payload = {
+        'display_name': name,
+        'genre_tags': body.get('genre_tags') or [],
+        'location': body.get('location'),
+        'claimed': False,
+    }
+    res = supabase().table('artist_profiles').insert(payload).execute()
+    if not res.data:
+        return jsonify({'error': 'insert failed'}), 500
+    return jsonify({'profile': res.data[0]}), 201
+
+
 @artist_profiles_bp.route('', methods=['GET'])
 def list_profiles():
     uid, err = require_user()

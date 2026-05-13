@@ -5,11 +5,29 @@ Phase 2 endpoints for the Event entity and its lineup.
 Spec: projects/thesoundcave/wiki/spec/phase_2_3_pivot.md
 Source brief: ~/Downloads/Soundcave Phase 2.3 Mission.md
 """
+import base64
+import json
+import os
+import time
+
+import anthropic
 from flask import Blueprint, jsonify, request
 
 from sb_helpers import require_user, supabase
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
+
+FLYER_BUCKET = 'event_flyers'
+FLYER_ALLOWED_MIMES = {'image/png', 'image/jpeg', 'image/jpg', 'image/webp'}
+FLYER_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+EXTRACT_MODEL = 'claude-sonnet-4-6'
+
+_anthropic = None
+def _ai():
+    global _anthropic
+    if _anthropic is None:
+        _anthropic = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+    return _anthropic
 
 ALLOWED_STATUS = {'draft', 'announced', 'sold_out', 'past'}
 ALLOWED_VOICE = {'underground', 'professional', 'high_energy', 'intimate'}
@@ -104,6 +122,101 @@ def create_event():
             supabase().table('lineup_slots').insert(slots).execute()
 
     return jsonify({'event': event}), 201
+
+
+EXTRACTION_PROMPT = """Extract event details from this flyer image. Return ONLY a JSON object with this exact shape — no prose, no markdown fences:
+
+{
+  "name": "<event name as it appears on the flyer; null if unclear>",
+  "event_date": "<ISO 8601 datetime in 24h format, e.g. 2026-06-15T22:00:00; null if no date visible>",
+  "venue_name": "<venue name; null if not on flyer>",
+  "venue_city": "<city; null if not on flyer>",
+  "ticketing_url": "<URL to buy tickets; null if not visible>",
+  "lineup": ["Artist 1", "Artist 2", ...]
+}
+
+Rules:
+- For event_date: if only a date is shown, use 22:00:00 as a sensible nightclub default; if you see a year nowhere, omit (return null)
+- For lineup: ONE STRING per artist, exactly as printed. Preserve stylisation (caps, special chars, spacing). Do NOT include "live", "DJ set", "b2b", or set times. Skip the venue/promoter name.
+- If the image isn't an event flyer or is unreadable, return {"name": null, "event_date": null, "venue_name": null, "venue_city": null, "ticketing_url": null, "lineup": []}
+"""
+
+
+@events_bp.route('/extract-flyer', methods=['POST'])
+def extract_flyer():
+    """Upload a flyer + extract event details via Claude Sonnet vision.
+
+    Multipart body: field 'file' = the flyer image.
+    Returns: { flyer_image_url, extracted: {name, event_date, venue_name, venue_city, ticketing_url, lineup: [...]} }
+    Does NOT create an Event row — the client uses the extracted values to prefill the create-event form.
+    """
+    uid, err = require_user()
+    if err:
+        return err
+    f = request.files.get('file')
+    if f is None:
+        return jsonify({'error': 'file field required'}), 400
+    mime = (f.mimetype or '').lower()
+    if mime not in FLYER_ALLOWED_MIMES:
+        return jsonify({'error': f'unsupported type: {mime}'}), 400
+    data = f.read()
+    if not data:
+        return jsonify({'error': 'empty file'}), 400
+    if len(data) > FLYER_MAX_BYTES:
+        return jsonify({'error': f'file exceeds {FLYER_MAX_BYTES // (1024*1024)}MB'}), 400
+
+    # Upload to storage first so we have a URL to attach to the event later.
+    original = (f.filename or '').lower()
+    ext = '.' + original.rsplit('.', 1)[1][:6] if '.' in original else ''
+    object_path = f"{uid}/flyer_{int(time.time())}_{os.urandom(3).hex()}{ext or '.jpg'}"
+    try:
+        supabase().storage.from_(FLYER_BUCKET).upload(
+            path=object_path,
+            file=data,
+            file_options={'content-type': mime, 'upsert': 'true'},
+        )
+        flyer_image_url = supabase().storage.from_(FLYER_BUCKET).get_public_url(object_path)
+    except Exception as e:
+        return jsonify({'error': f'storage upload failed: {e}'}), 500
+
+    # Vision call
+    b64 = base64.standard_b64encode(data).decode('ascii')
+    media_type = 'image/jpeg' if mime in ('image/jpg', 'image/jpeg') else mime
+    try:
+        msg = _ai().messages.create(
+            model=EXTRACT_MODEL,
+            max_tokens=1024,
+            messages=[{
+                'role': 'user',
+                'content': [
+                    {'type': 'image', 'source': {'type': 'base64', 'media_type': media_type, 'data': b64}},
+                    {'type': 'text', 'text': EXTRACTION_PROMPT},
+                ],
+            }],
+        )
+        raw = msg.content[0].text if msg.content else ''
+    except anthropic.APIError as e:
+        return jsonify({'error': f'extraction failed: {e}', 'flyer_image_url': flyer_image_url}), 502
+
+    # Parse the JSON the model returned. Strip code fences if any.
+    s = raw.strip()
+    if s.startswith('```'):
+        s = s.strip('`')
+        if s.lower().startswith('json'):
+            s = s[4:].lstrip()
+    try:
+        extracted = json.loads(s)
+    except Exception:
+        return jsonify({
+            'error': 'model returned non-JSON',
+            'flyer_image_url': flyer_image_url,
+            'raw': raw[:500],
+        }), 502
+
+    # Normalise: ensure lineup is a list of strings
+    extracted['lineup'] = [str(x).strip() for x in (extracted.get('lineup') or []) if str(x).strip()]
+
+    return jsonify({'flyer_image_url': flyer_image_url, 'extracted': extracted})
 
 
 @events_bp.route('/<event_id>', methods=['GET'])

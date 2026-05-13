@@ -75,6 +75,73 @@
     return h('div', { class: 'card', style: { textAlign: 'center', padding: '48px 24px', color: 'var(--muted)' } }, msg);
   }
 
+  // ── FLYER DROP ZONE ───────────────────────────────────
+  function renderDropZone() {
+    const fileInput = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', style: { display: 'none' } });
+    const status = h('div', { style: { fontSize: '11px', color: 'var(--muted)', marginTop: '6px' } }, '');
+    const zone = h('div', {
+      class: 'card',
+      style: {
+        marginBottom: '18px', padding: '20px 24px', textAlign: 'center',
+        borderStyle: 'dashed', cursor: 'pointer',
+      },
+    }, [
+      h('div', { style: { ...MONO_LABEL, marginBottom: '6px' } }, 'DROP A FLYER · AUTO-EXTRACT EVENT'),
+      h('div', { style: { fontSize: '11px', color: 'var(--secondary)' } },
+        'PNG / JPG / WEBP, up to 10MB. Or click to pick a file.'),
+      status,
+      fileInput,
+    ]);
+    zone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFlyer(fileInput.files[0], status, zone); });
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--red)'; });
+    zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.style.borderColor = '';
+      const f = e.dataTransfer.files[0];
+      if (f) handleFlyer(f, status, zone);
+    });
+    return zone;
+  }
+
+  async function handleFlyer(file, statusEl, zoneEl) {
+    statusEl.textContent = `Uploading ${file.name}… running vision extraction (10-20s)…`;
+    zoneEl.style.pointerEvents = 'none';
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await authedFetch(`${API}/api/events/extract-flyer`, { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!r.ok) { statusEl.textContent = `Extraction failed: ${j.error || r.status}`; zoneEl.style.pointerEvents = ''; return; }
+      const ex = j.extracted || {};
+      draft = {
+        name: ex.name || '',
+        event_date: localDateTimeValue(ex.event_date),
+        venue_name: ex.venue_name || '',
+        venue_city: ex.venue_city || '',
+        ticketing_url: ex.ticketing_url || '',
+        voice_preset: 'professional',
+        lineup_names: (ex.lineup || []).join('\n'),
+        flyer_image_url: j.flyer_image_url,
+      };
+      renderForm();
+    } catch (e) {
+      statusEl.textContent = `Extraction failed: ${e.message}`;
+      zoneEl.style.pointerEvents = '';
+    }
+  }
+
+  function localDateTimeValue(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (_) { return ''; }
+  }
+
   // ── LIST view ─────────────────────────────────────────
   async function renderList() {
     const newBtn = h('button', { type: 'button', class: 'btn-red', onClick: startNew }, '{NEW EVENT}');
@@ -82,8 +149,9 @@
       h('h2', { style: { ...MONO_HEAD, margin: 0 } }, 'EVENTS'),
       newBtn,
     ]);
+    const dropZone = renderDropZone();
     const listSlot = h('div', null, 'Loading…');
-    mount(h('div', null, [headerRow, listSlot]));
+    mount(h('div', null, [headerRow, dropZone, listSlot]));
 
     try {
       const r = await authedFetch(`${API}/api/events`);
@@ -333,8 +401,14 @@
         if (!r.ok) { alert(`Scrape failed for ${handle}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE EVENT}'; return; }
         apid = j.profile.id;
       } else if (sel.kind === 'manual') {
-        alert(`Manual stub creation isn't wired yet. Skipping "${results[i].name}".`);
-        continue;
+        const r = await authedFetch(`${API}/api/artist-profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ display_name: results[i].name }),
+        });
+        const j = await r.json();
+        if (!r.ok) { alert(`Manual stub failed for ${results[i].name}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE EVENT}'; return; }
+        apid = j.profile.id;
       }
       lineup.push({ artist_profile_id: apid, billing_position: i === 0 ? 'headliner' : 'support', billing_order: i });
     }
@@ -348,6 +422,7 @@
       venue_name: draft.venue_name || null,
       venue_city: draft.venue_city || null,
       ticketing_url: draft.ticketing_url || null,
+      flyer_image_url: draft.flyer_image_url || null,
       voice_preset: draft.voice_preset,
       lineup,
     };

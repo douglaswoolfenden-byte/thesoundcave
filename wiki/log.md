@@ -476,4 +476,30 @@ Three small UX shifts in one pass:
 - **Not yet done**: copy-quality dogfood, post-editor modal, image composition (Pillow), async orchestration (threads), Roster rename.
 - Session paused at usage limit. Resumption note in memory.
 
+## [2026-05-13] Session 2 — Phase 3 v0.6 brand-aware image gen shipped end-to-end
+Picked up after the morning pause. **25 commits across both sessions today.**
+
+**Phase 1 closed:** EVENTS as default landing tab (`5be156e`), Roster cosmetic rename, wiki ratified.
+**Phase 2 closed (~98%):** flyer drop extraction, manual stub endpoint, lineup matching surfaced cleanly, Sonnet 4.6 vision extraction verified working on real flyer.
+**Phase 3 v0 → v0.6 shipped:**
+- v0 sync copy generation per post type with voice presets (`3e9c070`)
+- v0.5 Pillow image composition (`cc321f5`)
+- Sound Cave branding stripped from all output (`08d4147` — module hard rule, S0UNDCAV3 mark gone, no Sound Cave red default)
+- v0.6 brand-aware: FLUX Redux style-reference image gen, brand_kits.reference_image_urls, events.brand_kit_id, master-flyer generation endpoint, composer dispatch (`c6e426b`)
+- v0.6 UI: {GENERATE MASTER MEDIA} + {REGEN FROM REFERENCE} buttons, BRAND REFERENCES library on event edit (`ea8f78b`)
+**Stash bridge (`8004984`):** auto-sync campaign posts -> stash_items at gen time; retroactive {PUSH TO STASH} button. Unblocks the path to Trail Map scheduling.
+**Tech debt closed:** js/events.js split into 6 focused modules (`e61a79b`), all under 500 LOC.
+**Bug fixes:** sb_helpers.maybe_one() killed supabase-py NoneType crashes on zero-row queries (`f2373bc`); JSON variant parser hardened against ```json fences + trailing prose (`94d04cf`); init-tab honoured currentTab (`5be156e`); brand_kits response shape unwrap (`a12d0f6`).
+**Spec & wiki:** `brand_aware_image_gen.md` written, rewritten after Doug's Firepit-as-factory reframe, signed off (`e145a25`). `features/campaigns.md` (`ae2632d`). `features/events.md` (`5617894`).
+**Drop "flyer" -> "media" copy pass** complete (`ece0d2b`).
+**Known v0.7 work (Task #30, memory `project_soundcave_regen_variance`):** brand variance — logos shift between posts; single-ref FLUX is unstable; fix levers = logo lockup overlay + multi-ref IP-Adapter + deterministic seed + palette enforcement.
+**Outstanding for next session:**
+- Verify Stash UI actually renders the pushed posts (potential firepit.js render tweak)
+- v0.7 variance fix (biggest product blocker)
+- Trail Map -> real backend (Phase 5; currently reads localStorage mock)
+- Proper Brands tab UI for references (shortcutted onto event form for v0.6)
+- 3-event dogfood (Doug-driven, not code)
+- Doug confirmed voices file hand-tuned mid-session — voice quality validated.
+
+
 

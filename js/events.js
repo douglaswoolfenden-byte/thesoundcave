@@ -197,9 +197,33 @@
 
   // ── NEW form ──────────────────────────────────────────
   function startNew() {
-    draft = { name: '', event_date: '', venue_name: '', venue_city: '', ticketing_url: '', voice_preset: 'professional', lineup_names: '' };
+    draft = { name: '', event_date: '', venue_name: '', venue_city: '', ticketing_url: '', voice_preset: 'professional', lineup_names: '', editing_id: null };
     renderForm();
   }
+
+  async function startEdit(eventId) {
+    mount(h('div', { class: 'card' }, 'Loading…'));
+    try {
+      const r = await authedFetch(`${API}/api/events/${eventId}`);
+      const j = await r.json();
+      if (!r.ok) { mount(h('div', { class: 'card' }, j.error || 'Not found')); return; }
+      const e = j.event;
+      draft = {
+        name: e.name || '',
+        event_date: localDateTimeValue(e.event_date),
+        venue_name: e.venue_name || '',
+        venue_city: e.venue_city || '',
+        ticketing_url: e.ticketing_url || '',
+        voice_preset: e.voice_preset || 'professional',
+        lineup_names: '',  // lineup edit is its own UX, deferred
+        editing_id: eventId,
+      };
+      renderForm();
+    } catch (err) {
+      mount(h('div', { class: 'card' }, 'Could not load event for editing.'));
+    }
+  }
+  window.editEvent = startEdit;
 
   function field(label, inputEl) {
     return h('label', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
@@ -244,20 +268,22 @@
       ]),
       field('TICKETING LINK', inputs.ticketing_url),
       field('VOICE PRESET', inputs.voice_preset),
-      field('LINEUP (ONE NAME PER LINE)', inputs.lineup_names),
+      draft.editing_id ? null : field('LINEUP (ONE NAME PER LINE)', inputs.lineup_names),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '10px' } }, [
-        h('button', { class: 'btn-red', type: 'submit' }, '{MATCH LINEUP →}'),
+        h('button', { class: 'btn-red', type: 'submit' }, draft.editing_id ? '{SAVE CHANGES}' : '{MATCH LINEUP →}'),
       ]),
     ]);
 
     mount(h('div', null, [
-      topBar('NEW EVENT', renderList),
+      topBar(draft.editing_id ? 'EDIT EVENT' : 'NEW EVENT',
+        draft.editing_id ? (() => window.openEvent(draft.editing_id)) : renderList),
       error ? h('div', { class: 'card', style: { borderColor: 'var(--red)', color: 'var(--red)', marginBottom: '12px' } }, error) : null,
       form,
     ]));
   }
 
   function onFormSubmit(inputs) {
+    const editingId = draft.editing_id;
     draft = {
       name: inputs.name.value.trim(),
       event_date: inputs.event_date.value,
@@ -266,11 +292,37 @@
       ticketing_url: inputs.ticketing_url.value.trim(),
       voice_preset: inputs.voice_preset.value || 'professional',
       lineup_names: inputs.lineup_names.value,
+      editing_id: editingId,
     };
     if (!draft.name || !draft.event_date) { renderForm('Name and date are required.'); return; }
+    if (editingId) { savePatch(editingId); return; }
     const names = draft.lineup_names.split('\n').map(s => s.trim()).filter(Boolean);
     if (!names.length) { saveEvent([]); return; }
     runMatchPipeline(names);
+  }
+
+  async function savePatch(eventId) {
+    const payload = {
+      name: draft.name,
+      event_date: new Date(draft.event_date).toISOString(),
+      venue_name: draft.venue_name || null,
+      venue_city: draft.venue_city || null,
+      ticketing_url: draft.ticketing_url || null,
+      voice_preset: draft.voice_preset,
+    };
+    try {
+      const r = await authedFetch(`${API}/api/events/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await r.json();
+      if (!r.ok) { renderForm(j.error || `Save failed (${r.status})`); return; }
+      draft = null;
+      window.openEvent(eventId);
+    } catch (e) {
+      renderForm(`Save failed: ${e.message}`);
+    }
   }
 
   // ── MATCH REVIEW view ─────────────────────────────────
@@ -474,8 +526,14 @@
       ]);
     });
 
+    const topRow = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' } }, [
+      h('button', { type: 'button', class: 'btn-outline', onClick: renderList }, '← BACK'),
+      h('h2', { style: { ...MONO_HEAD, margin: 0, flex: 1 } }, e.name),
+      h('button', { type: 'button', class: 'btn-outline', onClick: () => startEdit(e.id) }, '{EDIT}'),
+    ]);
+
     mount(h('div', null, [
-      topBar(e.name, renderList),
+      topRow,
       h('div', { class: 'card', style: { marginBottom: '14px' } }, [
         h('div', { style: { ...MONO_LABEL, marginBottom: '4px' } }, `${e.status} · ${e.voice_preset}`),
         h('div', { style: { fontSize: '13px', marginBottom: '6px' } }, fmtDate(e.event_date)),

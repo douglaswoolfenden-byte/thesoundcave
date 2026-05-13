@@ -26,11 +26,13 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 app = Flask(__name__)
 CORS(app)
 
-# Phase 2 module split (scaffolded 2026-05-13). Routes register here as they land.
+# Phase 2/3 module split (2026-05-13). Routes register here as they land.
 from events_api import events_bp
 from artist_profiles_api import artist_profiles_bp
+from campaigns_api import campaigns_bp
 app.register_blueprint(events_bp)
 app.register_blueprint(artist_profiles_bp)
+app.register_blueprint(campaigns_bp)
 
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 

@@ -80,6 +80,58 @@ def _platform_targets_for(post_type):
     return ['instagram_grid', 'instagram_story', 'twitter']
 
 
+def _selected_copy_text(post):
+    """Pick the text that should appear in Stash for this post."""
+    variants = post.get('copy_variants') or []
+    sid = post.get('selected_copy_variant_id')
+    for v in variants:
+        if v.get('id') == sid:
+            return v.get('text', '')
+    return variants[0].get('text', '') if variants else ''
+
+
+def _upsert_post_into_stash(uid, event, post, campaign_id):
+    """Create or refresh a stash_items row for a campaign post.
+
+    Stash items are how the existing Trail Map / scheduler discovers content.
+    Bridge for Phase 3 -> publishing. One stash item per post; idempotent
+    via metadata->>post_id lookup.
+    """
+    media_url = post.get('selected_image_url') or (post.get('image_asset_urls') or [None])[0]
+    content = _selected_copy_text(post)
+    metadata = {
+        'source': 'campaign_post',
+        'post_id': post['id'],
+        'campaign_id': campaign_id,
+        'event_id': event.get('id'),
+        'event_name': event.get('name'),
+        'post_type': post.get('post_type'),
+        'scheduled_for': post.get('scheduled_for'),
+    }
+
+    sb = supabase()
+    # Lookup existing stash row for this post (metadata->>post_id match)
+    existing = sb.table('stash_items').select('id') \
+        .eq('user_id', uid).eq('kind', 'image') \
+        .contains('metadata', {'post_id': post['id']}) \
+        .limit(1).execute()
+    existing_id = (existing.data or [None])[0]
+
+    row = {
+        'user_id': uid,
+        'kind': 'image',
+        'content': content or None,
+        'media_url': media_url,
+        'prompt': f"campaign · {post.get('post_type', '').replace('_', ' ')}",
+        'metadata': metadata,
+    }
+    if existing_id:
+        sb.table('stash_items').update(row).eq('id', existing_id['id']).execute()
+        return existing_id['id']
+    inserted = sb.table('stash_items').insert(row).execute().data
+    return inserted[0]['id'] if inserted else None
+
+
 def _build_user_prompt(event, voice, post, profile, lineup_profiles=None):
     """Construct the user message for one post's copy generation.
 
@@ -348,6 +400,12 @@ def generate_campaign(event_id):
         except Exception as e:
             errors.append({'post_type': plan_post['post_type'], 'error': f'image: {e}'})
 
+        # Bridge to Stash so Trail Map can schedule the post
+        try:
+            _upsert_post_into_stash(uid, event, post_row, camp['id'])
+        except Exception as e:
+            print(f'[stash bridge] failed for post {post_row.get("id")}: {e}')
+
         posts_created.append(post_row)
 
     # Finalise campaign
@@ -364,6 +422,43 @@ def generate_campaign(event_id):
         'posts': posts_created,
         'errors': errors,
     })
+
+
+@campaigns_bp.route('/api/campaigns/<campaign_id>/push-to-stash', methods=['POST'])
+def push_campaign_to_stash(campaign_id):
+    """Retroactively push every post in this campaign into stash_items.
+
+    For campaigns generated before the auto-bridge landed. Idempotent —
+    re-runs refresh the existing rows instead of duplicating.
+    """
+    uid, err = require_user()
+    if err:
+        return err
+
+    camp = maybe_one(
+        supabase().table('campaigns')
+        .select('id, event_id, events(id, name, owner_id)')
+        .eq('id', campaign_id)
+    )
+    if not camp or not camp.get('events') or camp['events'].get('owner_id') != uid:
+        return jsonify({'error': 'not found'}), 404
+    event = camp['events']
+
+    posts = (
+        supabase().table('posts').select('*').eq('campaign_id', campaign_id).order('scheduled_for').execute()
+    ).data or []
+
+    pushed = []
+    failed = []
+    for post in posts:
+        try:
+            sid = _upsert_post_into_stash(uid, event, post, campaign_id)
+            if sid:
+                pushed.append(sid)
+        except Exception as e:
+            failed.append({'post_id': post['id'], 'error': str(e)})
+
+    return jsonify({'pushed': len(pushed), 'failed': failed, 'stash_item_ids': pushed})
 
 
 @campaigns_bp.route('/api/campaigns/<campaign_id>', methods=['GET'])

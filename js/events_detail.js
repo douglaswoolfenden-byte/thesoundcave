@@ -90,12 +90,18 @@
         }, '{GENERATE CAMPAIGN}'),
       ]);
     }
-    const heading = h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' } }, [
+    const heading = h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px' } }, [
       h('div', { style: MONO_LABEL }, `CAMPAIGN · ${campaign.status}${posts.length ? ' · ' + posts.length + ' posts' : ''}`),
-      h('button', {
-        class: 'btn-outline', type: 'button',
-        onClick: (ev) => triggerGenerate(event.id, ev.target, true),
-      }, '{REGENERATE}'),
+      h('div', { style: { display: 'flex', gap: '8px' } }, [
+        h('button', {
+          class: 'btn-outline', type: 'button',
+          onClick: (ev) => triggerPushToStash(campaign.id, ev.target),
+        }, '{PUSH TO STASH}'),
+        h('button', {
+          class: 'btn-outline', type: 'button',
+          onClick: (ev) => triggerGenerate(event.id, ev.target, true),
+        }, '{REGENERATE}'),
+      ]),
     ]);
     if (campaign.generation_error) {
       return h('div', null, [
@@ -145,6 +151,21 @@
     }, [
       h('div', { style: { display: 'flex', gap: '14px', alignItems: 'stretch' } }, [thumb, textBlock]),
     ]);
+  }
+
+  async function triggerPushToStash(campaignId, buttonEl) {
+    const original = buttonEl.textContent;
+    buttonEl.disabled = true; buttonEl.textContent = '{PUSHING…}';
+    try {
+      const r = await authedFetch(`${API}/api/campaigns/${campaignId}/push-to-stash`, { method: 'POST' });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || `Push failed (${r.status})`); buttonEl.disabled = false; buttonEl.textContent = original; return; }
+      buttonEl.textContent = `{PUSHED ${j.pushed}}`;
+      setTimeout(() => { buttonEl.disabled = false; buttonEl.textContent = original; }, 2500);
+    } catch (e) {
+      alert(`Push failed: ${e.message}`);
+      buttonEl.disabled = false; buttonEl.textContent = original;
+    }
   }
 
   async function triggerGenerateFlyer(eventId, buttonEl) {

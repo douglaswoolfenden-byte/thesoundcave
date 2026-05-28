@@ -1,5 +1,17 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-28] Firepit-headline restructure — 2 top-level pills, Events folds in as Summons
+- **Why:** industry feedback (May 2026) said the app felt like 2–3 products in one. Firepit has the broadest wedge ("we make your event content") so it becomes the headline. Cave splits off as a separate / premium-tier product surface (artist discovery & tracking — distinct buyer/job). See `wiki/spec/firepit_headline.md` (signed off 2026-05-28).
+- **Nav before:** EVENTS · FIREPIT · THE CAVE · BRANDS · REFLECTION (5 top-level pills).
+- **Nav after:** FIREPIT · THE CAVE · REFLECTION (3 top-level pills). EVENTS + BRANDS removed from top-level; their surfaces now live as Firepit sub-tabs.
+- **New Firepit subnav:** SUMMONS · FORGE · TRAIL MAP · STASH · BRAND KITS. Mirrors the existing #caveSubnav pattern with a global #firepitSubnav element shown whenever the FIREPIT pill is active (i.e. tab in {firepit, events, brands}).
+- **Default landing:** Firepit → Forge (Doug overruled my Summons-default — Forge is the most demo-friendly first impression).
+- **Caveman rename:** Events → Summons in user-facing strings only. Backend tables (`events`, `lineup_slots`), API routes (`/api/events/<id>`), JS var names and DOM IDs (`#tab-events`, `#eventsRoot`) all unchanged. UI-only.
+- **Commits:** `d5e8500` (nav + JS routing + Overview hero CTA), `12c25f6` (Event→Summons string rename across the events surface).
+- **Files touched:** `index.html` (removed 2 pills, added #firepitSubnav, removed redundant in-firepit modes strip, updated Overview CTA), `js/app.js` (FIREPIT_TABS group + firepit subnav visibility + default tab = firepit), `js/firepit.js` (`setFirepitMode` syncs the global subnav active state), `js/events_list.js` + `js/events_form.js` + `js/events_detail.js` + `js/events_match.js` (UI strings), `wiki/spec/firepit_headline.md` (new spec), `wiki/features/events.md` (header note), `wiki/spec/phase_2_3_pivot.md` (banner pointing to new spec).
+- **Not yet:** "Event Promo" content-type in Forge dropdown left as-is (own decision pending). v0.7 logo debug still open. Memory file `feedback_soundcave_caveman_language.md` records the brand law.
+- **Visual confirm pending:** Doug to start the server, log in, and screenshot the new nav before this is "done".
+
 ## [2026-05-14] Phase 3 v0.7 — regen variance fix (levers 1 + 3)
 - **Why:** v0.6 brand-aware gen drifts — logo/brand elements change between every post, some outputs visually wrong. Brand consistency across a campaign IS the product. See `wiki/spec/regen_variance_v0_7.md` (signed off 2026-05-14). Levers 2 (multi-ref IP-Adapter) + 4 (palette enforcement) deferred to v0.8.
 - **Lever 1 — logo lockup as Pillow overlay:** logo is no longer asked of FLUX (it always drifted). New `_draw_logo_overlay()` in `image_composer.py` composites `brand_kit.logo_url` server-side at a fixed position. Position + scale read from `brand_kit.defaults.logo_position` / `logo_scale` — the 9-position grid + scale slider in the Brand Kits UI **already existed** (js/brands.js, #bfPositionGrid), so no UI/API work needed; the composer just now honours it. Applied to both the brand-aware path and the Pillow fallback. Missing/broken logo → skipped silently. FLUX prompt gained "no logos, no text, no wordmarks".

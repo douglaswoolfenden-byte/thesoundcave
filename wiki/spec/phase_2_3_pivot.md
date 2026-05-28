@@ -1,5 +1,7 @@
 # Sound Cave — Phase 2 & 3 Pivot Spec
 
+> **2026-05-28 nav restructure:** the IA in this spec (Events as a top-level tab alongside Firepit) is superseded by [`firepit_headline.md`](firepit_headline.md). Firepit is now the headline product; Events folds in as a Firepit sub-tab renamed "Summons"; Brands folds in too; Cave splits off as a premium tier. Backend / data model in this spec stays valid.
+>
 > Status: **Proposed 2026-05-13.** Awaiting Doug sign-off before any code lands.
 >
 > **Source:** `/Users/douglaswoolfenden/Downloads/Soundcave Phase 2.3 Mission.md` (mission brief, the authoritative spec).

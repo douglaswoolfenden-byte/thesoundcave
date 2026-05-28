@@ -339,7 +339,143 @@ def _aspect_ratio(width, height):
     return '1:1'
 
 
-# ── Router ─────────────────────────────────────────────────
+# ── Image Gen v2 Router (job-type → model) ─────────────────
+# Spec: wiki/spec/image_gen_v2.md (approved 2026-05-28).
+# Principle: pixels vs text are separated. Text overlay happens client-side
+# in the Composer (Fabric.js); this layer only produces the underlying art.
+#
+# IMPORTANT: model SLUGS below are best-guess based on Doug confirming the
+# model NAMES exist on fal.ai (2026-05-28). The exact fal endpoint paths
+# + per-model payload shapes must be VERIFIED against fal docs before going
+# live. Each model gets its own _payload_for_*() to isolate per-model quirks.
+
+JOB_BACKGROUND       = 'background'
+JOB_HERO_ART         = 'hero_art'
+JOB_AVATAR           = 'avatar'
+JOB_EDIT             = 'edit'
+JOB_SAFE_COMMERCIAL  = 'safe_commercial'
+
+# job_type → (model_slug, payload_builder). Changing a model = swap the slug
+# (and possibly the builder). One-line swap point as required by the spec.
+_JOB_REGISTRY = {
+    # slug guesses pending fal-docs verification:
+    JOB_BACKGROUND:      ('fal-ai/seedream-v5',     '_payload_for_seedream'),
+    JOB_HERO_ART:        ('fal-ai/flux-2-pro',      '_payload_for_flux2'),
+    JOB_AVATAR:          ('fal-ai/flux-2-pro',      '_payload_for_flux2'),
+    JOB_EDIT:            ('fal-ai/nano-banana-pro', '_payload_for_nano_banana'),
+    JOB_SAFE_COMMERCIAL: ('fal-ai/adobe-firefly',   '_payload_for_firefly'),
+}
+
+
+def _payload_for_flux2(prompt, image_refs, width, height, seed):
+    """FLUX.2 [pro] — supports up to 10 reference images via image_urls."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+        'enable_safety_checker': True,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    if image_refs:
+        p['image_urls'] = list(image_refs)[:10]
+    return p
+
+
+def _payload_for_seedream(prompt, image_refs, width, height, seed):
+    """Seedream v5.0 — backdrop / textured-scene workhorse. No refs in v1."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    return p
+
+
+def _payload_for_nano_banana(prompt, image_refs, width, height, seed):
+    """Nano Banana Pro — conversational edits + character consistency."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    if image_refs:
+        p['image_urls'] = list(image_refs)[:10]
+    return p
+
+
+def _payload_for_firefly(prompt, image_refs, width, height, seed):
+    """Adobe Firefly — licensed-data, commercial-safe fallback."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    return p
+
+
+_PAYLOAD_BUILDERS = {
+    '_payload_for_flux2':       _payload_for_flux2,
+    '_payload_for_seedream':    _payload_for_seedream,
+    '_payload_for_nano_banana': _payload_for_nano_banana,
+    '_payload_for_firefly':     _payload_for_firefly,
+}
+
+
+def generate_for_job(job_type, prompt, *, image_refs=None, width=1080, height=1350,
+                     seed=None, model_override=None, timeout=90):
+    """Image Gen v2 router — picks model by job type.
+
+    Returns (image_bytes, provider, model_slug). Raises on any failure;
+    the caller decides whether to retry or fall back.
+    """
+    api_key = os.getenv('FAL_KEY')
+    if not api_key:
+        raise RuntimeError('FAL_KEY not set')
+
+    if model_override:
+        model_slug, builder_name = model_override, '_payload_for_flux2'  # safe default shape
+    else:
+        entry = _JOB_REGISTRY.get(job_type)
+        if not entry:
+            raise ValueError(f'unknown job_type: {job_type!r} '
+                             f'(expected one of {list(_JOB_REGISTRY)})')
+        model_slug, builder_name = entry
+
+    build = _PAYLOAD_BUILDERS[builder_name]
+    payload = build(prompt, image_refs, width, height, seed)
+
+    r = http_requests.post(
+        f'https://fal.run/{model_slug}',
+        headers={
+            'Authorization': f'Key {api_key}',
+            'Content-Type': 'application/json',
+        },
+        json=payload,
+        timeout=timeout,
+    )
+    r.raise_for_status()
+    data = r.json()
+    out_url = data['images'][0]['url']
+    img_r = http_requests.get(out_url, timeout=timeout)
+    img_r.raise_for_status()
+    return img_r.content, 'fal-ai', model_slug
+
+
+def job_registry():
+    """Read-only view of the job_type → model registry (for diagnostics / UI)."""
+    return {k: v[0] for k, v in _JOB_REGISTRY.items()}
+
+
+# ── Router (legacy — Forge text-to-image fallback chain) ───
+# Kept intact for backwards compatibility while Forge migrates to
+# generate_for_job(). Once Forge is fully on v2, this can retire.
 
 def generate_image(prompt, width, height):
     """Try Fal AI first, fall back to Replicate. Returns (bytes, provider, model)."""

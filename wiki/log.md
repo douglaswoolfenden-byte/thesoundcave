@@ -1,5 +1,14 @@
 # Sound Cave Wiki — Log
 
+## [2026-05-28] Image Gen v2 — spec signed off + Phase 1 (router) shipped
+- **Spec:** `wiki/spec/image_gen_v2.md` (approved 2026-05-28). Architecture: pixels-vs-text separation, fal.ai router per job type, Fabric.js Composer for client-side text/logo/QR edits, avatar reference-image pattern (LoRA deferred to v3).
+- **Two overrides on Doug's pasted writeup, both signed off:** stay on Supabase Storage (not R2/S3); stay on Python `ThreadPoolExecutor` (not BullMQ/Redis) — we're a Python Flask stack.
+- **Scope:** Forge-first. Summons (campaign-post) generation stays on the current Pillow-baked pipeline; migration to v2 deferred to Phase 5+.
+- **Phase 1 — model router (this commit):** new `generate_for_job(job_type, prompt, *, image_refs, ...)` in `media_gen.py`. Job-type registry maps `background → Seedream v5.0`, `hero_art → FLUX.2 [pro]`, `avatar → FLUX.2 [pro]`, `edit → Nano Banana Pro`, `safe_commercial → Adobe Firefly`. Per-model `_payload_for_*()` adapters isolate per-model payload quirks. One-line swap point as required.
+- **Verified:** importable, registry correct, unknown job_type rejected with clear error, signature exposes expected kwargs.
+- **NOT verified:** actual fal endpoint slugs + per-model payload shapes. Doug confirmed model names exist on fal.ai 2026-05-28; the exact wire format must be checked against fal docs at Phase 3 wiring time (when Forge UI fires real requests).
+- **Phases ahead:** 2 — `avatars` table + API; 3 — Forge UI for generation; 4 — Composer (Fabric.js); 5 — templates.
+
 ## [2026-05-28] Firepit-headline restructure — 2 top-level pills, Events folds in as Summons
 - **Why:** industry feedback (May 2026) said the app felt like 2–3 products in one. Firepit has the broadest wedge ("we make your event content") so it becomes the headline. Cave splits off as a separate / premium-tier product surface (artist discovery & tracking — distinct buyer/job). See `wiki/spec/firepit_headline.md` (signed off 2026-05-28).
 - **Nav before:** EVENTS · FIREPIT · THE CAVE · BRANDS · REFLECTION (5 top-level pills).

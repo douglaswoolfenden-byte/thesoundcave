@@ -4,7 +4,7 @@
   const { API, h, mount, authedFetch, fmtDate, MONO_LABEL, MONO_HEAD } = E;
 
   window.openEvent = async function (id) {
-    mount(h('div', { class: 'card' }, 'Loading event…'));
+    mount(h('div', { class: 'card' }, 'Loading summons…'));
     try {
       const [evResp, campResp] = await Promise.all([
         authedFetch(`${API}/api/events/${id}`),
@@ -15,7 +15,7 @@
       const campJson = campResp.ok ? await campResp.json() : { campaign: null, posts: [] };
       renderEventDetail(evJson.event, campJson.campaign, campJson.posts);
     } catch (e) {
-      mount(h('div', { class: 'card' }, 'Could not load event.'));
+      mount(h('div', { class: 'card' }, 'Could not load summons.'));
     }
   };
 
@@ -83,7 +83,7 @@
     if (!campaign) {
       return h('div', { class: 'card', style: { textAlign: 'center', padding: '32px 24px' } }, [
         h('div', { style: { fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' } },
-          'No campaign yet. Generation runs your event through Claude per post type (15–30s).'),
+          'No campaign yet. Generation runs your summons through Claude per post type (15–30s).'),
         h('button', {
           class: 'btn-red', type: 'button',
           onClick: (ev) => triggerGenerate(event.id, ev.target, false),

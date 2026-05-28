@@ -12,6 +12,13 @@
 - **Not yet:** "Event Promo" content-type in Forge dropdown left as-is (own decision pending). v0.7 logo debug still open. Memory file `feedback_soundcave_caveman_language.md` records the brand law.
 - **Visual confirm pending:** Doug to start the server, log in, and screenshot the new nav before this is "done".
 
+## [2026-05-28] Nav polish — top-pill reorder + BRAND KITS → MARKS
+- **Order:** top pills now **THE CAVE · FIREPIT · REFLECTION** (was Firepit-first); Firepit subnav now **FORGE · SUMMONS · TRAIL MAP · STASH · MARKS** (Forge leads, Summons sits second).
+- **Rename:** BRAND KITS → **MARKS** in the Firepit subnav (caveman vocab — cave paintings = brand identity). Internal data-subtab value stays `brandkits`; the brand kits surface itself still says "Brand Kits" inside — separate decision later.
+- **Default landing unchanged:** Firepit → Forge (Doug's earlier call still holds even though Cave is now first in nav order).
+- **Files:** `index.html` (pill order, subnav order, label), `wiki/spec/firepit_headline.md` (updated).
+
+
 ## [2026-05-14] Phase 3 v0.7 — regen variance fix (levers 1 + 3)
 - **Why:** v0.6 brand-aware gen drifts — logo/brand elements change between every post, some outputs visually wrong. Brand consistency across a campaign IS the product. See `wiki/spec/regen_variance_v0_7.md` (signed off 2026-05-14). Levers 2 (multi-ref IP-Adapter) + 4 (palette enforcement) deferred to v0.8.
 - **Lever 1 — logo lockup as Pillow overlay:** logo is no longer asked of FLUX (it always drifted). New `_draw_logo_overlay()` in `image_composer.py` composites `brand_kit.logo_url` server-side at a fixed position. Position + scale read from `brand_kit.defaults.logo_position` / `logo_scale` — the 9-position grid + scale slider in the Brand Kits UI **already existed** (js/brands.js, #bfPositionGrid), so no UI/API work needed; the composer just now honours it. Applied to both the brand-aware path and the Pillow fallback. Missing/broken logo → skipped silently. FLUX prompt gained "no logos, no text, no wordmarks".

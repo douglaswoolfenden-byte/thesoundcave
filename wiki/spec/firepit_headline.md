@@ -18,7 +18,7 @@ Industry feedback (May 2026) said Sound Cave felt like 2–3 products in one. **
 ## Target nav (after)
 
 **Top-level pills** (header):
-- **FIREPIT** · **THE CAVE** · REFLECTION
+- **THE CAVE** · **FIREPIT** · REFLECTION  *(order updated 2026-05-28)*
 
 **Firepit sub-tabs** (new order, left to right):
 - **SUMMONS** (was top-level EVENTS — renamed)
@@ -85,8 +85,8 @@ Industry feedback (May 2026) said Sound Cave felt like 2–3 products in one. **
 
 ## Definition of done
 
-- Header has **two** primary pills: FIREPIT, THE CAVE (plus REFLECTION).
-- Firepit's mode strip shows: SUMMONS · FORGE · TRAIL MAP · STASH · BRAND KITS.
+- Header has **two** primary pills: THE CAVE, FIREPIT (plus REFLECTION).
+- Firepit's mode strip shows: FORGE · SUMMONS · TRAIL MAP · STASH · MARKS.
 - App boots on Firepit → Summons.
 - Every user-facing "Event(s)" label reads "Summons" (singular grammar intact).
 - The Cave still works identically as a sibling product surface.

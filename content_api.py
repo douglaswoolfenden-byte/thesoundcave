@@ -695,8 +695,9 @@ def public_config():
 
 
 # ── Stash (Supabase-backed) ───────────────────────────────
-# Service-role proxy. Phase B will replace user_id with auth.uid() from JWT.
-from media_gen import DEV_USER_ID
+# Service-role proxy. Every route below scopes by the JWT-resolved user_id
+# (see _require_user); RLS is bypassed by the service key, so the .eq('user_id')
+# filters are the access-control boundary.
 _stash_sb = None
 def _stash_client():
     global _stash_sb

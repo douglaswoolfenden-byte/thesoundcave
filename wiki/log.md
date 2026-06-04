@@ -501,5 +501,20 @@ Picked up after the morning pause. **25 commits across both sessions today.**
 - 3-event dogfood (Doug-driven, not code)
 - Doug confirmed voices file hand-tuned mid-session — voice quality validated.
 
+## [2026-06-04] Cleanup — close stale Phase-B auth TODO
+The `// TODO(phase-B): drop DEV_USER_ID gating in content_api.py and pass real auth JWT`
+marker at the top of `js/firepit.js` was already satisfied: Phase B auth lockdown
+(see 2026-04-29 entries) moved every protected route to `_require_user()` (JWT →
+Supabase `auth.get_user`, 401 on miss) and the frontend onto `scAuth.authedFetch`.
+The only residue was a dead `from media_gen import DEV_USER_ID` import in
+`content_api.py` (unused — grep confirmed) and the stale comments.
+- Removed the dead import; rewrote the stash-section comment to state the real
+  access boundary (service key bypasses RLS, so the `.eq('user_id', uid)` filters
+  are the control).
+- Replaced the firepit.js TODO with a note that requests carry the JWT via
+  `scAuth.authedFetch` and 401 without it (no DEV_USER_ID fallback).
+- `DEV_USER_ID` still lives in `media_gen.py` purely as a default for direct/CLI
+  calls; content_api always passes the JWT-resolved `uid`, so no behaviour change.
+
 
 

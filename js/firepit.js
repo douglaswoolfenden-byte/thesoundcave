@@ -43,8 +43,9 @@ const CONTENT_TYPES = {
 // Stash storage moved from localStorage to Supabase via /api/stash backend proxy.
 // Render functions stay sync by reading from this in-memory cache, hydrated on
 // renderFirepit(). Mutations update the cache optimistically and POST/DELETE to
-// the API in the background.
-// TODO(phase-B): drop DEV_USER_ID gating in content_api.py and pass real auth JWT.
+// the API in the background. All requests carry the user's JWT via
+// scAuth.authedFetch; content_api.py resolves the user from that token and 401s
+// without it (no DEV_USER_ID fallback).
 let _stashCache = [];
 
 function getContentLibrary() { return _stashCache; }

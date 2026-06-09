@@ -12,6 +12,7 @@ shared scoring/record logic is mirrored from scout.py on purpose.
 """
 
 import os
+import re
 import sys
 import json
 import requests
@@ -33,6 +34,10 @@ RESULTS_DIR   = os.path.join(DATA_DIR, 'searches')
 BASE_URL      = 'https://api.soundcloud.com/tracks'
 
 RECENCY_DAYS  = 365   # scheduled searches cast a wider net than the weekly scout
+
+# `id` is used as a filename (data/searches/<id>.json) — enforce a strict slug
+# so a hand-edited/poisoned JSON can't write outside the results dir.
+_SEARCH_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 
 
 # ── OAuth ──────────────────────────────────────────────────
@@ -244,7 +249,8 @@ def main():
 
     for search in active:
         sid = search.get('id')
-        if not sid:
+        if not sid or not _SEARCH_ID_RE.match(str(sid)):
+            print(f"  ⚠ skipping search with invalid id: {sid!r}")
             continue
         result = run_search(search)
         out_path = os.path.join(RESULTS_DIR, f'{sid}.json')

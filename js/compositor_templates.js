@@ -7,19 +7,18 @@
 // Layer types: background | logo | headline_text | supporting_text | accent_shape
 // ─────────────────────────────────────────────────────────
 
-// Dimensions mirror media_gen.py:IMAGE_DIMENSIONS
+// Dimensions mirror media_gen.py:IMAGE_DIMENSIONS — 5 types, all 4:5 portrait.
+// Per wiki/spec/forge_output_recipes.md (Approved 2026-06-09).
 window.COMPOSITOR_DIMENSIONS = {
   social_post:     { w: 1080, h: 1350 },
   social_carousel: { w: 1080, h: 1350 },
-  social_short:    { w: 1080, h: 1920 },
   event_promo:     { w: 1080, h: 1350 },
-  lineup_poster:   { w: 1080, h: 1350 },
-  artist_bio:      { w: 1200, h: 675  },
-  press_release:   { w: 1200, h: 675  },
+  event_poster:    { w: 1080, h: 1350 },
+  artist_bio:      { w: 1080, h: 1350 },
 };
 
 window.COMPOSITOR_TEMPLATES = {
-  lineup_poster: {
+  event_poster: {
     headline_default: 'SET TIMES',
     layers: [
       { type: 'logo',            x: 0.5,  y: 0.10, scale: 0.20, anchor: 'tc' },
@@ -48,11 +47,12 @@ window.COMPOSITOR_TEMPLATES = {
       { type: 'supporting_text', x: 0.06, y: 0.20, size: 0.035, anchor: 'tl', source: 'generated' },
     ],
   },
-  social_short: {
+  artist_bio: {
+    // Name-as-hero spotlight: heavy display name, genre/bio line below.
     layers: [
       { type: 'logo',            x: 0.92, y: 0.08, scale: 0.10, anchor: 'tr' },
-      { type: 'headline_text',   x: 0.5,  y: 0.78, size: 0.10, anchor: 'tc', text: '' },
-      { type: 'supporting_text', x: 0.5,  y: 0.88, size: 0.04, anchor: 'tc', source: 'generated' },
+      { type: 'headline_text',   x: 0.06, y: 0.66, size: 0.11, anchor: 'tl', text: '{{artist}}' },
+      { type: 'supporting_text', x: 0.06, y: 0.82, size: 0.035, anchor: 'tl', source: 'generated' },
     ],
   },
 };

@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 If the wiki is silent on what's being built, STOP. Write the spec/decision page first, get Doug's approval, then code. After any non-trivial change: append `wiki/log.md` and update relevant pages BEFORE saying done.
 
+**Terminology:** UI labels use caveman-vernacular and several differ from internal code/DB names. `wiki/glossary.md` is the source of truth (UI label ↔ concept ↔ code key ↔ old aliases) — consult it when a term on screen doesn't match the code. On any UI label rename, update the glossary + current-state wiki/MD pages in the same change (don't rewrite log history or rename internal code unless asked).
+
 **For UI/visual work:** also browse `wiki/design_references/` first — it's the curated library of saved inspiration sites. The `ui-change-protocol` skill's Q1 ("got 1-3 references?") is answered from there, not from scratch. To save a new reference, see `wiki/design_references/README.md`.
 
 This file describes *what the code currently is*. The wiki describes *what we're building, why, and for whom*. Both matter.

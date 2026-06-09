@@ -8,6 +8,7 @@ __pycache__/
 data/generated_images/
 data/generated_videos/
 venv/
+venv.nosync/
 .DS_Store
 
 # Local dev shortcuts that may carry session tokens / JWTs

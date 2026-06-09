@@ -1,19 +1,27 @@
 # Sound Cave Wiki — Index
 
+## Terminology
+- [Glossary](glossary.md) — **source of truth** for UI labels ↔ what they mean ↔ internal code names ↔ old aliases. Read this when a term on the website doesn't match the code. Keep current on every rename.
+
+## Stack
+- [Stack & Integrations](stack.md) — every tool, API & model the product uses (text-gen, image-gen, video-gen, infra). **Reviewed 2026-06-09.**
+
 ## Spec
 - [Overview](spec/overview.md) — what Sound Cave is, who for, what it's NOT. **Approved 2026-04-28.**
 - [Splash + Cave Entrance](spec/splash_cave_entrance.md) — KVS×Augen redesign. **Doug-confirmed 2026-05-08.**
 - [App-wide redesign v1](spec/redesign_v1.md) — KVS skin extended across the app. **Chrome shipped 2026-05-08, per-tab content awaits Doug's morning walkthrough.**
+- [Forge output recipes](spec/forge_output_recipes.md) — per-type media generation spec (Post / Carousel / Event Promo / Event Poster / Artist Bio): format, composition, style, model. **Approved 2026-06-09.**
 
 ## Features
-- [The Cave](features/the_cave.md) — discovery dashboard. Built; print stylesheet pending.
+- [The Cave](features/the_cave.md) — the discovery **umbrella** (Mural · Foraging · Clan · Footprints). The **Mural** is its dashboard scene (UI label was "Dashboard"). Built; print stylesheet pending.
 - [Foraging](features/foraging.md) — manual + scheduled search. Live search exists; OAuth untested.
-- [Clan](features/clan.md) — saved artist roster. Built; profile polish pending.
+- [Clan](features/clan.md) — your saved artist roster (UI label is **CLAN**; briefly "Roster"). Account-backed. Built; profile polish pending.
 - [Footprints](features/footprints.md) — analytics & charts on tracked artists. Built.
 - [Firepit — Forge](features/firepit_forge.md) — AI text + image generator. Code complete, untested.
 - [Firepit — Video](features/firepit_video.md) — 3-tier video generation (composite/standard/premium). Tiers 1 + 2 live-verified.
 - [Firepit — Stash](features/firepit_stash.md) — content library (localStorage).
 - [Firepit — Trail Map](features/firepit_trail_map.md) — content calendar. **Not yet built.**
+- [Firepit — Beat](features/firepit_beat.md) — rights-gated audio on posts (clip picker + copyright gate). **Spec approved 2026-06-09, build not started.**
 - [Artist live stats](features/artist_live_stats.md) — fresh follower/play counts on view (10-min TTL). Shipped 2026-05-11.
 
 ## Decisions

@@ -1,5 +1,87 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-09] UI rename — Dashboard → Mural, Roster → Clan (+ glossary)
+- **Doug's calls:** the dashboard/overview tab is now **MURAL** (his "cave wall where paintings/markings live" idea); the saved-artists tab reverts to **CLAN** (caveman-fit, was briefly "Roster"). **The Cave ≠ Mural** — The Cave is the umbrella section (Mural · Foraging · Clan · Footprints); the Mural is just its dashboard scene.
+- **Changed (display strings only — no code/API/DB rename):** `index.html` cave sub-nav + terminology cards + Clan heading; `js/clan.js` subtitle.
+- **New: `wiki/glossary.md`** — source of truth mapping UI label ↔ concept ↔ internal code name ↔ old aliases. Internal keys deliberately keep old names (Mural=`tab-cave`/`js/cave.js`, Clan persistence=`roster` table/API, Gatherings=`events`/`summons`, Marks=`brandkits`). Linked from `wiki/index.md`.
+- **Standing rule reinforced:** on any UI label rename, update the glossary + current-state wiki/MD in the same change so terms always match what Doug reads on screen. (Log/old-spec history left intact — not rewritten.)
+- Updated current-state pages: `wiki/index.md`, `wiki/features/the_cave.md`, `wiki/features/clan.md`.
+
+## [2026-06-09] Firepit — Beat (rights-gated audio on posts) — spec approved, build not started
+- **Why:** in music a post without sound underperforms — the track *is* the product. But naive audio attachment is a time bomb: TikTok + Meta fingerprint the audio inside every uploaded MP4 and enforce **retroactively** (mute/remove/strike weeks–months later). Doug's explicit requirement: campaigns must not die in three months because the audio failed a licence/fingerprint check.
+- **Spec:** `wiki/features/firepit_beat.md`. Caveman name **Beat** = the audio clip a post carries (Doug's call, 2026-06-09).
+- **Two hard constraints from research that shape everything:** (1) native platform music (TikTok CML / Meta Sound Collection) is unreachable via a scheduler — Ayrshare only exposes TikTok `autoAddMusic` + IG `audioName` (a label) — so audio must be **baked into the MP4**, which gets fingerprinted; (2) fingerprinting can't tell ownership from theft, so durability = rights-cleared audio + proof on file. Snippet length is irrelevant (no safe duration; promo use ≠ fair use).
+- **The gate (the net-new core):** at upload, audio is classified A–G. A–D (own master / lineup-artist-with-written-permission / royalty-free-with-commercial-licence / CC0) are postable **with proof on file**; E–G (major-label / trending-or-ripped / undocumented third-party) are **hard-blocked from scheduling** (Doug picked hard-block over soft-warn — a blocked post can't die later). Gate is enforced platform rules, not opinion; citations (TikTok Music/CML/Copyright terms, Meta Sound Collection/Copyright/Rights Manager, US Copyright Office §512, Sony v. DSW 2025 + Marriott/Sony 2024) are in the spec.
+- **Reuses the already-built video pipeline (`firepit_video.md`):** Beat is just the rights gate + manual clip picker + Forge wiring. `/api/generate-media` Tier-1 composite (image + Ken Burns + waveform + audio, bit-perfect audio), `audio_tracks` table, and the `stash_items` clip columns (`audio_track_id`/`start_seconds`/`end_seconds`, 10s cap) already exist. Net-new is small.
+- **Source policy:** any upload, gated by classification + proof (Doug's choice). SoundCloud can't supply the file (API = metadata only), so artist/promoter uploads it — which is the natural consent moment.
+- **Build plan (approved):** P1 `db/0018_audio_rights.sql` (0017 is roster) + API gate at upload and at `scheduled_posts` create; P2 Forge "Add a Beat" upload+classify+clip UI; P3 wire `events.hero_track_url` + Trail Map audio badge/block-reason; P4 (later) royalty-free library integration.
+- **P1 shipped (code) 2026-06-09 — DB apply pending Doug:** `db/0018_audio_rights.sql` adds `rights_category` (CHECK-constrained to the 7 codes) + `rights_proof_url` / `license_notes` / `source_artist_profile_id` / `rights_attested_at` / `rights_attested_by` to `audio_tracks` (pure ALTER — reuses the existing `audio_tracks` bucket, no new bucket). `media_gen.upload_audio_track(..., rights=...)` persists them. `content_api.py`: `_audio_rights_ok()` + `AUDIO_RIGHTS_POSTABLE/BLOCKED` sets; `/api/generate-media` now **requires `rights.category`** on any audio upload (400 if missing/invalid) and echoes `audio_rights_category`/`audio_rights_postable`; `scheduled_posts_create` is the **hard gate** — audio-bearing posts 403 unless the track is a postable category *with proof on file*. Gate logic unit-verified across all 7 categories + missing-proof + unclassified (own_master/artist_permission/royalty_free/cc0 PASS w/ proof; all else BLOCK). **Doug must apply `db/0018` in Supabase before the gate can be tested end-to-end** (Verify task). Both files `py_compile`-clean.
+
+## [2026-06-09] Roster account persistence — shipped + verified end-to-end
+- **Why:** Doug's curated Roster vanished. Root cause was NOT a bug — the Roster lived only in browser `localStorage` (`sc_favs` / `sc_watching` / `sc_dismissed`), which is scoped per-origin + per-browser-profile. Signing in did nothing for it. Now that the app has Supabase accounts, the roster must follow the **login**.
+- **Spec:** `wiki/spec/roster_account_persistence.md` (approved 2026-06-08).
+- **Approach — write-through cache:** account is source of truth; `localStorage` is a hot cache so the existing synchronous `getFavourites()` reads stay unchanged. Load on init/sign-in → write through on each mutation → reconcile on every load (self-healing). One-time migration pushes any local-only roster up on first sign-in.
+- **Migration (`db/0017_roster.sql`):** new `roster` table (one row per saved artist, mirrors the sc_favs entry, `unique(user_id, artist_username)` for upsert) + `roster_prefs` (one row per user: watching/dismissed). RLS owner-scoped, updated_at triggers. Follows the `0016_avatars.sql` pattern. **Doug applied it in Supabase 2026-06-09.**
+- **API (`roster_api.py`, registered in content_api.py):** GET /api/roster (roster + prefs), POST /api/roster (upsert one artist), DELETE /api/roster/<username>, PUT /api/roster/prefs, POST /api/roster/import (bulk migration). All owner-scoped via `sb_helpers.require_user`.
+- **Frontend (`js/roster_sync.js`, loaded before app.js):** `window.rosterSync` exposes loadRoster/pushArtist/deleteArtist/pushPrefs/migrateLocalToAccount, all guarded by `scAuth.session()` (no-op signed-out). Write-through hooks added to `addFavourite`, `toggleCut`, `removeFavourite`, `savePlatform` (app.js) and `forageAction` watch/cut (foraging.js). `init()` awaits `loadRoster()`. Post-load logins caught via `scAuth.onChange`.
+- **Verified end-to-end** (`scripts/verify_roster.py` + Playwright with an injected throwaway-user session): 14/14 backend checks (upsert/list/idempotency/status/prefs/import/delete/RLS-401); frontend proof — wipe `localStorage` + reload → roster repopulates **from the account**; UI add → persists to account. Throwaway test user deleted after (rows cascade).
+- **Infra fix this session:** the project venv lived under iCloud-synced `~/Documents` and got evicted (dataless files) → every `import` hung, API died silently. Rebuilt venv as `venv.nosync` (iCloud ignores `.nosync`); `run.sh` now points at it directly (symlinks get mangled by iCloud) and self-heals if missing. Added `stripe` to `requirements.txt` (was hand-installed, missing).
+- **Out of scope (flagged):** wiring `clan_tracker.py` (daily GH Action) to read the account roster instead of `data/clan_artists.json`.
+
+## [2026-05-28] Image Gen v2 — spec signed off + Phase 1 (router) shipped
+- **Spec:** `wiki/spec/image_gen_v2.md` (approved 2026-05-28). Architecture: pixels-vs-text separation, fal.ai router per job type, Fabric.js Composer for client-side text/logo/QR edits, avatar reference-image pattern (LoRA deferred to v3).
+- **Two overrides on Doug's pasted writeup, both signed off:** stay on Supabase Storage (not R2/S3); stay on Python `ThreadPoolExecutor` (not BullMQ/Redis) — we're a Python Flask stack.
+- **Scope:** Forge-first. Summons (campaign-post) generation stays on the current Pillow-baked pipeline; migration to v2 deferred to Phase 5+.
+- **Phase 1 — model router (this commit):** new `generate_for_job(job_type, prompt, *, image_refs, ...)` in `media_gen.py`. Job-type registry maps `background → Seedream v5.0`, `hero_art → FLUX.2 [pro]`, `avatar → FLUX.2 [pro]`, `edit → Nano Banana Pro`, `safe_commercial → Adobe Firefly`. Per-model `_payload_for_*()` adapters isolate per-model payload quirks. One-line swap point as required.
+- **Verified:** importable, registry correct, unknown job_type rejected with clear error, signature exposes expected kwargs.
+- **NOT verified:** actual fal endpoint slugs + per-model payload shapes. Doug confirmed model names exist on fal.ai 2026-05-28; the exact wire format must be checked against fal docs at Phase 3 wiring time (when Forge UI fires real requests).
+- **Phases ahead:** 2 — `avatars` table + API; 3 — Forge UI for generation; 4 — Composer (Fabric.js); 5 — templates.
+
+## [2026-05-28] Image Gen v2 — Phase 2 (avatars + /api/generate) shipped
+- **Migration:** `db/0016_avatars.sql` — new `avatars` table (id, user_id, name, description, reference_image_urls, preview_url, lora_weights_id, timestamps), RLS owner-scoped, updated_at trigger guarded on the helper existing.
+- **Storage:** new `avatar_refs` + `generated_assets` buckets — bootstrap scripts at `scripts/create_avatar_refs_bucket.py` and `scripts/create_generated_assets_bucket.py`.
+- **API (`avatars_api.py`):** GET /api/avatars (list), POST /api/avatars (multipart create with name+description+files), PATCH /api/avatars/<id> (JSON for name/description + multipart for additional refs), DELETE /api/avatars/<id>/references (single URL), DELETE /api/avatars/<id>. Mirrors brand_kits reference patterns. Owner-scoped via RLS + service-role helper.
+- **Unified generation entry:** POST /api/generate — body `{job_type, prompt, avatar_id?, style_ref_urls?, width, height, seed?}`. Resolves avatar references → calls media_gen.generate_for_job → stores output in generated_assets → returns `{image_url, provider, model, refs_used}`.
+- **Wired:** both blueprints registered in content_api.py; imports verified.
+- **Manual ops Doug needs before live testing:** (1) apply `db/0016_avatars.sql` to Supabase, (2) run the two bucket scripts, (3) restart content_api.py.
+- **NOT yet working end-to-end:** the fal endpoint slugs in media_gen.py's `_JOB_REGISTRY` are best-guess. Generation will return 502 until the slugs + per-model payload shapes are verified against fal docs. That's a Phase 3 prerequisite.
+- **Next:** Phase 3 (Forge UI) is blocked on fal endpoint verification. Doug to decide: verify-then-build, or proceed to Forge UI scaffolding in parallel.
+
+## [2026-05-29] Image Gen v2 — fal endpoint slugs verified
+- **Verified against fal.ai docs:** Seedream v5 Lite slug is `fal-ai/bytedance/seedream/v5/lite/text-to-image` (not the guessed `fal-ai/seedream-v5`); seed input is stripped by ByteDance so `_payload_for_seedream` no longer sends it. FLUX.2 [pro] slug `fal-ai/flux-2-pro` was correct. Nano Banana Pro `/edit` is the right endpoint for avatars (built-in character consistency + multi-ref).
+- **Avatar default swapped:** `JOB_AVATAR` now routes to `fal-ai/nano-banana-pro/edit` instead of FLUX.2. Nano Banana Pro's "character consistency" feature is the explicit fit for our recurring-mascot use; FLUX.2 stays for `hero_art`.
+- **`safe_commercial` dropped:** Adobe Firefly isn't hosted on fal.ai. The Adobe×fal partnership runs the other way (fal models inside Adobe Express). Re-introduce when Firefly opens an API.
+- Files: `media_gen.py` (_JOB_REGISTRY, _payload_for_seedream, dropped Firefly), `wiki/spec/image_gen_v2.md` (verified table).
+
+
+
+## [2026-05-28] Firepit-headline restructure — 2 top-level pills, Events folds in as Summons
+- **Why:** industry feedback (May 2026) said the app felt like 2–3 products in one. Firepit has the broadest wedge ("we make your event content") so it becomes the headline. Cave splits off as a separate / premium-tier product surface (artist discovery & tracking — distinct buyer/job). See `wiki/spec/firepit_headline.md` (signed off 2026-05-28).
+- **Nav before:** EVENTS · FIREPIT · THE CAVE · BRANDS · REFLECTION (5 top-level pills).
+- **Nav after:** FIREPIT · THE CAVE · REFLECTION (3 top-level pills). EVENTS + BRANDS removed from top-level; their surfaces now live as Firepit sub-tabs.
+- **New Firepit subnav:** SUMMONS · FORGE · TRAIL MAP · STASH · BRAND KITS. Mirrors the existing #caveSubnav pattern with a global #firepitSubnav element shown whenever the FIREPIT pill is active (i.e. tab in {firepit, events, brands}).
+- **Default landing:** Firepit → Forge (Doug overruled my Summons-default — Forge is the most demo-friendly first impression).
+- **Caveman rename:** Events → Summons in user-facing strings only. Backend tables (`events`, `lineup_slots`), API routes (`/api/events/<id>`), JS var names and DOM IDs (`#tab-events`, `#eventsRoot`) all unchanged. UI-only.
+- **Commits:** `d5e8500` (nav + JS routing + Overview hero CTA), `12c25f6` (Event→Summons string rename across the events surface).
+- **Files touched:** `index.html` (removed 2 pills, added #firepitSubnav, removed redundant in-firepit modes strip, updated Overview CTA), `js/app.js` (FIREPIT_TABS group + firepit subnav visibility + default tab = firepit), `js/firepit.js` (`setFirepitMode` syncs the global subnav active state), `js/events_list.js` + `js/events_form.js` + `js/events_detail.js` + `js/events_match.js` (UI strings), `wiki/spec/firepit_headline.md` (new spec), `wiki/features/events.md` (header note), `wiki/spec/phase_2_3_pivot.md` (banner pointing to new spec).
+- **Not yet:** "Event Promo" content-type in Forge dropdown left as-is (own decision pending). v0.7 logo debug still open. Memory file `feedback_soundcave_caveman_language.md` records the brand law.
+- **Visual confirm pending:** Doug to start the server, log in, and screenshot the new nav before this is "done".
+
+## [2026-05-28] Nav polish — top-pill reorder + BRAND KITS → MARKS
+- **Order:** top pills now **THE CAVE · FIREPIT · REFLECTION** (was Firepit-first); Firepit subnav now **FORGE · SUMMONS · TRAIL MAP · STASH · MARKS** (Forge leads, Summons sits second).
+- **Rename:** BRAND KITS → **MARKS** in the Firepit subnav (caveman vocab — cave paintings = brand identity). Internal data-subtab value stays `brandkits`; the brand kits surface itself still says "Brand Kits" inside — separate decision later.
+- **Default landing unchanged:** Firepit → Forge (Doug's earlier call still holds even though Cave is now first in nav order).
+- **Files:** `index.html` (pill order, subnav order, label), `wiki/spec/firepit_headline.md` (updated).
+
+
+## [2026-05-14] Phase 3 v0.7 — regen variance fix (levers 1 + 3)
+- **Why:** v0.6 brand-aware gen drifts — logo/brand elements change between every post, some outputs visually wrong. Brand consistency across a campaign IS the product. See `wiki/spec/regen_variance_v0_7.md` (signed off 2026-05-14). Levers 2 (multi-ref IP-Adapter) + 4 (palette enforcement) deferred to v0.8.
+- **Lever 1 — logo lockup as Pillow overlay:** logo is no longer asked of FLUX (it always drifted). New `_draw_logo_overlay()` in `image_composer.py` composites `brand_kit.logo_url` server-side at a fixed position. Position + scale read from `brand_kit.defaults.logo_position` / `logo_scale` — the 9-position grid + scale slider in the Brand Kits UI **already existed** (js/brands.js, #bfPositionGrid), so no UI/API work needed; the composer just now honours it. Applied to both the brand-aware path and the Pillow fallback. Missing/broken logo → skipped silently. FLUX prompt gained "no logos, no text, no wordmarks".
+- **Lever 3 — deterministic per-campaign seed:** new `_campaign_seed(campaign_id, post_type)` derives a stable seed from `sha256(campaign_id)` + a fixed per-post-type offset. `generate_fal_with_reference` gained an optional `seed` param passed straight to Fal's redux body. `campaign_id` threaded through `compose_post_image` from `campaigns_api.py` (`camp['id']`). Side effect (intentional, Doug signed off): regen of the same campaign is now reproducible — no shuffle button in v0.7.
+- **Files:** `media_gen.py` (seed param), `image_composer.py` (`_campaign_seed`, `_draw_logo_overlay`, `_fetch_image_rgba`, threaded `campaign_id`/`brand_kit`, prompt change), `campaigns_api.py` (pass `campaign_id`). No migration, no new deps, no new routes.
+- **Verified:** unit smoke test — seed determinism (same campaign+type identical, different campaign/type differ, None→None); logo overlay safe no-op on missing kit/logo. Visual: 9-position contact sheet confirms correct anchor + margin inset for every position.
+- **NOT yet verified:** full campaign regen against live Fal (seed coherence on real FLUX output + logo on real generated canvas) — needs a live server run / Doug dogfood.
+
 ## [2026-05-12] Artist panel — platform links redesign (brand SVGs, single-col list, clear add-link CTA)
 - **Why:** prior platform-links section in the artist detail panel used emoji glyphs (🟢 ▶️ 📸 🎵 🎧 🎸 💿) and a hover-to-paste interaction. Doug called it "messy" and asked for proper brand logos plus a clearer affordance when a link is missing.
 - **Decision A (chosen):** mono brand marks tinted with `--red` when linked, muted grey when not. Picked over Option B (full brand colours when linked) to keep palette discipline — adding 7 brand colours would have broken the dark/orange consistency.
@@ -501,6 +583,31 @@ Picked up after the morning pause. **25 commits across both sessions today.**
 - 3-event dogfood (Doug-driven, not code)
 - Doug confirmed voices file hand-tuned mid-session — voice quality validated.
 
+## [2026-06-09] Stash → campaign blocks + Trail Map campaign-aware + Summons→Gatherings rename
+Firepit info-architecture pass (plan: `~/.claude/plans/bubbly-percolating-shore.md`, signed off).
+
+**Rename:** user-facing **Summons → Gatherings** across the events surface (`index.html` subnav, `events_list/_match/_form/_detail.js`). Internal `events`/`summons` routing keys + the `events` table untouched (invisible plumbing).
+
+**Stash — campaign blocks (new `js/stash.js`):** the flat list is now a **grid of blocks**. Campaign posts cluster into one campaign tile per Gathering (cover + post-count + date range), click to drill into its posts; loose Forge items sit alongside as single tiles. Every tile shows a title + countdown label (`postTypeLabel`: 7-DAY/3-DAY/ANNOUNCEMENT…). Count moved into the panel header (`STASH · N pieces`); top-pill `#firepitCount` + subnav badge removed.
+- **Keystone (no backend change):** `_stashRowToItem` (firepit.js) extended to carry `campaignId`/`eventName`/`postType`/`scheduledFor`/`source` from `stash_items.metadata` top level — these were already persisted by the campaign bridge (`_upsert_post_into_stash`) but dropped before reaching the UI, so every campaign post had been showing as a generic label-less `social_post`.
+- **Module split:** stash *view* (render/grouping/drill-in/count/filters) → `js/stash.js`; firepit.js keeps the *data* layer + Forge-coupled mutations. firepit.js back under control (~960 LOC).
+
+**Trail Map — campaign-aware + schedule-lock (`js/trail_map.js`):** drawer now shows campaign folders → drill → draggable post cards, reusing `groupStashByCampaign()`. Calendar pills + cards show countdown labels. **Schedule-lock:** a scheduled item is *derived* as scheduled (its id in the shared `/api/scheduled_posts` cache) → drops from the draggable pool + Stash default grid, surfaced under the "Scheduled" filter, returns to drafts when its calendar entry is deleted. Two-way sync, no new endpoint. (Decision: derive-not-write, confirmed with Doug.)
+
+**Status note:** Trail Map is backend-wired (Supabase `/api/scheduled_posts`), correcting the stale "localStorage mock" note above.
+
+**CSS:** `.stash-grid`/`.stash-block`/`.countdown-badge`/drill-in in `style.css`; `.trail-stash-folder`/`.trail-drawer-head` in `trail_map.css`. Tokens only.
+
+**Verification:** all 7 JS files pass `node --check`; servers up (8000+3000). Visual screenshot-confirm with Doug pending (browser session was locked during build).
+
+### Round 2 — Doug feedback (same day)
+After eyeballing round 1 ("looking much better"):
+- **Delete/open whole campaigns:** campaign tiles get a hover settings overlay — `openGathering()` (jump to the Gathering) + `deleteStashCampaign()` (bulk-delete the campaign's posts from stash; Gathering record stays).
+- **Cave-style icons:** replaced emoji actions (✏️/📋/🗑️ — the clipboard read as ambiguous) with inline 16-grid line-art SVGs matching the clan/watch/cut set, with tooltips.
+- **Proposed dates:** drill-in post tiles show `Proposed · <date>` small print so a campaign reads as a timeline.
+- **Scheduled stays visible (reverses round-1 hide):** scheduled items remain in the Stash with a `scheduled` badge; in the Trail Map drawer they're dimmed + non-draggable; folders show `N of M to schedule`. Doug's call — clarity over hiding.
+- **Parked:** `posted`→`archived`→auto-delete lifecycle (badge styles added; logic TBD).
+
 ## [2026-06-04] Cleanup — close stale Phase-B auth TODO
 The `// TODO(phase-B): drop DEV_USER_ID gating in content_api.py and pass real auth JWT`
 marker at the top of `js/firepit.js` was already satisfied: Phase B auth lockdown
@@ -516,5 +623,50 @@ The only residue was a dead `from media_gen import DEV_USER_ID` import in
 - `DEV_USER_ID` still lives in `media_gen.py` purely as a default for direct/CLI
   calls; content_api always passes the JWT-resolved `uid`, so no behaviour change.
 
+## [2026-06-09] Stack inventory page
+- New `wiki/stack.md` — source-of-truth inventory of every tool/API/model, pulled from code not memory. Covers text-gen (Claude Haiku 4.5 + Sonnet 4.6), image-gen (v2 router: Seedream v5 Lite / FLUX.2 pro / Nano Banana Pro, plus legacy v0.6 FLUX-Redux paths), video-gen (3 tiers: FFmpeg / Fal LTX+Hunyuan / Fal Kling+Replicate Veo), and infra (Supabase, Stripe, Ayrshare, SoundCloud).
+- Flagged: no music-gen; Apollo/EchoTik/Perplexity/Notion/Meta keys are workspace-wide and NOT Sound Cave deps; two image-gen generations coexist (v0.6 + v2) — retirement decision pending; single text provider = SPOF.
+- Linked from `wiki/index.md` under a new **Stack** section.
 
+## [2026-06-09] Forge output recipes — Phase 0 (per-type media specialisation)
+Kicked off the image-quality overhaul. **Diagnosis:** the best image models (v2 router: Seedream /
+FLUX.2 pro / Nano Banana Pro) are built but only avatars use them; Forge runs FLUX schnell + never
+passes reference images; the campaign path ignores the text prompt entirely (hardcoded 2-word strings).
+So output is low-quality AND undifferentiated — every type generates the same 1080×1350.
+- **Scope locked with Doug:** post types cut to **5** — Post, Carousel, Event Promo, **Event Poster**
+  (renamed from Lineup Poster), Artist Bio. Removed: Short (video), Press Release. Artist Bio gains image
+  gen (was text-only) as a portrait 1080×1350 feed post. Audio/attach-music feature handled separately.
+- **References sourced + approved** (Claude-sourced, Doug-approved): per-type anchors saved to
+  `wiki/design_references/forge_output_refs.md`. Load-bearing finding: real underground posters =
+  backdrop layer + type layer in a fixed frame → validates the Konva-compositor architecture (model makes
+  the backdrop only; compositor overlays type).
+- **Spec:** `wiki/spec/forge_output_recipes.md` (Approved) — per-type format, composition, style language,
+  context+refs, and `content_type → job_type` model mapping. Carousel routes to FLUX.2 (seed-locked) since
+  Seedream ignores seed and slides would drift.
+- **Trust mechanism:** every generation will log the exact prompt + attached refs (Doug's reassurance ask).
+- **Next:** Forge cleanup (drop types/rename, Artist Bio image ON) → Phase 1a (route Forge through v2
+  router + pass image_refs + per-type dims). Plan: `~/.claude/plans/what-are-the-image-parsed-hare.md`.
+
+### Phase 0 + cleanup + Phase 1a shipped (commit `d14a346`)
+- Forge cleanup: dropped Short + Press Release, renamed Lineup→Event Poster, Artist Bio now image-ON
+  portrait 1080×1350. Synced across index.html, firepit.js, compositor_templates.js, content_api.py,
+  media_gen.py (5 types, all 4:5; new STYLE_HINTS describe BACKDROP intent only).
+- Phase 1a: `/api/generate-image` routes through `generate_for_job` via new `job_type_for()`
+  (social_post→Seedream, carousel/promo/poster→FLUX.2, artist_bio→FLUX.2 / Nano Banana if avatar).
+  Passes `reference_images` as `image_refs`; guarded fallback to legacy `generate_image`; logs prompt +
+  ref count. Both ref channels live (Claude vision prompt + FLUX.2 payload). Module-verified.
+
+### Phase 1b — campaign prompts data-driven + v2 router
+- `image_composer.py`: deleted `_POST_FLUX_PROMPT` (the hardcoded 2-word strings). `_compose_brand_aware`
+  now builds the prompt via `build_image_prompt` from event + artist + the post's **selected copy**
+  (threaded in via new `generated_text` param on `compose_post_image`, passed from campaigns_api:394).
+  New `_campaign_content_type()` maps post_type → Forge content_type (spotlight→artist_bio,
+  announcement→event_poster, else event_promo) for the right STYLE_HINTS.
+- Replaced `generate_fal_with_reference` with `generate_for_job(JOB_HERO_ART, …, image_refs=[style_ref],
+  seed=…)`. FLUX.2 is fixed for the campaign path because it depends on image_refs + seed, which Seedream
+  ignores. Logo overlay + deterministic seed + Pillow fallback all unchanged.
+- **Pending live-fire:** real fal generation screenshot-confirm (needs server + credits + a real campaign).
+- **Follow-up flagged:** `events_api.py` master-flyer still uses `generate_fal_with_reference` (separate
+  surface — not per-post; left in scope-creep parking).
+- **Still to do:** Phase 1c-full (Konva compositor for campaign posts) — deferred.
 

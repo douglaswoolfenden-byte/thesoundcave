@@ -1,9 +1,10 @@
-# Feature: The Cave
+# Feature: The Cave (umbrella) — the Mural dashboard
 
 > Status: **Built.** Redesigned 2026-05-12 — diagonal stack hero.
+> **Terminology (2026-06-09):** "The Cave" is the **umbrella section** — the top-nav group containing Mural · Foraging · Clan · Footprints. The dashboard scene described on this page is now labelled **MURAL** (the cave wall where the whole picture lives; was "Dashboard"). See [glossary](../glossary.md). Internal code still uses `tab-cave` / `js/cave.js` / `css/dashboard.css`.
 
 ## What it does
-The Cave is the **dashboard / first-scene** of the app. It presents the user's Clan as a diagonal stack of cards flowing bottom-left → top-right. The front-most card is the currently focused artist. Scrolling, arrow keys, or trackpad cycle the focus; hovering lifts a card; clicking opens that artist's profile.
+The **Mural** is the **dashboard / first-scene** of the Cave. It presents the user's Clan as a diagonal stack of cards flowing bottom-left → top-right. The front-most card is the currently focused artist. Scrolling, arrow keys, or trackpad cycle the focus; hovering lifts a card; clicking opens that artist's profile.
 
 Around the stack, four floating glass panels surface at-a-glance stats:
 - **Top-left:** Followers gained (week-over-week diff across Clan)

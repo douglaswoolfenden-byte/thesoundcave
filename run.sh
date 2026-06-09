@@ -6,13 +6,21 @@
 set -e
 cd "$(dirname "$0")"
 
-if [ ! -d venv ]; then
-  echo "❌ venv missing — run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
-  exit 1
-fi
+# venv lives in venv.nosync — the `.nosync` suffix keeps iCloud Drive from
+# evicting the package files (this project sits under ~/Documents, which syncs).
+# Do NOT use a plain `venv/` symlink: iCloud mangles symlinks.
+VENV=venv.nosync
 
-# shellcheck disable=SC1091
-source venv/bin/activate
+if [ ! -x "$VENV/bin/python" ]; then
+  echo "⚙️  venv missing — creating $VENV and installing requirements…"
+  python3 -m venv "$VENV"
+  # shellcheck disable=SC1091
+  source "$VENV/bin/activate"
+  pip install --quiet --upgrade pip && pip install --quiet -r requirements.txt
+else
+  # shellcheck disable=SC1091
+  source "$VENV/bin/activate"
+fi
 
 cleanup() {
   echo ""

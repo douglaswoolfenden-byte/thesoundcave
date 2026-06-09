@@ -43,7 +43,7 @@ function renderClan() {
   const clan = getClanFiltered();
   const allClan = Object.values(favs).filter(a => a.status !== 'cut');
 
-  document.getElementById('clanSubtitle').textContent = `${allClan.length} artists in your roster.${clan.length !== allClan.length ? ` Showing ${clan.length}.` : ''}`;
+  document.getElementById('clanSubtitle').textContent = `${allClan.length} artists in your clan.${clan.length !== allClan.length ? ` Showing ${clan.length}.` : ''}`;
 
   // Populate genre filter if empty
   const gSel = document.getElementById('clanGenreFilter');

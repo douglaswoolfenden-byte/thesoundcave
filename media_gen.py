@@ -15,6 +15,7 @@ import time
 import hashlib
 import io
 import uuid
+from datetime import datetime, timezone
 from enum import Enum
 import requests as http_requests
 from dotenv import load_dotenv
@@ -81,25 +82,25 @@ VIDEO_BUCKET = 'generated_videos'
 AUDIO_BUCKET = 'audio_tracks'
 
 # ── Per-content-type image dimensions ──────────────────────
+# Per wiki/spec/forge_output_recipes.md (Approved 2026-06-09): all 5 types are 4:5 portrait
+# feed format. The model generates the BACKDROP only; the Konva compositor overlays type.
 IMAGE_DIMENSIONS = {
     'social_post':     (1080, 1350),   # 4:5 portrait — IG/FB feed
     'social_carousel': (1080, 1350),   # 4:5 portrait — IG/FB carousel slide
-    'social_short':    (1080, 1920),   # 9:16 vertical — Reels/TikTok
-    'event_promo':     (1080, 1350),   # 4:5 portrait — feed-friendly
-    'lineup_poster':   (1080, 1350),   # 4:5 portrait — poster
-    'artist_bio':      (1200, 675),    # 16:9 landscape — press/site header
-    'press_release':   (1200, 675),    # 16:9 landscape — press kit
+    'event_promo':     (1080, 1350),   # 4:5 portrait — atmospheric teaser
+    'event_poster':    (1080, 1350),   # 4:5 portrait — full lineup poster
+    'artist_bio':      (1080, 1350),   # 4:5 portrait — artist spotlight feed post
 }
 
 # ── Style hints per content type ───────────────────────────
+# House style is non-negotiable dark (#0a0a0a / #e8e8e8 / single #ff4500). These hints describe
+# the BACKDROP intent only — type/logo are composited on top, never rendered by the model.
 STYLE_HINTS = {
-    'social_post':     'Feed-friendly portrait, bold and eye-catching, high contrast, scroll-stopping.',
-    'social_carousel': 'Portrait carousel slide, clean and graphic, modern editorial feel, consistent palette across slides.',
-    'social_short':    'Vertical, cinematic, dramatic lighting, thumbnail-worthy for Reels/TikTok.',
-    'event_promo':     'Portrait, mysterious, dark and moody, minimal elements, fog or smoke, anticipation.',
-    'lineup_poster':   'Portrait poster design, dark background, neon or metallic accents, event flyer aesthetic, room for typography.',
-    'artist_bio':      'Wide portrait orientation, dramatic lighting, artist-spotlight feel.',
-    'press_release':   'Wide, professional press kit aesthetic, clean and modern.',
+    'social_post':     'Full-bleed near-black backdrop, single focal texture or subject, crushed toward monochrome, deliberate empty zone, grain, high contrast.',
+    'social_carousel': 'Dark carousel-slide backdrop, consistent grid and motif across slides, restrained, room for slide numbering.',
+    'event_promo':     'Atmospheric and mysterious, near-black, minimal, fog or smoke or a lone figure, heavy negative space, anticipation.',
+    'event_poster':    'Dark brutalist backdrop for a poster, smoke/grain/concrete texture, subordinate to typography, room for a type hierarchy.',
+    'artist_bio':      'Artist spotlight backdrop, figure as silhouette/duotone/abstract (never a detailed face), dramatic backlight, grain, near-black.',
 }
 
 IMAGE_PROMPT_SYSTEM = """You are an expert image prompt engineer for AI image generation (FLUX/Stable Diffusion models).
@@ -226,12 +227,16 @@ def _generate_fal(prompt, width, height):
     return img_r.content, 'fal-ai', 'flux-schnell'
 
 
-def generate_fal_with_reference(prompt, reference_image_url, width, height, timeout=60):
+def generate_fal_with_reference(prompt, reference_image_url, width, height, timeout=60, seed=None):
     """Generate image via Fal AI FLUX Redux — takes a style reference URL.
 
     Used by Phase 3 v0.6 brand-aware image gen: feed in one of the
     promoter's past flyers or their event master flyer as the style anchor,
     plus a per-post prompt for content variation.
+
+    `seed` (v0.7): when set, pins FLUX to a fixed seed so a campaign's posts
+    are drawn from adjacent latent space and regen is deterministic. When
+    None, Fal picks a random seed (unchanged behaviour).
 
     Returns (image_bytes, provider, model). Raises on failure — callers
     decide whether to fall back to the Pillow-only composer.
@@ -242,20 +247,24 @@ def generate_fal_with_reference(prompt, reference_image_url, width, height, time
     if not reference_image_url:
         raise ValueError('reference_image_url is required')
 
+    payload = {
+        'prompt': prompt,
+        'image_url': reference_image_url,
+        'image_size': {'width': width, 'height': height},
+        'num_inference_steps': 28,
+        'num_images': 1,
+        'enable_safety_checker': True,
+    }
+    if seed is not None:
+        payload['seed'] = int(seed)
+
     r = http_requests.post(
         'https://fal.run/fal-ai/flux/dev/redux',
         headers={
             'Authorization': f'Key {api_key}',
             'Content-Type': 'application/json',
         },
-        json={
-            'prompt': prompt,
-            'image_url': reference_image_url,
-            'image_size': {'width': width, 'height': height},
-            'num_inference_steps': 28,
-            'num_images': 1,
-            'enable_safety_checker': True,
-        },
+        json=payload,
         timeout=timeout,
     )
     r.raise_for_status()
@@ -331,7 +340,150 @@ def _aspect_ratio(width, height):
     return '1:1'
 
 
-# ── Router ─────────────────────────────────────────────────
+# ── Image Gen v2 Router (job-type → model) ─────────────────
+# Spec: wiki/spec/image_gen_v2.md (approved 2026-05-28).
+# Principle: pixels vs text are separated. Text overlay happens client-side
+# in the Composer (Fabric.js); this layer only produces the underlying art.
+#
+# Slugs verified against fal.ai docs 2026-05-29:
+#   Seedream v5 Lite → fal-ai/bytedance/seedream/v5/lite/text-to-image
+#                      (no seed input — endpoint strips negatives + seed + steps)
+#   FLUX.2 [pro]     → fal-ai/flux-2-pro (text-to-image) / .../edit (multi-ref)
+#   Nano Banana Pro  → fal-ai/nano-banana-pro (text-to-image) / .../edit (refs)
+# Adobe Firefly is NOT on fal yet (partnership runs the other way — fal
+# models hosted inside Adobe Express), so safe_commercial is dropped from v2.
+
+JOB_BACKGROUND  = 'background'
+JOB_HERO_ART    = 'hero_art'
+JOB_AVATAR      = 'avatar'
+JOB_EDIT        = 'edit'
+
+# job_type → (model_slug, payload_builder). Changing a model = swap the slug
+# (and possibly the builder). One-line swap point as required by the spec.
+# Avatar uses Nano Banana Pro's /edit endpoint — its explicit "character
+# consistency" feature is the strongest fit for our recurring-mascot use.
+_JOB_REGISTRY = {
+    JOB_BACKGROUND: ('fal-ai/bytedance/seedream/v5/lite/text-to-image', '_payload_for_seedream'),
+    JOB_HERO_ART:   ('fal-ai/flux-2-pro',                                '_payload_for_flux2'),
+    JOB_AVATAR:     ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
+    JOB_EDIT:       ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
+}
+
+
+def _payload_for_flux2(prompt, image_refs, width, height, seed):
+    """FLUX.2 [pro] — supports up to 10 reference images via image_urls."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+        'enable_safety_checker': True,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    if image_refs:
+        p['image_urls'] = list(image_refs)[:10]
+    return p
+
+
+def _payload_for_seedream(prompt, image_refs, width, height, seed):
+    """Seedream v5.0 Lite — backdrop / textured-scene workhorse.
+    ByteDance stripped seed/negatives/steps from this endpoint — model
+    chooses internally — so `seed` and `image_refs` are intentionally ignored
+    here. If you need deterministic seedreams, switch to FLUX.2."""
+    return {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+    }
+
+
+def _payload_for_nano_banana(prompt, image_refs, width, height, seed):
+    """Nano Banana Pro — conversational edits + character consistency."""
+    p = {
+        'prompt': prompt,
+        'image_size': {'width': width, 'height': height},
+        'num_images': 1,
+    }
+    if seed is not None:
+        p['seed'] = int(seed)
+    if image_refs:
+        p['image_urls'] = list(image_refs)[:10]
+    return p
+
+
+_PAYLOAD_BUILDERS = {
+    '_payload_for_flux2':       _payload_for_flux2,
+    '_payload_for_seedream':    _payload_for_seedream,
+    '_payload_for_nano_banana': _payload_for_nano_banana,
+}
+
+
+def generate_for_job(job_type, prompt, *, image_refs=None, width=1080, height=1350,
+                     seed=None, model_override=None, timeout=90):
+    """Image Gen v2 router — picks model by job type.
+
+    Returns (image_bytes, provider, model_slug). Raises on any failure;
+    the caller decides whether to retry or fall back.
+    """
+    api_key = os.getenv('FAL_KEY')
+    if not api_key:
+        raise RuntimeError('FAL_KEY not set')
+
+    if model_override:
+        model_slug, builder_name = model_override, '_payload_for_flux2'  # safe default shape
+    else:
+        entry = _JOB_REGISTRY.get(job_type)
+        if not entry:
+            raise ValueError(f'unknown job_type: {job_type!r} '
+                             f'(expected one of {list(_JOB_REGISTRY)})')
+        model_slug, builder_name = entry
+
+    build = _PAYLOAD_BUILDERS[builder_name]
+    payload = build(prompt, image_refs, width, height, seed)
+
+    r = http_requests.post(
+        f'https://fal.run/{model_slug}',
+        headers={
+            'Authorization': f'Key {api_key}',
+            'Content-Type': 'application/json',
+        },
+        json=payload,
+        timeout=timeout,
+    )
+    r.raise_for_status()
+    data = r.json()
+    out_url = data['images'][0]['url']
+    img_r = http_requests.get(out_url, timeout=timeout)
+    img_r.raise_for_status()
+    return img_r.content, 'fal-ai', model_slug
+
+
+def job_registry():
+    """Read-only view of the job_type → model registry (for diagnostics / UI)."""
+    return {k: v[0] for k, v in _JOB_REGISTRY.items()}
+
+
+# Forge content_type → v2 job_type. Source: wiki/spec/forge_output_recipes.md.
+# Principle: the model makes the backdrop/hero only; the Konva compositor lays type on top.
+_CONTENT_JOB_TYPE = {
+    'social_post':     JOB_BACKGROUND,   # Seedream — cheap scroll-stop backdrop
+    'social_carousel': JOB_HERO_ART,     # FLUX.2 seed-locked (Seedream ignores seed → slides drift)
+    'event_promo':     JOB_HERO_ART,     # FLUX.2 — atmospheric, ref-anchored
+    'event_poster':    JOB_HERO_ART,     # FLUX.2 — full composition, seedable
+    'artist_bio':      JOB_HERO_ART,     # FLUX.2 (→ JOB_AVATAR when an avatar is set)
+}
+
+
+def job_type_for(content_type, has_avatar=False):
+    """Resolve a Forge content_type to a v2 router job_type."""
+    if content_type == 'artist_bio' and has_avatar:
+        return JOB_AVATAR
+    return _CONTENT_JOB_TYPE.get(content_type, JOB_HERO_ART)
+
+
+# ── Router (legacy — Forge text-to-image fallback chain) ───
+# Kept intact for backwards compatibility while Forge migrates to
+# generate_for_job(). Once Forge is fully on v2, this can retire.
 
 def generate_image(prompt, width, height):
     """Try Fal AI first, fall back to Replicate. Returns (bytes, provider, model)."""
@@ -717,12 +869,19 @@ def generate_video_premium(prompt, audio_path, width, height, duration_seconds=5
 
 # ── Audio storage ──────────────────────────────────────────
 
-def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg'):
+def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg',
+                       rights=None):
     """Upload an audio file to Supabase Storage + insert audio_tracks row.
 
     Returns dict: {id, bucket_path, local_path, duration_seconds, bytes}.
     `local_path` is always populated (a tempfile cached for the FFmpeg run);
     callers should clean it up when done.
+
+    `rights` (optional dict) carries the Beat rights gate (see
+    wiki/features/firepit_beat.md): {category, proof_url, license_notes,
+    source_artist_profile_id, attested_by}. Stored on the audio_tracks row; the
+    scheduling gate reads it back. Caller validates the category — this just
+    persists what it's given.
 
     If LOCAL_IMAGE_FALLBACK=1, skips the Supabase upload and DB insert — returns
     the local-only shape so offline dev / smoke tests don't need cloud access.
@@ -756,14 +915,24 @@ def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg
         file=file_bytes,
         file_options={'content-type': mime_type, 'upsert': 'true'},
     )
-    row = sb.table('audio_tracks').insert({
+    track_row = {
         'user_id': user_id,
         'filename': safe_name,
         'bucket_path': bucket_path,
         'mime_type': mime_type,
         'duration_seconds': duration,
         'bytes': len(file_bytes),
-    }).execute()
+    }
+    if rights and rights.get('category'):
+        track_row.update({
+            'rights_category': rights.get('category'),
+            'rights_proof_url': rights.get('proof_url'),
+            'license_notes': rights.get('license_notes'),
+            'source_artist_profile_id': rights.get('source_artist_profile_id'),
+            'rights_attested_by': rights.get('attested_by'),
+            'rights_attested_at': datetime.now(timezone.utc).isoformat(),
+        })
+    row = sb.table('audio_tracks').insert(track_row).execute()
     track_id = row.data[0]['id'] if row.data else None
     return {
         'id': track_id,

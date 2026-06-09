@@ -387,9 +387,11 @@ def generate_campaign(event_id):
             continue
         post_row = inserted[0]
 
-        # Image composition — brand-aware if references exist, else Pillow fallback
+        # Image composition — brand-aware if references exist, else Pillow fallback.
+        # Feed the post's selected copy into the image prompt so the canvas reflects it.
+        copy_text = variants[0].get('text', '') if variants else ''
         try:
-            png = compose_post_image(event, profile, plan_post['post_type'], brand_kit=brand_kit)
+            png = compose_post_image(event, profile, plan_post['post_type'], brand_kit=brand_kit, campaign_id=camp['id'], generated_text=copy_text)
             image_url = store_post_image(uid, post_row['id'], png)
             supabase().table('posts').update({
                 'image_asset_urls': [image_url],

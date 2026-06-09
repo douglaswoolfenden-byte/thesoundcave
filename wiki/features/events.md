@@ -1,6 +1,8 @@
-# Feature — Events
+# Feature — Events *(user-facing label: Summons)*
 
 > Status: **Shipped 2026-05-13** (Phase 2). Authoritative spec: [`phase_2_3_pivot.md`](../spec/phase_2_3_pivot.md). Mission brief: `~/Downloads/Soundcave Phase 2.3 Mission.md`.
+>
+> **2026-05-28 rename:** the user-facing label is now **"Summons"** per the Firepit-headline restructure ([`firepit_headline.md`](../spec/firepit_headline.md)). The surface also moved from a top-level tab to a Firepit sub-tab. Backend tables (`events`, `lineup_slots`), API routes (`/api/events/<id>`), and code identifiers stay as "events" — only UI labels changed.
 
 ## What it is
 

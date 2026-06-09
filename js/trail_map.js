@@ -16,6 +16,7 @@ let trailView = 'month';                    // 'month' | 'week'
 let trailAnchor = startOfDay(new Date());   // any date in the visible period
 let trailStashOpen = false;
 let trailEditingId = null;                  // id of scheduled_post being edited in modal
+let trailDrawerCampaign = null;             // campaignId the drawer is drilled into (null = top level)
 
 // ── Storage (Supabase-backed via content_api) ────────────
 let _trailCache = [];
@@ -210,7 +211,11 @@ function trailCellHTML(date, currentMonth, today, scheduled, stash, isWeek) {
 function trailPillHTML(post, stash) {
   const item = stash.find(s => s.id === post.stash_item_id);
   const ico = item?.icon || '📝';
-  const title = item ? (item.label || item.type) : '(missing stash item)';
+  // Prefer the countdown/post-type label (7-DAY, ANNOUNCEMENT…) so a calendar
+  // pill says what the post IS, not just its content type.
+  const title = item
+    ? ((item.postType && typeof postTypeLabel === 'function') ? postTypeLabel(item.postType) : (item.label || item.type))
+    : '(missing stash item)';
   const dots = post.platforms.map(() => `<span class="dot"></span>`).join('');
   return `<div class="trail-pill ${post.status}" data-id="${post.id}">
     <span class="ico">${ico}</span>
@@ -220,37 +225,111 @@ function trailPillHTML(post, stash) {
 }
 
 // ── Stash drawer ─────────────────────────────────────────
+// Scheduled items STAY in the drawer (marked "scheduled" + non-draggable) rather
+// than vanishing — so a campaign reads as complete and you can't double-schedule.
+// Delete the calendar entry (deleteScheduledPost → renderTrailMap) and the card
+// becomes draggable again automatically.
+function _trailScheduledIds() {
+  return new Set(getScheduled().map(p => p.stash_item_id).filter(Boolean));
+}
+
+function _trailNonArchivedStash() {
+  return getTrailStash().filter(i => i.status !== 'archived');
+}
+
+function _trailSchedulableStash() {
+  const scheduledIds = _trailScheduledIds();
+  return _trailNonArchivedStash().filter(i => !scheduledIds.has(i.id));
+}
+
+function _trailStashCardHTML(item, scheduled) {
+  const preview = (item.content || '').slice(0, 80).replace(/\n/g, ' ');
+  const thumb = item.imageUrl
+    ? `<img class="thumb" src="${esc(item.imageUrl)}" alt="">`
+    : `<div class="thumb placeholder">${esc(item.icon || '📝')}</div>`;
+  // Inside a campaign the card's identity IS its countdown label; loose items
+  // fall back to their content-type label.
+  const title = (item.postType && typeof postTypeLabel === 'function')
+    ? postTypeLabel(item.postType)
+    : (item.label || item.type);
+  const tag = scheduled ? '<span class="trail-card-tag">scheduled</span>' : '';
+  const drag = scheduled ? '' : 'draggable="true"';
+  return `<div class="trail-stash-card ${scheduled ? 'scheduled' : ''}" ${drag} data-id="${item.id}">
+    ${thumb}
+    <div class="info">
+      <div class="type">${esc(title)}${tag}</div>
+      <div class="preview">${esc(preview)}</div>
+    </div>
+  </div>`;
+}
+
+function _trailCampaignFolderHTML(campaignId, group, scheduledIds) {
+  const cover = (group.find(i => i.imageUrl) || {}).imageUrl || '';
+  const title = esc((group[0] || {}).eventName || 'Campaign');
+  const n = group.length;
+  const remaining = group.filter(i => !scheduledIds.has(i.id)).length;
+  const thumb = cover
+    ? `<img class="thumb" src="${esc(cover)}" alt="">`
+    : `<div class="thumb placeholder">📣</div>`;
+  const badge = remaining
+    ? `<span class="trail-folder-count">${remaining}</span>`
+    : `<span class="trail-folder-count done">✓</span>`;
+  const sub = remaining ? `${remaining} of ${n} to schedule` : `all ${n} scheduled`;
+  return `<div class="trail-stash-folder" onclick="openTrailDrawerCampaign('${campaignId}')" title="Open campaign">
+    ${thumb}
+    <div class="info">
+      <div class="type">${title}</div>
+      <div class="preview">${sub}</div>
+    </div>
+    ${badge}
+  </div>`;
+}
+
 function renderTrailStashDrawer() {
   const drawer = document.getElementById('trailStashDrawer');
   drawer.classList.toggle('open', trailStashOpen);
   if (!trailStashOpen) return;
 
-  const stash = getTrailStash().filter(i => i.status !== 'archived');
   const list = document.getElementById('trailStashList');
+  const scheduledIds = _trailScheduledIds();
+  const stash = _trailNonArchivedStash();
   if (!stash.length) {
-    list.innerHTML = `<div class="trail-stash-empty">No content in your Stash yet.<br>Generate something in the Forge first.</div>`;
+    trailDrawerCampaign = null;
+    list.innerHTML = `<div class="trail-stash-empty">No content in your Stash yet.<br>Forge something first.</div>`;
     return;
   }
-  list.innerHTML = stash.map(item => {
-    const preview = (item.content || '').slice(0, 80).replace(/\n/g, ' ');
-    const thumb = item.imageUrl
-      ? `<img class="thumb" src="${item.imageUrl}" alt="">`
-      : `<div class="thumb placeholder">${item.icon || '📝'}</div>`;
-    return `<div class="trail-stash-card" draggable="true" data-id="${item.id}">
-      ${thumb}
-      <div class="info">
-        <div class="type">${esc(item.label || item.type)}</div>
-        <div class="preview">${esc(preview)}</div>
-      </div>
-    </div>`;
-  }).join('');
+
+  // Drilled into one campaign — its posts in proposed-send order; scheduled ones
+  // marked and non-draggable.
+  if (trailDrawerCampaign) {
+    const group = stash.filter(i => i.campaignId === trailDrawerCampaign)
+      .sort((a, b) => new Date(a.scheduledFor || a.created) - new Date(b.scheduledFor || b.created));
+    if (!group.length) { trailDrawerCampaign = null; renderTrailStashDrawer(); return; }
+    const title = esc((group[0] || {}).eventName || 'Campaign');
+    const head = `<div class="trail-drawer-head"><button class="stash-back" onclick="closeTrailDrawerCampaign()">‹ All</button><span class="trail-drawer-title">${title}</span></div>`;
+    list.innerHTML = head + group.map(i => _trailStashCardHTML(i, scheduledIds.has(i.id))).join('');
+    attachStashDragHandlers();
+    return;
+  }
+
+  // Top level — campaign folders alongside loose cards.
+  const grouped = (typeof groupStashByCampaign === 'function')
+    ? groupStashByCampaign(stash)
+    : { campaigns: new Map(), singles: stash };
+  const parts = [];
+  grouped.campaigns.forEach((group, cid) => parts.push(_trailCampaignFolderHTML(cid, group, scheduledIds)));
+  grouped.singles.forEach(item => parts.push(_trailStashCardHTML(item, scheduledIds.has(item.id))));
+  list.innerHTML = parts.join('');
   attachStashDragHandlers();
 }
+
+function openTrailDrawerCampaign(campaignId) { trailDrawerCampaign = campaignId; renderTrailStashDrawer(); }
+function closeTrailDrawerCampaign() { trailDrawerCampaign = null; renderTrailStashDrawer(); }
 
 function updateTrailStashCount() {
   const el = document.getElementById('trailStashCount');
   if (!el) return;
-  const n = getTrailStash().filter(i => i.status !== 'archived').length;
+  const n = _trailSchedulableStash().length;
   el.textContent = n;
   el.style.display = n ? '' : 'none';
 }
@@ -386,4 +465,4 @@ function trailNav(dir) {
 }
 function trailToday() { trailAnchor = startOfDay(new Date()); renderTrailMap(); }
 function trailSetView(v) { trailView = v; renderTrailMap(); }
-function trailToggleStash() { trailStashOpen = !trailStashOpen; renderTrailMap(); }
+function trailToggleStash() { trailStashOpen = !trailStashOpen; trailDrawerCampaign = null; renderTrailMap(); }

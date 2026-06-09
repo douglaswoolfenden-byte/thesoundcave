@@ -68,17 +68,11 @@
     <img src="brand/logo/soundcave_logo_2026-05-11.svg" alt="" class="htab-brand-logo">
   </button>
   <nav class="header-tabs">
-    <button class="htab" type="button" data-tab="events">
-      <span class="htab-label">EVENTS <span class="count" id="eventsCount"></span></span>
-    </button>
-    <button class="htab" type="button" data-tab="firepit">
-      <span class="htab-label">FIREPIT <span class="count" id="firepitCount"></span></span>
-    </button>
     <button class="htab active" type="button" data-tab="cave" data-group="cave">
       <span class="htab-label">THE CAVE</span>
     </button>
-    <button class="htab" type="button" data-tab="brands">
-      <span class="htab-label">BRANDS</span>
+    <button class="htab" type="button" data-tab="firepit">
+      <span class="htab-label">FIREPIT <span class="count" id="firepitCount"></span></span>
     </button>
     <button class="htab" type="button" data-tab="reflection">
       <span class="htab-label">REFLECTION</span>
@@ -97,10 +91,19 @@
 
   <!-- ─── CAVE SUB-NAV (visible only when in Cave group) ── -->
   <nav class="cave-subnav" id="caveSubnav" style="display:none">
-    <button class="cave-subtab active" type="button" data-tab="cave">DASHBOARD</button>
+    <button class="cave-subtab active" type="button" data-tab="cave">MURAL</button>
     <button class="cave-subtab" type="button" data-tab="foraging">FORAGING</button>
-    <button class="cave-subtab" type="button" data-tab="clan">ROSTER</button>
+    <button class="cave-subtab" type="button" data-tab="clan">CLAN</button>
     <button class="cave-subtab" type="button" data-tab="footprints">FOOTPRINTS</button>
+  </nav>
+
+  <!-- ─── FIREPIT SUB-NAV (visible when in Firepit group) ── -->
+  <nav class="cave-subnav" id="firepitSubnav" style="display:none">
+    <button class="cave-subtab active" type="button" data-subtab="forge">FORGE</button>
+    <button class="cave-subtab" type="button" data-subtab="summons">GATHERINGS</button>
+    <button class="cave-subtab" type="button" data-subtab="stash">STASH</button>
+    <button class="cave-subtab" type="button" data-subtab="trailmap">TRAIL MAP</button>
+    <button class="cave-subtab" type="button" data-subtab="brandkits">MARKS</button>
   </nav>
 
   <!-- ─── HOME TAB ────────────────────────────────────── -->
@@ -117,7 +120,7 @@
       <p style="font-size:16px;color:var(--secondary);margin-top:8px;max-width:500px;margin-left:auto;margin-right:auto">
         Discover, track and grow unsigned talent in European underground dance music.
       </p>
-      <button class="btn-red" style="margin-top:24px;padding:12px 32px;font-size:14px" onclick="switchTab('cave')">Enter The Cave</button>
+      <button class="btn-red" style="margin-top:24px;padding:12px 32px;font-size:14px" onclick="switchTab('firepit')">Enter Firepit</button>
     </div>
 
     <!-- Philosophy -->
@@ -139,13 +142,13 @@
         </div>
         <div class="card-elevated">
           <div class="term-ico" data-icon="clan"></div>
-          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Roster</div>
-          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your roster of tracked artists. View profiles, link platforms, star favourites and monitor their growth from one place.</p>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Clan</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your clan of tracked artists. View profiles, link platforms, star favourites and monitor their growth from one place.</p>
         </div>
         <div class="card-elevated">
           <div class="term-ico" data-icon="cave"></div>
-          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">The Cave</div>
-          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your dashboard. See aggregate stats, genre breakdowns, weekly charts and new track drops from your Clan at a glance.</p>
+          <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Mural</div>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Your dashboard — the cave wall where the whole picture lives. Aggregate stats, genre breakdowns, weekly charts and new track drops from your Clan at a glance.</p>
         </div>
         <div class="card-elevated">
           <div class="term-ico" data-icon="footprints"></div>
@@ -160,7 +163,7 @@
         <div class="card-elevated">
           <div class="term-ico" data-icon="cut"></div>
           <div style="font-size:13px;font-weight:600;color:var(--heading);margin-bottom:4px">Cut</div>
-          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Remove an artist from active tracking. Cut artists stop appearing in your dashboard and analytics but their data is preserved.</p>
+          <p style="font-size:12px;color:var(--secondary);line-height:1.5">Remove an artist from active tracking. Cut artists stop appearing in your mural and analytics but their data is preserved.</p>
         </div>
       </div>
     </div>
@@ -333,11 +336,11 @@
     </div>
   </div>
 
-  <!-- ─── ROSTER TAB (formerly CLAN; data layer rename deferred) ─── -->
+  <!-- ─── CLAN TAB (data layer is 'clan'; account API/table use 'roster') ─── -->
   <div id="tab-clan" style="display:none">
     <div class="clan-header">
       <div>
-        <h2 style="font-size:20px;font-weight:700;color:var(--heading)">ROSTER</h2>
+        <h2 style="font-size:20px;font-weight:700;color:var(--heading)">CLAN</h2>
         <p class="subtitle" id="clanSubtitle"></p>
       </div>
     </div>
@@ -392,11 +395,8 @@
       </div>
     </div>
 
-    <div class="firepit-modes">
-      <button class="firepit-mode active" type="button" onclick="setFirepitMode('forge', this)">FORGE</button>
-      <button class="firepit-mode" type="button" onclick="setFirepitMode('stash', this)">STASH <span class="count" id="stashCount"></span></button>
-      <button class="firepit-mode" type="button" onclick="setFirepitMode('trailmap', this)">TRAIL MAP</button>
-    </div>
+    <!-- (internal firepit-modes strip removed 2026-05-28 — replaced by global #firepitSubnav, see spec/firepit_headline.md) -->
+    <span style="display:none" id="stashCount"></span>
 
     <!-- ── FORGE ──────────────────────────────────────── -->
     <div id="firepit-forge">
@@ -432,15 +432,13 @@
               <optgroup label="Social">
                 <option value="social_post">Post</option>
                 <option value="social_carousel">Carousel</option>
-                <option value="social_short">Short</option>
               </optgroup>
               <optgroup label="Events">
                 <option value="event_promo">Event Promo</option>
-                <option value="lineup_poster">Lineup Poster</option>
+                <option value="event_poster">Event Poster</option>
               </optgroup>
               <optgroup label="Editorial">
                 <option value="artist_bio">Artist Bio</option>
-                <option value="press_release">Press Release</option>
               </optgroup>
             </select>
           </div>
@@ -896,6 +894,7 @@
 <script src="js/lib/supabase.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/cave_entrance.js"></script>
+<script src="js/roster_sync.js"></script>
 <script src="js/app.js"></script>
 <script src="js/cave.js"></script>
 <script src="js/foraging.js"></script>
@@ -905,6 +904,7 @@
 <script src="js/compositor_templates.js"></script>
 <script src="js/compositor.js"></script>
 <script src="js/firepit.js"></script>
+<script src="js/stash.js"></script>
 <script src="js/trail_map.js"></script>
 <script src="js/brands.js"></script>
 <script src="js/events_shared.js"></script>

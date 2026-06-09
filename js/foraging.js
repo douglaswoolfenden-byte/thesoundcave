@@ -361,6 +361,8 @@ function forageAction(username, action) {
     if (!d.includes(username)) { d.push(username); saveDismissed(d); }
     saveWatching(getWatching().filter(u => u !== username));
   }
+  // Persist the foraging curation state to the account (no-op when signed out).
+  window.rosterSync?.pushPrefs();
   // Remove from live results
   liveSearchResults = liveSearchResults.filter(t => t.artist_username !== username);
   updateCounts();

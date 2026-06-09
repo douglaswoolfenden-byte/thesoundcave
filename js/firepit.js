@@ -16,28 +16,28 @@ let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
 let _forgeRefImages = [];
 const REF_IMAGES_MAX_COUNT = 5;
 const REF_IMAGES_MAX_BYTES = 5 * 1024 * 1024; // 5MB per image
+// Must match the backend allow-list in content_api._ref_images_to_blocks.
+// HEIC (Mac), AVIF and SVG are NOT accepted by the image API.
+const REF_IMAGES_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 // Which content types should auto-generate an image alongside the text.
 const OUTPUT_MEDIA = {
   social_post:     'image',
   social_carousel: 'image',
-  social_short:    'image',
   event_promo:     'image',
-  lineup_poster:   'image',
-  artist_bio:      'none',
-  press_release:   'none',
+  event_poster:    'image',
+  artist_bio:      'image',
 };
 
 // Forge content types — slim set focused on Meta + TikTok + Reddit.
 // Captions are auto-generated inside the social types; no standalone "caption" type.
+// Per wiki/spec/forge_output_recipes.md (Approved 2026-06-09): 5 types, each with its own recipe.
 const CONTENT_TYPES = {
   social_post:     { label:'Post',                  icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
   social_carousel: { label:'Carousel',              icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
-  social_short:    { label:'Short',                 icon:'', iconKey:'lineup',       fields:['artist','freeform'], maxLength:2200 },
   event_promo:     { label:'Event Promotion',       icon:'', iconKey:'event_promo',  fields:['event','artist','freeform'] },
-  lineup_poster:   { label:'Lineup Poster',         icon:'', iconKey:'lineup',       fields:['event','artist_list','freeform'] },
+  event_poster:    { label:'Event Poster',          icon:'', iconKey:'lineup',       fields:['event','artist_list','freeform'] },
   artist_bio:      { label:'Artist Spotlight / Bio', icon:'', iconKey:'artist_bio',   fields:['artist','freeform'] },
-  press_release:   { label:'Press Release',         icon:'', iconKey:'press_release',fields:['artist','release','event','freeform'] },
 };
 
 // Stash storage moved from localStorage to Supabase via /api/stash backend proxy.
@@ -64,6 +64,16 @@ function _stashRowToItem(row) {
     status: m.status || 'draft',
     created: row.created_at,
     modified: row.created_at,
+    // Campaign linkage — campaign-bridged rows store these at the metadata
+    // top level (see _upsert_post_into_stash in campaigns_api.py). Carrying
+    // them through is what lets the Stash group posts into campaign blocks
+    // and render countdown labels. Loose Forge items leave them null.
+    source: m.source || null,
+    campaignId: m.campaign_id || null,
+    eventId: m.event_id || null,
+    eventName: m.event_name || null,
+    postType: m.post_type || null,
+    scheduledFor: m.scheduled_for || null,
   };
 }
 
@@ -116,13 +126,26 @@ async function migrateLocalStorageStash() {
 
 function setFirepitMode(mode, btn) {
   firepitMode = mode;
+  window._firepitMode = mode; // exposed for global firepitSubnav active-state sync
   document.querySelectorAll('.firepit-mode').forEach(el => el.classList.remove('active'));
   if (btn) btn.classList.add('active');
   ['forge','stash','trailmap'].forEach(m => {
     const el = document.getElementById(`firepit-${m}`);
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
-  if (mode === 'stash') renderStash();
+  // Sync the global firepit subnav active state too.
+  const fpsub = document.getElementById('firepitSubnav');
+  if (fpsub) {
+    fpsub.querySelectorAll('.cave-subtab').forEach(el => {
+      el.classList.toggle('active', el.dataset.subtab === mode);
+    });
+  }
+  if (mode === 'stash') {
+    if (typeof resetStashView === 'function') resetStashView();
+    // Refresh the scheduled-id set so items already on the Trail Map stay hidden.
+    if (typeof loadScheduledStashIds === 'function') loadScheduledStashIds().then(renderStash);
+    else renderStash();
+  }
   if (mode === 'trailmap' && typeof renderTrailMap === 'function') renderTrailMap();
 }
 
@@ -130,6 +153,7 @@ async function renderFirepit() {
   updateForgeFields();
   await loadStash();
   await loadBrandKits();
+  if (typeof loadScheduledStashIds === 'function') await loadScheduledStashIds();
   updateStashCount();
   populateStashTypeFilter();
   if (firepitMode === 'stash') renderStash();
@@ -423,7 +447,7 @@ function gatherForgeContext() {
 }
 
 // Short-form content types that support 3-variant generation. Long-form stays single-shot.
-const VARIANT_TYPES = new Set(['social_post','social_carousel','social_short','event_promo','lineup_poster']);
+const VARIANT_TYPES = new Set(['social_post','social_carousel','event_promo','event_poster']);
 
 async function generateContent(variation) {
   const ctx = gatherForgeContext();
@@ -454,7 +478,12 @@ async function generateContent(variation) {
       const j = await r.json().catch(() => ({}));
       throw new Error(`Insufficient credits — this generation costs ${j.cost || 1}.`);
     }
-    if (!r.ok) throw new Error(`API error: ${r.status}`);
+    if (!r.ok) {
+      // Surface the API's actual error (e.g. an unsupported reference image),
+      // not a generic status code.
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || `API error: ${r.status}`);
+    }
     const data = await r.json();
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
@@ -475,10 +504,13 @@ async function generateContent(variation) {
       else document.getElementById('forgeImageArea').style.display = 'none';
     }
   } catch(e) {
+    // Only blame the API connection when the request genuinely couldn't reach it
+    // (network/fetch failure). A 4xx/5xx means the API IS up — show its message.
+    const offline = (e instanceof TypeError) || /failed to fetch|networkerror|load failed/i.test(e.message || '');
     outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
       <span style="font-family:var(--font-mono);color:var(--color-accent);font-weight:600">!</span>
-      <span style="color:var(--red)">${e.message}</span>
-      <span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>
+      <span style="color:var(--red)">${esc(e.message)}</span>
+      ${offline ? `<span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>` : ''}
     </div>`;
   }
 }
@@ -625,6 +657,13 @@ function handleRefImagesChange(event) {
   const oversized = files.find(f => f.size > REF_IMAGES_MAX_BYTES);
   if (oversized) {
     errEl.textContent = `"${oversized.name}" is over 5MB.`;
+    errEl.style.display = 'block';
+    event.target.value = '';
+    return;
+  }
+  const badType = files.find(f => !REF_IMAGES_SUPPORTED_TYPES.includes(f.type));
+  if (badType) {
+    errEl.textContent = `"${badType.name}" is ${badType.type || 'an unsupported format'} — use JPG, PNG, WebP or GIF.`;
     errEl.style.display = 'block';
     event.target.value = '';
     return;
@@ -809,63 +848,10 @@ async function saveToStash() {
   setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
-function updateStashCount() {
-  const lib = getContentLibrary();
-  const el = document.getElementById('stashCount');
-  if (el) el.textContent = lib.length || '';
-  const fp = document.getElementById('firepitCount');
-  if (fp) fp.textContent = lib.filter(i => i.status === 'draft').length || '';
-}
-
-function populateStashTypeFilter() {
-  const sel = document.getElementById('stashTypeFilter');
-  if (!sel) return;
-  const types = new Set(getContentLibrary().map(i => i.type));
-  const existing = sel.value;
-  sel.innerHTML = '<option value="">All types</option>' +
-    [...types].map(t => {
-      const ct = CONTENT_TYPES[t];
-      return `<option value="${t}">${ct ? ct.label : t}</option>`;
-    }).join('');
-  sel.value = existing;
-}
-
-function renderStash() {
-  const lib = getContentLibrary();
-  const search = (document.getElementById('stashSearch')?.value || '').toLowerCase();
-  const typeFilter = document.getElementById('stashTypeFilter')?.value || '';
-  const statusFilter = document.getElementById('stashStatusFilter')?.value || '';
-
-  let items = lib;
-  if (search) items = items.filter(i => i.content.toLowerCase().includes(search) || (i.label||'').toLowerCase().includes(search));
-  if (typeFilter) items = items.filter(i => i.type === typeFilter);
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
-
-  const el = document.getElementById('stashList');
-  if (!items.length) {
-    el.innerHTML = `<div class="empty"><div class="ico">📦</div><p>${lib.length ? 'No content matches your filters.' : 'Your stash is empty. Generate content in the Forge and save it here.'}</p></div>`;
-    return;
-  }
-  el.innerHTML = items.map(item => {
-    const preview = item.content.slice(0, 100).replace(/\n/g, ' ');
-    const date = new Date(item.created).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-    const thumb = item.imageUrl ? `<img src="${item.imageUrl}" class="stash-thumb" alt="">` : '';
-    return `<div class="stash-item">
-      ${thumb}
-      <div class="stash-info">
-        <div class="stash-type">${item.label || item.type}</div>
-        <div class="stash-preview">${esc(preview)}</div>
-        <div class="stash-date">${date}</div>
-      </div>
-      <span class="stash-status ${item.status}">${item.status}</span>
-      <div class="stash-actions">
-        <button class="action-btn" onclick="editStashItem('${item.id}')" title="Edit in Forge"><span class="icon">✏️</span></button>
-        <button class="action-btn" onclick="copyStashItem('${item.id}')" title="Copy"><span class="icon">📋</span></button>
-        <button class="action-btn" onclick="deleteStashItem('${item.id}')" title="Delete"><span class="icon">🗑️</span></button>
-      </div>
-    </div>`;
-  }).join('');
-}
+// Stash VIEW (renderStash, updateStashCount, populateStashTypeFilter, campaign
+// grouping, drill-in, postTypeLabel, scheduled-set) lives in js/stash.js.
+// firepit.js owns the stash DATA layer (_stashCache, _stashRowToItem, loadStash,
+// saveToStash) and the Forge-coupled mutations (editStashItem/copy/delete) below.
 
 function editStashItem(id) {
   const lib = getContentLibrary();

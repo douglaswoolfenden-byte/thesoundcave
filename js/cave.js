@@ -101,6 +101,11 @@ function openCaveStatModal(kind) {
   hideCaveTooltip();
   if (title) title.textContent = CAVE_STAT_LABELS[kind] || kind;
   body.innerHTML = caveStatModalBody(kind);
+  // Attach row handlers via JS (not inline onclick) so the username never has
+  // to be safe inside an HTML-attribute-embedded JS string literal.
+  body.querySelectorAll('tr[data-user]').forEach(tr => {
+    tr.addEventListener('click', () => { closeCaveStatModal(); openPanel(tr.dataset.user); });
+  });
   modal.classList.add('open');
 }
 
@@ -141,7 +146,7 @@ function caveStatModalBody(kind) {
       <thead><tr><th>Artist</th><th>Current</th><th>Δ</th></tr></thead>
       <tbody>${rows.map(r => {
         const sign = r.delta >= 0 ? '+' : '';
-        return `<tr onclick="closeCaveStatModal();openPanel('${esc(r.username)}')">
+        return `<tr data-user="${esc(r.username)}">
           <td>${esc(r.display)}</td>
           <td>${fmt(r.current)}</td>
           <td class="${r.delta >= 0 ? 'up' : 'down'}">${sign}${fmt(r.delta)}</td>

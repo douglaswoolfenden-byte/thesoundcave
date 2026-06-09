@@ -493,6 +493,46 @@ def enhance():
 
 VALID_MEDIA_TYPES = {'image', 'video_composite', 'video_standard', 'video_premium'}
 
+# ── Audio rights gate (Beat) ───────────────────────────────
+# See wiki/features/firepit_beat.md. A scheduled post embeds its audio into the
+# uploaded MP4, which TikTok/Meta fingerprint and enforce retroactively. POSTABLE
+# categories may be scheduled *only with proof on file*; BLOCKED categories are
+# undefendable and can never be scheduled. Encodes the platforms' actual rules.
+AUDIO_RIGHTS_POSTABLE = {'own_master', 'artist_permission', 'royalty_free', 'cc0_public_domain'}
+AUDIO_RIGHTS_BLOCKED = {'commercial_release', 'app_sound_or_rip', 'undocumented'}
+AUDIO_RIGHTS_CATEGORIES = AUDIO_RIGHTS_POSTABLE | AUDIO_RIGHTS_BLOCKED
+_AUDIO_RIGHTS_BLOCKED_LABEL = {
+    'commercial_release': 'a commercially-released / major-label recording',
+    'app_sound_or_rip': 'a trending app sound or a track ripped from streaming',
+    'undocumented': 'a third-party track with no documented permission',
+}
+
+
+def _audio_rights_ok(category, proof_url, license_notes):
+    """Gate logic for Beat audio. Returns (ok: bool, reason: str|None).
+
+    Blocked → never postable. Postable → needs proof (a licence/permission URL or
+    notes) on file. Unknown/missing → must be classified first.
+    """
+    if not category:
+        return False, 'Classify this audio’s rights before scheduling it.'
+    if category in AUDIO_RIGHTS_BLOCKED:
+        label = _AUDIO_RIGHTS_BLOCKED_LABEL.get(category, 'unlicensed for commercial use')
+        return False, (
+            f'This audio is {label}. TikTok and Meta fingerprint embedded audio and will '
+            'mute, remove, or strike the post — often weeks or months later. It can’t be '
+            'scheduled. Use your own track, a royalty-free/licensed track, or a lineup '
+            'artist’s track with written permission.'
+        )
+    if category in AUDIO_RIGHTS_POSTABLE:
+        if not (proof_url or license_notes):
+            return False, (
+                'Add proof of rights (licence receipt, written permission, or CC0/public-domain '
+                'link) before scheduling this audio.'
+            )
+        return True, None
+    return False, f'Unknown rights category: {category}.'
+
 
 def _parse_media_request():
     """Return (ctx_dict, audio_bytes_or_None, audio_filename_or_None, error_response_or_None).
@@ -564,6 +604,27 @@ def generate_media_endpoint():
     if media_type == 'video_composite' and audio_bytes is None:
         return jsonify({'error': 'video_composite requires an audio_file (multipart)'}), 400
 
+    # Beat rights gate (upload step): every supplied audio MUST be classified so
+    # the scheduling gate has provenance to check. Blocked categories are still
+    # allowed to generate (they can sit in the library), but can't be scheduled.
+    audio_rights = None
+    if audio_bytes is not None:
+        rights_in = ctx.get('rights') or {}
+        category = rights_in.get('category')
+        if category not in AUDIO_RIGHTS_CATEGORIES:
+            return jsonify({
+                'error': 'audio_rights_required',
+                'detail': 'Audio must be classified. rights.category must be one of: '
+                          + ', '.join(sorted(AUDIO_RIGHTS_CATEGORIES)),
+            }), 400
+        audio_rights = {
+            'category': category,
+            'proof_url': rights_in.get('proof_url'),
+            'license_notes': rights_in.get('license_notes'),
+            'source_artist_profile_id': rights_in.get('source_artist_profile_id'),
+            'attested_by': uid,
+        }
+
     cost_kind = media_type if media_type != 'image' else 'image'
     balance, err = _debit(uid, cost_kind, f'{media_type}:{content_type}')
     if err: return err
@@ -573,7 +634,8 @@ def generate_media_endpoint():
         # If audio supplied, upload + register first so we have a track id to
         # link from the generated stash item later.
         if audio_bytes is not None:
-            audio_track = upload_audio_track(audio_bytes, audio_filename, user_id=uid)
+            audio_track = upload_audio_track(audio_bytes, audio_filename, user_id=uid,
+                                             rights=audio_rights)
 
         image_prompt = build_image_prompt(content_type, ctx, generated_text)
         w, h = IMAGE_DIMENSIONS.get(content_type, (1200, 675))
@@ -598,6 +660,8 @@ def generate_media_endpoint():
             'dimensions': {'width': w, 'height': h},
             'duration_seconds': duration_seconds if media_type != 'image' else None,
             'audio_track_id': audio_track['id'] if audio_track else None,
+            'audio_rights_category': audio_rights['category'] if audio_rights else None,
+            'audio_rights_postable': (audio_rights['category'] in AUDIO_RIGHTS_POSTABLE) if audio_rights else None,
             'estimated_cost_usd': COST_USD.get(media_type, 0),
             'credits_balance': balance,
         })
@@ -1441,11 +1505,30 @@ def scheduled_posts_create():
         return jsonify({'error': 'stash_item_id and scheduled_for required'}), 400
 
     sb = _stash_client()
-    item = sb.table('stash_items').select('content,media_url').eq('id', stash_item_id).eq('user_id', uid).execute()
+    item = sb.table('stash_items').select('content,media_url,audio_track_id').eq('id', stash_item_id).eq('user_id', uid).execute()
     if not item.data:
         return jsonify({'error': 'stash item not found'}), 404
     snap = item.data[0]
     media_urls = [snap['media_url']] if snap.get('media_url') else []
+
+    # Beat rights gate (scheduling step — the hard block). A post carrying audio
+    # can only be scheduled if its track is a postable category with proof on
+    # file; blocked/unclassified audio is refused so the campaign can't be
+    # muted/struck retroactively. See wiki/features/firepit_beat.md.
+    if snap.get('audio_track_id'):
+        at = sb.table('audio_tracks').select(
+            'rights_category,rights_proof_url,license_notes'
+        ).eq('id', snap['audio_track_id']).eq('user_id', uid).execute()
+        at_row = at.data[0] if at.data else {}
+        ok, reason = _audio_rights_ok(
+            at_row.get('rights_category'), at_row.get('rights_proof_url'), at_row.get('license_notes')
+        )
+        if not ok:
+            return jsonify({
+                'error': 'audio_rights_blocked',
+                'detail': reason,
+                'rights_category': at_row.get('rights_category'),
+            }), 403
 
     # Validate: platforms requiring media reject if stash item is text-only.
     needs_media = [p for p in platforms if p in PLATFORMS_REQUIRE_MEDIA]

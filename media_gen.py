@@ -15,6 +15,7 @@ import time
 import hashlib
 import io
 import uuid
+from datetime import datetime, timezone
 from enum import Enum
 import requests as http_requests
 from dotenv import load_dotenv
@@ -868,12 +869,19 @@ def generate_video_premium(prompt, audio_path, width, height, duration_seconds=5
 
 # ── Audio storage ──────────────────────────────────────────
 
-def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg'):
+def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg',
+                       rights=None):
     """Upload an audio file to Supabase Storage + insert audio_tracks row.
 
     Returns dict: {id, bucket_path, local_path, duration_seconds, bytes}.
     `local_path` is always populated (a tempfile cached for the FFmpeg run);
     callers should clean it up when done.
+
+    `rights` (optional dict) carries the Beat rights gate (see
+    wiki/features/firepit_beat.md): {category, proof_url, license_notes,
+    source_artist_profile_id, attested_by}. Stored on the audio_tracks row; the
+    scheduling gate reads it back. Caller validates the category — this just
+    persists what it's given.
 
     If LOCAL_IMAGE_FALLBACK=1, skips the Supabase upload and DB insert — returns
     the local-only shape so offline dev / smoke tests don't need cloud access.
@@ -907,14 +915,24 @@ def upload_audio_track(file_bytes, filename, user_id=None, mime_type='audio/mpeg
         file=file_bytes,
         file_options={'content-type': mime_type, 'upsert': 'true'},
     )
-    row = sb.table('audio_tracks').insert({
+    track_row = {
         'user_id': user_id,
         'filename': safe_name,
         'bucket_path': bucket_path,
         'mime_type': mime_type,
         'duration_seconds': duration,
         'bytes': len(file_bytes),
-    }).execute()
+    }
+    if rights and rights.get('category'):
+        track_row.update({
+            'rights_category': rights.get('category'),
+            'rights_proof_url': rights.get('proof_url'),
+            'license_notes': rights.get('license_notes'),
+            'source_artist_profile_id': rights.get('source_artist_profile_id'),
+            'rights_attested_by': rights.get('attested_by'),
+            'rights_attested_at': datetime.now(timezone.utc).isoformat(),
+        })
+    row = sb.table('audio_tracks').insert(track_row).execute()
     track_id = row.data[0]['id'] if row.data else None
     return {
         'id': track_id,

@@ -18,6 +18,7 @@
 - [Firepit — Video](features/firepit_video.md) — 3-tier video generation (composite/standard/premium). Tiers 1 + 2 live-verified.
 - [Firepit — Stash](features/firepit_stash.md) — content library (localStorage).
 - [Firepit — Trail Map](features/firepit_trail_map.md) — content calendar. **Not yet built.**
+- [Firepit — Beat](features/firepit_beat.md) — rights-gated audio on posts (clip picker + copyright gate). **Spec approved 2026-06-09, build not started.**
 - [Artist live stats](features/artist_live_stats.md) — fresh follower/play counts on view (10-min TTL). Shipped 2026-05-11.
 
 ## Decisions

@@ -19,7 +19,10 @@ from sb_helpers import maybe_one, require_user, supabase
 from media_gen import generate_for_job
 
 avatars_bp = Blueprint('avatars_v2', __name__, url_prefix='/api/avatars')
-generate_bp = Blueprint('generate_v2', __name__, url_prefix='/api/generate')
+# NOTE: prefix is '/api/generate-v2', NOT '/api/generate' — the latter collides
+# with content_api's text-generation route and was shadowing it (Forge "Generate
+# Content" got "job_type and prompt are required"). No frontend calls this yet.
+generate_bp = Blueprint('generate_v2', __name__, url_prefix='/api/generate-v2')
 
 GEN_BUCKET = 'generated_assets'
 

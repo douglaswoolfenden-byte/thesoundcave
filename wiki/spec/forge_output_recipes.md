@@ -13,8 +13,18 @@ intent, style language, the context + reference images it feeds the model, and t
 Real underground posters/posts = **a dark backdrop on one layer + type stacked over it in a fixed
 frame**, with type usually the hero (ref: Joe Prytherch / Boiler Room). This validates our pipeline:
 **the image model generates the backdrop/hero ONLY; the Konva compositor (`js/compositor.js`) overlays
-type + logo.** Never ask the model to render text — it renders text badly. Every recipe below assumes
-backdrop-from-model + type-from-compositor.
+type + logo.** Every recipe below (no uploaded references) assumes backdrop-from-model + type-from-compositor.
+
+### Reference-restyle route (added 2026-06-09, bake-off-proven)
+**When a promoter uploads reference flyers to match**, the picture changes. A bake-off across four
+distinct flyer styles (riso, grunge, neon-glitch, chrome Y2K) showed **FLUX.2 `/edit`
+(`JOB_RESTYLE`) recreates the uploaded flyer's full style — including legible display type — far
+better than backdrop-only.** So with uploaded references we route to `fal-ai/flux-2-pro/edit` and use
+`build_restyle_prompt` (which *does* ask the model to render the event text). Caveat: the model nails
+the **style** but **garbles longer text** ("CATURDAY", "PRESRETS"); short headlines stay clean. Best
+practice: AI for style + rough type, then the compositor lays the must-be-correct lines (date, venue,
+ticket link) on top. The old "never ask the model to render text" rule still holds for the no-reference
+backdrop recipes below; it does NOT hold for the restyle route. See `wiki/features/firepit_forge.md`.
 
 ## House style (when no client brand kit overrides)
 Palette is **non-negotiable dark** (see memory `feedback_soundcave_palette`): near-black `#0a0a0a`,

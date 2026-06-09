@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 import anthropic
 import requests as http_requests
 from media_gen import (
-    build_image_prompt, generate_image, generate_for_job, job_type_for,
+    build_image_prompt, build_restyle_prompt, generate_image, generate_for_job, job_type_for,
     save_image, save_video,
     IMAGE_DIMENSIONS, provider_status,
     generate_video_composite, generate_video_standard, generate_video_premium,
@@ -32,7 +32,7 @@ from events_api import events_bp
 from artist_profiles_api import artist_profiles_bp
 from campaigns_api import campaigns_bp
 from brand_kits_api import brand_kits_bp
-from avatars_api import avatars_bp, generate_bp
+from avatars_api import avatars_bp, generate_bp, _owned_avatar
 from roster_api import roster_bp
 app.register_blueprint(events_bp)
 app.register_blueprint(artist_profiles_bp)
@@ -693,16 +693,39 @@ def generate_image_endpoint():
     if err: return err
 
     try:
-        image_prompt = build_image_prompt(content_type, ctx, generated_text)
         w, h = IMAGE_DIMENSIONS.get(content_type, (1080, 1350))
-        image_refs = ctx.get('reference_images') or None
-        has_avatar = bool(ctx.get('avatar_id') or ctx.get('avatar_image_url'))
-        job_type = job_type_for(content_type, has_avatar=has_avatar)
+
+        # A selected Spirit (avatar) contributes its reference images for
+        # character consistency — the fix for "uploaded a photo, got nothing
+        # like them". Spirit refs lead, then any ad-hoc Forge refs; fal caps
+        # image inputs at 10.
+        avatar_id = ctx.get('avatar_id')
+        avatar_refs = []
+        if avatar_id:
+            av = _owned_avatar(avatar_id, uid)
+            if av:
+                avatar_refs = list(av.get('reference_image_urls') or [])
+        if not avatar_refs and ctx.get('avatar_image_url'):
+            avatar_refs = [ctx['avatar_image_url']]
+        ctx_refs = ctx.get('reference_images') or []
+        image_refs = (avatar_refs + ctx_refs)[:10] or None
+
+        has_avatar = bool(avatar_id or ctx.get('avatar_image_url'))
+        # Uploaded flyers (not an avatar) → recreate-the-style via FLUX.2 /edit,
+        # with a prompt that RENDERS the event text (the reference carries the
+        # aesthetic). Otherwise keep the backdrop prompt (compositor lays type on top).
+        has_style_refs = bool(ctx_refs) and not has_avatar
+        if has_style_refs:
+            image_prompt = build_restyle_prompt(content_type, ctx, generated_text)
+        else:
+            image_prompt = build_image_prompt(content_type, ctx, generated_text)
+        job_type = job_type_for(content_type, has_avatar=has_avatar, has_style_refs=has_style_refs)
         seed = ctx.get('seed')
 
         # Trust mechanism (Doug's reassurance ask): make prompt + ref usage visible.
         print(f"🎨 Forge image — type={content_type} job={job_type} "
-              f"refs={len(image_refs) if image_refs else 0} seed={seed}")
+              f"refs={len(image_refs) if image_refs else 0} "
+              f"(spirit:{len(avatar_refs)} + ctx:{len(ctx_refs)}) seed={seed}")
         print(f"   prompt: {image_prompt[:240]}")
 
         try:

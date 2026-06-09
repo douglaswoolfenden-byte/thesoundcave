@@ -1430,6 +1430,39 @@ def artist_stats(username):
     return jsonify({**record, 'cached': False, 'age_seconds': 0})
 
 
+# ── Scheduled searches store (committed JSON the weekly Action runs) ──────
+SCHEDULED_SEARCHES_PATH = os.path.join(os.path.dirname(__file__), 'data', 'scheduled_searches.json')
+
+
+def _read_scheduled_searches():
+    try:
+        with open(SCHEDULED_SEARCHES_PATH) as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except FileNotFoundError:
+        return []
+    except Exception:
+        return []
+
+
+@app.route('/api/scheduled-searches', methods=['GET'])
+def get_scheduled_searches():
+    return jsonify(_read_scheduled_searches())
+
+
+@app.route('/api/scheduled-searches', methods=['POST'])
+def save_scheduled_searches():
+    """Overwrite the committed list with the posted full list (the frontend
+    sends the whole array on every create/edit/delete/toggle)."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, list):
+        return jsonify({'error': 'expected a JSON array of searches'}), 400
+    os.makedirs(os.path.dirname(SCHEDULED_SEARCHES_PATH), exist_ok=True)
+    with open(SCHEDULED_SEARCHES_PATH, 'w') as f:
+        json.dump(body, f, indent=2)
+    return jsonify({'ok': True, 'count': len(body)})
+
+
 @app.route('/api/search', methods=['GET'])
 def search():
     genre = request.args.get('genre', '')

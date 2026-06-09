@@ -723,3 +723,22 @@ Spec: `wiki/spec/play_tracking_accuracy.md` (signed off). Live-fire verified aga
 - Pre-existing, out-of-scope: `fetch_user_by_username` doesn't resolve display names with spaces/unicode (8/20 resolved) — a name→permalink gap, unrelated to play accuracy. Worth a future fix (store `user_id`/permalink at scout time).
 
 **Next:** Phase 4 — real weekly scheduled searches (committed JSON → scout.py → GitHub Action, results tagged by search).
+
+## 2026-06-09 — The Cave overhaul, Phase 4 (real weekly scheduled searches)
+
+Spec: `wiki/spec/scheduled_searches.md` (signed off, API-backed model). Live-fire verified. **Completes the 4-phase Cave overhaul.**
+
+- Scheduled searches were fake (localStorage only, nothing ran them, the Running tab falsely claimed CI ran them). Now real:
+  - **Store + API:** `data/scheduled_searches.json` + `content_api.py` `GET/POST /api/scheduled-searches`.
+  - **Runner:** new `scheduled_scout.py` runs each active search (genre/keyword + own follower range), writes `data/searches/<id>.json` (results tagged with `search_id`/`search_name`) + `index.json`, sets `last_run`.
+  - **Action:** new `.github/workflows/scheduled_searches.yml` — weekly + manual dispatch, commits results.
+  - **Frontend:** `js/foraging.js` API-backed store (localStorage fallback); Running tab renders **results grouped per search** (name + filters + last-run), triaged via `forageAction`; added a `keyword` field; manual results show their filter summary; **removed the false "runs automatically" claim**.
+- Live run: seeded "Underground Tech House" → 12 results (all ≤5000 followers), tagged + grouped in the UI; API GET/POST + 400 validation confirmed.
+
+### Cave overhaul — all 4 phases shipped (commits)
+- P1 `f5fb908` — auto-add fix, orange eye, bigger Mural, widget tooltip+modal · XSS hardening `80e05d7`
+- P2 `db366a4` — artist detail centered modal + compact platform links
+- P3 `45faff1` — accurate own-track play tracking + plays chart
+- P4 (this) — real weekly scheduled searches
+
+Note: an editor open on Doug's side clobbered some uncommitted edits mid-P3 (auto-saved stale buffers over disk); re-applied + committed. Mitigation: commit promptly / keep project files closed in the editor during a session.

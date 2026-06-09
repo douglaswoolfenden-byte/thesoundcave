@@ -18,7 +18,7 @@ function setForageSubTab(tab, btn) {
     const el = document.getElementById(`forage-${t}`);
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
-  if (tab === 'scheduled') renderScheduledSearches();
+  if (tab === 'scheduled') loadScheduledSearches().then(renderScheduledSearches);
   if (tab === 'running') renderRunningSearches();
 }
 
@@ -28,9 +28,49 @@ function setSearchLimit(n, btn) {
   if (btn) btn.classList.add('active');
 }
 
-// ── Scheduled searches (localStorage) ──────────────────
-function getScheduledSearches() { return JSON.parse(localStorage.getItem('sc_scheduled_searches') || '[]'); }
-function saveScheduledSearches(d) { localStorage.setItem('sc_scheduled_searches', JSON.stringify(d)); }
+// ── Scheduled searches (API-backed, localStorage fallback) ──────
+// Source of truth is data/scheduled_searches.json (written by content_api when
+// running locally; the weekly GitHub Action runs the searches). An in-memory
+// cache lets the render functions stay synchronous.
+let _scheduledCache = null;
+
+function getScheduledSearches() {
+  if (_scheduledCache) return _scheduledCache;
+  _scheduledCache = JSON.parse(localStorage.getItem('sc_scheduled_searches') || '[]');
+  return _scheduledCache;
+}
+
+async function loadScheduledSearches() {
+  const apiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  try {
+    const r = await fetch(`${apiUrl}/api/scheduled-searches`);
+    if (r.ok) {
+      const d = await r.json();
+      if (Array.isArray(d)) { _scheduledCache = d; localStorage.setItem('sc_scheduled_searches', JSON.stringify(d)); return d; }
+    }
+  } catch (e) { /* API offline — fall back to the local copy */ }
+  _scheduledCache = JSON.parse(localStorage.getItem('sc_scheduled_searches') || '[]');
+  return _scheduledCache;
+}
+
+function saveScheduledSearches(d) {
+  _scheduledCache = d;
+  localStorage.setItem('sc_scheduled_searches', JSON.stringify(d));   // always keep a local copy
+  const apiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  fetch(`${apiUrl}/api/scheduled-searches`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
+  }).catch(() => { /* offline — the local copy holds until next sync */ });
+}
+
+// Human-readable filter summary for a saved search (mirrors the Python side).
+function schedFiltersText(s) {
+  const parts = [];
+  if (s.genre)         parts.push(s.genre);
+  if (s.keyword)       parts.push(`"${s.keyword}"`);
+  if (s.min_followers) parts.push(`${fmt(s.min_followers)}+ followers`);
+  if (s.max_followers) parts.push(`≤${fmt(s.max_followers)} followers`);
+  return parts.join(' · ') || 'All genres';
+}
 
 function saveScheduledSearch() {
   const name = document.getElementById('schedName')?.value?.trim();
@@ -40,6 +80,7 @@ function saveScheduledSearch() {
     id: 's_' + Date.now(),
     name,
     genre: document.getElementById('schedGenre')?.value || '',
+    keyword: document.getElementById('schedKeyword')?.value?.trim() || '',
     min_followers: parseInt(document.getElementById('schedMinFollow')?.value) || 0,
     max_followers: parseInt(document.getElementById('schedMaxFollow')?.value) || 0,
     frequency: document.getElementById('schedFreq')?.value || 'weekly',
@@ -50,12 +91,12 @@ function saveScheduledSearch() {
   });
   saveScheduledSearches(searches);
   document.getElementById('schedName').value = '';
+  const kw = document.getElementById('schedKeyword'); if (kw) kw.value = '';
   renderScheduledSearches();
 }
 
 function deleteScheduledSearch(id) {
-  let searches = getScheduledSearches().filter(s => s.id !== id);
-  saveScheduledSearches(searches);
+  saveScheduledSearches(getScheduledSearches().filter(s => s.id !== id));
   renderScheduledSearches();
   renderRunningSearches();
 }
@@ -72,6 +113,7 @@ function toggleScheduledSearch(id) {
 function renderScheduledSearches() {
   const searches = getScheduledSearches();
   const el = document.getElementById('scheduledSearchList');
+  if (!el) return;
   if (!searches.length) {
     el.innerHTML = `<div class="empty"><p>No scheduled searches yet. Create one above.</p></div>`;
     return;
@@ -81,10 +123,9 @@ function renderScheduledSearches() {
       <div class="schedule-info">
         <div class="schedule-name">${esc(s.name)}</div>
         <div class="schedule-details">
-          ${s.genre ? esc(s.genre) : 'All genres'} ·
-          ${s.min_followers ? fmt(s.min_followers)+'+' : 'No min'} followers ·
-          ${esc(s.frequency)} · Max ${s.limit} results
+          ${esc(schedFiltersText(s))} · ${esc(s.frequency)} · Max ${s.limit}
           ${s.active ? '<span style="color:var(--green)"> · Active</span>' : '<span style="color:var(--muted)"> · Paused</span>'}
+          ${s.last_run ? ' · Last run ' + esc(s.last_run) : ' · Not yet run'}
         </div>
       </div>
       <div style="display:flex;gap:6px">
@@ -94,27 +135,46 @@ function renderScheduledSearches() {
     </div>`).join('');
 }
 
-function renderRunningSearches() {
-  const searches = getScheduledSearches().filter(s => s.active);
+// Running tab = real results, grouped by search. Pulls data/searches/<id>.json
+// (written by scheduled_scout.py / the weekly Action), filtered against the
+// Clan / dismissed / watching lists so triage stays clean.
+async function renderRunningSearches() {
   const el = document.getElementById('runningSearchList');
+  if (!el) return;
+  el.innerHTML = `<div class="empty"><p>Loading scheduled results…</p></div>`;
+  const searches = await loadScheduledSearches();
   if (!searches.length) {
-    el.innerHTML = `<div class="empty"><p>No active scheduled searches. Create and activate searches in the Scheduled tab.</p></div>`;
+    el.innerHTML = `<div class="empty"><p>No scheduled searches yet. Create and activate one in the Scheduled tab — they run weekly via GitHub Actions.</p></div>`;
     return;
   }
+  const favs = getFavourites(), dismissed = getDismissed(), watching = getWatching();
+  const groups = [];
+  for (const s of searches) {
+    let result = null;
+    try {
+      const r = await fetch(`data/searches/${s.id}.json?t=${Date.now()}`);
+      if (r.ok) result = await r.json();
+    } catch (e) { /* not run yet */ }
+    const all = result ? (result.tracks || []) : [];
+    const fresh = all.filter(t => !favs[t.artist_username] && !dismissed.includes(t.artist_username) && !watching.includes(t.artist_username));
+    groups.push({ s, result, fresh, total: all.length });
+  }
   el.innerHTML = `
-    <div style="margin-bottom:12px">
-      <p style="font-size:12px;color:var(--secondary)">These searches run automatically via GitHub Actions. Manage them in the Scheduled tab.</p>
-    </div>
-    ${searches.map(s => `
-      <div class="schedule-item">
-        <div class="schedule-info">
-          <div class="schedule-name" style="color:var(--green)">${esc(s.name)}</div>
-          <div class="schedule-details">
-            ${s.genre ? esc(s.genre) : 'All genres'} · ${esc(s.frequency)} · Max ${s.limit}
-            ${s.last_run ? ' · Last: '+s.last_run : ' · Not yet run'}
+    <p style="font-size:12px;color:var(--secondary);margin-bottom:14px">Scheduled searches run weekly via GitHub Actions. Each block shows that search's latest results — keep (Clan), watch, or cut.</p>
+    ${groups.map(g => `
+      <div class="forage-col" style="margin-bottom:18px">
+        <div class="forage-col-header">
+          <div>
+            <div class="forage-col-title">${esc(g.s.name)}${g.s.active ? '' : ' <span style="color:var(--muted)">(paused)</span>'}</div>
+            <div class="schedule-details">${esc(schedFiltersText(g.s))}${g.result?.date ? ' · last run ' + esc(g.result.date) : ' · not yet run'}</div>
           </div>
+          <div class="forage-col-count accent">${g.fresh.length}</div>
         </div>
-        <span class="schedule-badge">Active</span>
+        ${g.result
+          ? (g.fresh.length
+              ? `<div class="forage-col-body">${g.fresh.map(t => buildForageCard(t, 'rotation')).join('')}</div>`
+              : `<div class="forage-col-empty">All ${g.total} result(s) triaged — nothing new.</div>`)
+          : `<div class="forage-col-empty">Not run yet. Runs weekly, or trigger the “Scheduled Searches” workflow manually on GitHub.</div>`}
       </div>`).join('')}`;
 }
 
@@ -167,11 +227,29 @@ function renderLiveResults() {
   el.innerHTML = `
     <div class="forage-col">
       <div class="forage-col-header">
-        <div class="forage-col-title">Search results</div>
+        <div>
+          <div class="forage-col-title">Search results</div>
+          <div class="schedule-details">${esc(manualFiltersText())}</div>
+        </div>
         <div class="forage-col-count accent">${liveSearchResults.length}</div>
       </div>
       <div class="forage-col-body">${liveSearchResults.map(t => buildForageCard(t, 'rotation')).join('')}</div>
     </div>`;
+}
+
+// Filter summary for the manual live search — so it's obvious which filters
+// produced the current results (parity with scheduled-search labelling).
+function manualFiltersText() {
+  const g = document.getElementById('filterGenre')?.value || '';
+  const kw = document.getElementById('filterName')?.value?.trim() || '';
+  const min = parseInt(document.getElementById('filterMinFollow')?.value) || 0;
+  const max = parseInt(document.getElementById('filterMaxFollow')?.value) || 0;
+  const parts = [];
+  if (g)  parts.push(g);
+  if (kw) parts.push(`"${kw}"`);
+  if (min) parts.push(`${fmt(min)}+ followers`);
+  if (max) parts.push(`≤${fmt(max)} followers`);
+  return parts.join(' · ') || 'All genres';
 }
 
 function toggleFilters() {

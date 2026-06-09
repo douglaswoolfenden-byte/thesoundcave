@@ -14,6 +14,10 @@ Around the stack, four floating glass panels surface at-a-glance stats:
 
 Below the hero, a chart strip plots weekly aggregate stats (followers / likes / listens / playlist adds) — only renders when there are 2+ weeks of historical data.
 
+**Drill-downs (2026-06-09):** the stat panels are interactive. Hover Followers/Likes/Listens for a top-5-movers tooltip; click any of the 6 widgets to open a centered `.stat-modal` — a full ranked artist table (row → artist panel) for the stat widgets, or the complete Genre Mix / New Drops breakdown. Panels are also visibly enlarged (scaled-up type + padding) for legibility.
+
+**Artist panel (2026-06-09):** opening an artist no longer auto-adds them to the Clan. Non-clan artists render **read-only** with a "+ Add to Clan" action; only that button (or the Foraging Clan button) writes to the Clan. The panel is now a **centered modal** (was a right-slide sidebar) with platform links as a compact horizontal row of icon marks (click to add/open, hover ✎ to edit) — spec `wiki/spec/artist_detail_modal.md`. Shared by Mural / Foraging / Clan / Footprints. The old "Performance history" table is replaced by a **Plays-over-time chart** from the daily snapshots; play counts now sum the artist's **entire own-track catalogue** (was just 5 recent tracks) — spec `wiki/spec/play_tracking_accuracy.md`.
+
 ## Why it exists
 The Cave is the entry point — first impression matters. Old version was a stat grid that felt like an admin console. New version is curatorial and visually distinctive, signalling that this is a *content/discovery* product, not just a dashboard.
 
@@ -26,6 +30,8 @@ Spec: `wiki/spec/cave_dashboard_redesign.md`.
 - [x] Four floating glass panels (followers / likes / genre / drops)
 - [x] Chart strip hides gracefully when <2 weeks of data
 - [x] Dark Sound Cave palette preserved (technique-only ref to Unveil)
+- [x] Stat widgets hover (top-5 tooltip) + click (full `.stat-modal`) drill-downs — 2026-06-09
+- [x] Panels enlarged for legibility; opening an artist is read-only (no auto-add to Clan) — 2026-06-09
 - [ ] Mobile diagonal animation polish (defer)
 - [ ] Secondary "Index" view for filtering (deferred from this round)
 

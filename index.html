@@ -445,6 +445,19 @@
 
           <div id="forgeDynamicFields"></div>
 
+          <!-- Spirit selector — a reusable character/face reference set (avatar).
+               Shown for Artist Bio; summoning one routes to Nano Banana Pro for
+               character consistency. -->
+          <div class="forge-input-group" id="forgeSpiritRow">
+            <label class="forge-label">Spirit</label>
+            <div class="forge-brand-selector">
+              <select class="input" id="forgeSpiritSelect">
+                <option value="">— No spirit —</option>
+              </select>
+              <button type="button" class="btn-red forge-summon-btn" onclick="openSpirits()" title="Summon &amp; manage spirits">+ SUMMON</button>
+            </div>
+          </div>
+
           <div class="forge-input-group">
             <label class="forge-label">Voice Profile</label>
             <select class="input" id="forgeVoice">
@@ -606,6 +619,18 @@
           <button class="trail-btn trail-btn-secondary" onclick="closeTrailModal()">Cancel</button>
           <button class="trail-btn trail-btn-primary" onclick="saveTrailModal()">Save</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Spirits modal (avatars — reusable character reference sets).
+         Launched from the Forge "Spirit" selector ⚙; body rendered by js/spirits.js. -->
+    <div class="trail-modal-overlay" id="spiritsOverlay" onclick="if(event.target===this)closeSpirits()">
+      <div class="trail-modal spirits-modal">
+        <div class="trail-modal-head">
+          <span class="trail-modal-title">SPIRITS</span>
+          <button class="trail-modal-close" onclick="closeSpirits()">×</button>
+        </div>
+        <div class="trail-modal-body" id="spiritsBody"></div>
       </div>
     </div>
   </div>
@@ -831,19 +856,20 @@
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
   <div class="panel-body">
+    <div class="panel-section" id="panelAddClanSection" style="display:none">
+      <button class="btn-red" type="button" style="width:100%;padding:11px;font-size:13px;letter-spacing:.04em" onclick="addArtistToClan(activeArtist)">＋ ADD TO CLAN</button>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">Viewing only — not in your Clan. Add to track stats, edit links and take notes.</p>
+    </div>
     <div class="panel-section" id="panelGrowth"></div>
-    <div class="panel-section">
+    <div class="panel-section" id="panelPlatformSection">
       <h3>Platform links</h3>
       <div class="platform-grid" id="platformGrid"></div>
     </div>
     <div class="panel-section">
-      <h3>Performance history</h3>
-      <table class="snap-table">
-        <thead><tr><th>Date</th><th>Followers</th><th>Plays</th><th>Likes</th><th>Reposts</th><th>Pl. Adds</th><th>Score</th></tr></thead>
-        <tbody id="snapBody"></tbody>
-      </table>
+      <h3>Plays over time</h3>
+      <div id="playsChart" class="plays-chart"></div>
     </div>
-    <div class="panel-section">
+    <div class="panel-section" id="panelManualSection">
       <h3>Manual data entry</h3>
       <p style="font-size:11px;color:var(--muted);margin-bottom:10px">SoundCloud's API can lag. Use these fields to correct values.</p>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -860,17 +886,30 @@
       <h3>Tracks discovered</h3>
       <div id="tracksSeen"></div>
     </div>
-    <div class="panel-section">
+    <div class="panel-section" id="panelNotesSection">
       <h3>Notes</h3>
       <textarea class="notes-area" id="artistNotes" placeholder="Add notes about this artist..." oninput="saveNotes()"></textarea>
     </div>
-    <div class="panel-section">
+    <div class="panel-section" id="panelActionRow">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-outline" type="button" onclick="toggleCut()" id="cutBtn">CUT FROM TRACKING</button>
         <button class="btn-outline" type="button" onclick="exportSingleArtist(activeArtist)">EXPORT CSV</button>
         <button class="btn-outline" type="button" onclick="removeFavourite()" style="color:#ff4444;border-color:#ff4444">REMOVE</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Mural stat-widget drill-downs: hover tooltip + click modal -->
+<div class="cave-stat-tooltip" id="caveStatTooltip"></div>
+<div class="stat-modal" id="caveStatModal">
+  <div class="stat-modal-backdrop" onclick="closeCaveStatModal()"></div>
+  <div class="stat-modal-card" role="dialog" aria-modal="true">
+    <div class="stat-modal-head">
+      <h3 id="caveStatModalTitle"></h3>
+      <button class="stat-modal-close" type="button" onclick="closeCaveStatModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="stat-modal-body" id="caveStatModalBody"></div>
   </div>
 </div>
 
@@ -905,6 +944,7 @@
 <script src="js/compositor.js"></script>
 <script src="js/firepit.js"></script>
 <script src="js/stash.js"></script>
+<script src="js/spirits.js"></script>
 <script src="js/trail_map.js"></script>
 <script src="js/brands.js"></script>
 <script src="js/events_shared.js"></script>

@@ -358,26 +358,39 @@ function savePlatform(username, platform, value) {
   window.rosterSync?.pushArtist(favs[username]);
 }
 
-// Reveal the edit input for a platform row; auto-focuses input.
-function togglePlatformEdit(rowEl) {
-  if (!rowEl) return;
-  // Close any other open editors first
-  document.querySelectorAll('.plat-row-edit-panel:not([hidden])').forEach(p => {
-    if (p.closest('.plat-row') !== rowEl) p.hidden = true;
-  });
-  const panel = rowEl.querySelector('.plat-row-edit-panel');
-  if (!panel) return;
-  panel.hidden = !panel.hidden;
-  if (!panel.hidden) {
-    const inp = panel.querySelector('input');
-    if (inp) { inp.focus(); inp.select(); }
+// Click a platform mark: open its URL if linked, else start adding one.
+function platformPrimary(username, platform) {
+  const favs = getFavourites();
+  const a = favs[username];
+  if (!a) return;
+  const url = (a.platforms || {})[platform] || '';
+  if (url) {
+    const full = url.startsWith('http') ? url : 'https://' + url;
+    window.open(full, '_blank', 'noopener');
+  } else {
+    openPlatformEdit(username, platform);
   }
 }
 
-// Re-render a single platform row after the user blurs the input.
-function refreshPlatformRow(inputEl) {
-  if (!activeArtist) return;
-  if (typeof openPanel === 'function') openPanel(activeArtist);
+// Reveal a single inline URL input below the marks (one at a time).
+function openPlatformEdit(username, platform) {
+  const box = document.getElementById('platEdit');
+  if (!box) return;
+  const favs = getFavourites();
+  const cur = (favs[username]?.platforms || {})[platform] || '';
+  box.hidden = false;
+  box.innerHTML = `<label class="plat-edit-label">${esc(PLAT_LABELS[platform] || platform)} link</label>
+    <input class="plat-input" id="platEditInput" placeholder="Paste ${esc(PLAT_LABELS[platform] || platform)} URL" value="${esc(cur)}">`;
+  const input = document.getElementById('platEditInput');
+  if (!input) return;
+  input.focus();
+  let done = false;
+  const commit = () => { if (done) return; done = true; savePlatform(username, platform, input.value); renderPanel(username); };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { box.hidden = true; box.innerHTML = ''; }
+  });
+  input.addEventListener('blur', commit);
 }
 
 function saveNotes() {
@@ -505,6 +518,39 @@ function buildLineChart(datasets, labels, width=600, height=220) {
   });
   svg += '</svg>';
   return svg;
+}
+
+// Build an artist's play timeseries from the backend daily snapshots
+// (data/snapshots/*, loaded into allSnapshots) — the real series, ascending.
+function buildArtistPlaySeries(username) {
+  const snaps = (typeof allSnapshots !== 'undefined' ? allSnapshots : []);
+  return [...snaps]
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map(s => {
+      const rec = (s.artists || {})[username];
+      return rec ? { date: s.date, plays: rec.total_plays || 0, followers: rec.followers || 0, likes: rec.total_likes || 0 } : null;
+    })
+    .filter(Boolean);
+}
+
+// Render the plays-over-time chart into #playsChart (raw series, dips and all).
+function renderPlaysChart(username) {
+  const el = document.getElementById('playsChart');
+  if (!el) return;
+  const series = buildArtistPlaySeries(username);
+  if (series.length < 2) {
+    const tail = series.length === 1 ? ` Latest: ${fmt(series[0].plays)} plays.` : '';
+    el.innerHTML = `<div class="chart-empty">Tracking builds daily — the plays chart appears after a couple of days of snapshots.${tail}</div>`;
+    return;
+  }
+  const labels = series.map(s => (s.date || '').slice(5));   // MM-DD
+  const datasets = [{ label: 'Plays', color: '#ff4500', data: series.map(s => s.plays) }];
+  const latest = series[series.length - 1];
+  el.innerHTML = `<div class="chart-readout">
+      <span><b>${fmt(latest.plays)}</b> plays</span>
+      <span><b>${fmt(latest.followers)}</b> followers</span>
+      <span><b>${fmt(latest.likes)}</b> likes</span>
+    </div>${buildLineChart(datasets, labels, 660, 200)}`;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -724,19 +770,68 @@ function getArtistTimeSeries(username) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ARTIST DETAIL PANEL (slide-out)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// When viewing a non-clan artist we hold a transient (unsaved) object here so
+// the panel can render read-only WITHOUT writing to the Clan. Cleared on add.
+let _panelTransient = null;
+
+// Resolve the source track for a username from live search results (foraging)
+// first, then the weekly scout reports.
+function findReportTrack(username) {
+  try {
+    if (typeof liveSearchResults !== 'undefined' && Array.isArray(liveSearchResults)) {
+      const lt = liveSearchResults.find(t => t.artist_username === username);
+      if (lt) return lt;
+    }
+  } catch (e) { /* foraging.js not loaded */ }
+  for (const r of (allReports || [])) {
+    const t = (r.tracks || []).find(t => t.artist_username === username);
+    if (t) return t;
+  }
+  return null;
+}
+
+// Build a read-only artist object from a track — mirrors the favourites shape
+// enough for renderPanel, but is never persisted unless the user adds to Clan.
+function transientArtistFromTrack(username, track) {
+  const t = track || {};
+  const user = t.user || {};
+  return {
+    username,
+    display_name: t.artist || username,
+    genre:        t.genre || '',
+    avatar_url:   t.avatar_url || user.avatar_url || '',
+    artist_url:   t.artist_url || user.permalink_url || '#',
+    platforms:    {},
+    snapshots:    [],
+    tracks_seen:  t.title ? [{ title: t.title, url: t.url, date: today(), score: t.score }] : [],
+    starred:      false,
+    status:       'active',
+    notes:        '',
+    _transient:   true,
+    _track:       t,
+  };
+}
+
 function openPanel(username) {
   const favs = getFavourites();
-  if (!favs[username]) {
-    for (const r of allReports) {
-      const track = (r.tracks||[]).find(t => t.artist_username === username);
-      if (track) { addFavourite(track); break; }
-    }
-  }
+  // Opening a panel must NEVER add to the Clan (was the auto-add bug). A
+  // non-clan artist renders from a transient object; adding is a deliberate
+  // click on the "Add to Clan" button only.
+  _panelTransient = favs[username] ? null : transientArtistFromTrack(username, findReportTrack(username));
   activeArtist = username;
   renderPanel(username);
   document.getElementById('panelOverlay').classList.add('open');
   document.getElementById('artistPanel').classList.add('open');
   refreshArtistLive(username);
+}
+
+// The ONLY UI path that writes a viewed artist into the Clan.
+function addArtistToClan(username) {
+  const track = (_panelTransient && _panelTransient._track) || findReportTrack(username) || { artist_username: username };
+  addFavourite(track);
+  _panelTransient = null;
+  renderPanel(username);
+  refreshCurrentTab();
 }
 
 async function refreshArtistLive(username) {
@@ -745,9 +840,7 @@ async function refreshArtistLive(username) {
     const r = await fetch(`${apiBase}/api/artist/${encodeURIComponent(username)}`);
     if (!r.ok) return;
     const live = await r.json();
-    const favs = getFavourites();
-    if (!favs[username]) return;
-    favs[username].live = {
+    const liveObj = {
       followers: live.follower_count,
       plays: live.play_count,
       likes: live.like_count,
@@ -756,6 +849,14 @@ async function refreshArtistLive(username) {
       updated_at: live.updated_at,
       age_seconds: live.age_seconds || 0,
     };
+    const favs = getFavourites();
+    if (favs[username]) {
+      favs[username].live = liveObj;          // clan member (in-memory only)
+    } else if (_panelTransient && _panelTransient.username === username) {
+      _panelTransient.live = liveObj;          // transient view
+    } else {
+      return;
+    }
     // In-memory only — don't persist live values to localStorage (they expire).
     if (activeArtist === username) renderPanel(username);
   } catch (e) {
@@ -769,10 +870,24 @@ function closePanel() {
   activeArtist = null;
 }
 
+// Esc closes the artist modal (registered once at load).
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('artistPanel')?.classList.contains('open')) closePanel();
+});
+
 function renderPanel(username) {
   const favs = getFavourites();
-  const a = favs[username];
+  const isClan = !!favs[username];
+  const a = isClan ? favs[username] : _panelTransient;
   if (!a) return;
+
+  // Editable / clan-only sections are hidden for read-only (non-clan) views.
+  ['panelPlatformSection','panelManualSection','panelNotesSection','panelActionRow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isClan ? '' : 'none';
+  });
+  const addSec = document.getElementById('panelAddClanSection');
+  if (addSec) addSec.style.display = isClan ? 'none' : '';
 
   const avatarHTML = a.avatar_url
     ? `<img src="${a.avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='·'">`
@@ -794,10 +909,15 @@ function renderPanel(username) {
   const first = snaps[0]||{};
   const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
   const live = a.live || null;
+  // Backend daily snapshot (accurate own-track totals) as a fallback when the
+  // live API hasn't synced and there's no local snapshot — keeps the top stats
+  // consistent with the Plays-over-time chart below.
+  const bkSeries = buildArtistPlaySeries(username);
+  const bk = bkSeries.length ? bkSeries[bkSeries.length - 1] : null;
   const followers = live ? live.followers
-                    : (a.followers_override != null ? a.followers_override : (latest.followers||0));
-  const livePlays = live ? live.plays : (latest.plays||0);
-  const liveLikes = live ? live.likes : (latest.likes||0);
+                    : (a.followers_override != null ? a.followers_override : (latest.followers || bk?.followers || 0));
+  const livePlays = live ? live.plays : (latest.plays || bk?.plays || 0);
+  const liveLikes = live ? live.likes : (latest.likes || bk?.likes || 0);
   const syncedHint = live
     ? `<span class="panel-growth-tag" style="background:#1a4d2e;color:#a7f3d0">● Live · synced ${live.age_seconds < 60 ? 'just now' : Math.floor(live.age_seconds/60)+'m ago'}</span>`
     : '';
@@ -825,52 +945,36 @@ function renderPanel(username) {
       ${snaps.length >= 2 ? `<div style="margin-top:12px">${buildSparkline(snaps.map(s=>s.followers||0), 260, 40, '#e63946')}</div>` : ''}`;
   }
 
-  // Platform links — brand marks, single-col list, click-to-edit with clear add-link affordance.
-  // All dynamic values pass through esc(); SVG icons are codebase constants in PLAT_ICONS.
-  const platformRows = PLATFORMS.map(p => {
+  // Platform links — compact horizontal marks (icon-only, name on hover).
+  // Click a dim mark to add a URL inline; click a bright (linked) mark to open
+  // it; hover a linked mark for a ✎ pencil to edit. Handlers are wired via JS
+  // (not inline onclick) so usernames never sit inside attribute-embedded JS.
+  const platformChips = PLATFORMS.map(p => {
     const url = (a.platforms||{})[p] || '';
     const linked = !!url;
-    const fullUrl = linked ? (url.startsWith('http') ? url : 'https://' + url) : '';
-    const displayUrl = linked ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
-    const statusInner = linked
-      ? `<span class="plat-row-url" title="${esc(fullUrl)}">${esc(displayUrl)}</span>`
-      : `<span class="plat-row-cta">+ ADD LINK</span>`;
-    const openLink = linked
-      ? `<a href="${esc(fullUrl)}" target="_blank" rel="noopener" class="plat-row-open" title="Open in new tab" onclick="event.stopPropagation()">↗</a>`
-      : '';
-    return `<div class="plat-row ${linked ? 'linked' : ''}" data-platform="${p}" onclick="togglePlatformEdit(this)">
-      <div class="plat-row-mark" aria-hidden="true">${PLAT_ICONS[p]}</div>
-      <div class="plat-row-body">
-        <div class="plat-row-name">${PLAT_LABELS[p]}</div>
-        <div class="plat-row-status">${statusInner}</div>
-      </div>
-      <div class="plat-row-actions">
-        ${openLink}
-        <span class="plat-row-edit-hint">${linked ? '✎' : '+'}</span>
-      </div>
-      <div class="plat-row-edit-panel" hidden>
-        <input class="plat-input" placeholder="${PLAT_LABELS[p]} URL" value="${esc(url)}"
-          onclick="event.stopPropagation()"
-          onkeydown="if(event.key==='Enter'){this.blur()}"
-          onblur="savePlatform('${esc(username)}','${p}',this.value);refreshPlatformRow(this);">
-      </div>
-    </div>`;
+    const shown = linked ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'add link';
+    return `<span class="plat-chip ${linked ? 'linked' : ''}" data-platform="${p}" title="${esc(PLAT_LABELS[p])} · ${esc(shown)}">
+      <span class="plat-chip-ico" data-act="primary" role="button" tabindex="0" aria-label="${esc(PLAT_LABELS[p])}">${PLAT_ICONS[p]}</span>
+      ${linked ? `<span class="plat-chip-edit" data-act="edit" role="button" tabindex="0" aria-label="Edit ${esc(PLAT_LABELS[p])} link">✎</span>` : ''}
+    </span>`;
   }).join('');
-  document.getElementById('platformGrid').innerHTML = platformRows;
+  const grid = document.getElementById('platformGrid');
+  grid.innerHTML = `<div class="platform-row">${platformChips}</div><div class="plat-edit" id="platEdit" hidden></div>`;
+  grid.querySelectorAll('.plat-chip').forEach(chip => {
+    const p = chip.dataset.platform;
+    const primary = chip.querySelector('[data-act="primary"]');
+    primary.addEventListener('click', () => platformPrimary(username, p));
+    primary.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); platformPrimary(username, p); } });
+    const ed = chip.querySelector('[data-act="edit"]');
+    if (ed) {
+      ed.addEventListener('click', (e) => { e.stopPropagation(); openPlatformEdit(username, p); });
+      ed.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlatformEdit(username, p); } });
+    }
+  });
 
-  // Snapshot history
-  document.getElementById('snapBody').innerHTML = snaps.length
-    ? [...snaps].reverse().map(s => `
-        <tr>
-          <td>${s.date}</td>
-          <td>${fmt(s.followers)}</td>
-          <td>${fmt(s.plays)}</td>
-          <td>${fmt(s.likes)}</td>
-          <td>${fmt(s.reposts)}</td>
-          <td>${s.playlist_adds!=null?s.playlist_adds:'—'}</td>
-          <td style="color:var(--red)">${(s.score||0).toFixed(1)}</td>
-        </tr>`).join('')
-    : '<tr><td colspan="7" style="color:var(--muted);padding:10px">No snapshots yet.</td></tr>';
+  // Plays over time — chart from the backend daily snapshots (the real
+  // timeseries), replacing the old "rows and rows" table.
+  renderPlaysChart(username);
 
   document.getElementById('manualFollowers').value = a.followers_override != null ? a.followers_override : (latest.followers||'');
   document.getElementById('manualPlaylists').value = latest.playlist_adds != null ? latest.playlist_adds : '';

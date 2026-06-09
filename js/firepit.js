@@ -153,6 +153,7 @@ async function renderFirepit() {
   updateForgeFields();
   await loadStash();
   await loadBrandKits();
+  await loadSpirits();
   if (typeof loadScheduledStashIds === 'function') await loadScheduledStashIds();
   updateStashCount();
   populateStashTypeFilter();
@@ -197,6 +198,44 @@ function _selectedBrandKit() {
   const sel = document.getElementById('forgeBrandSelect');
   if (!sel || !sel.value) return null;
   return _brandKits.find(k => k.id === sel.value) || null;
+}
+
+// ── Spirits (avatars — reusable character/face reference sets) ─────
+// Loaded into the Forge "Spirit" select; the Spirits modal (js/spirits.js)
+// owns create/delete and calls loadSpirits() to refresh this select.
+let _spirits = [];
+async function loadSpirits() {
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/avatars`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    _spirits = j.avatars || [];
+  } catch (e) {
+    console.warn('loadSpirits failed:', e);
+    _spirits = [];
+  }
+  populateSpiritSelect();
+}
+function populateSpiritSelect() {
+  const sel = document.getElementById('forgeSpiritSelect');
+  if (!sel) return;
+  const previous = sel.value;
+  sel.replaceChildren();
+  const none = document.createElement('option');
+  none.value = ''; none.textContent = '— No spirit —';
+  sel.appendChild(none);
+  _spirits.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    sel.appendChild(opt);
+  });
+  if (previous && _spirits.some(s => s.id === previous)) sel.value = previous;
+}
+function _selectedSpirit() {
+  const sel = document.getElementById('forgeSpiritSelect');
+  if (!sel || !sel.value) return null;
+  return _spirits.find(s => s.id === sel.value) || null;
 }
 
 // ── Brand-bound caption templates (Phase B of Forge text rework) ──
@@ -443,6 +482,12 @@ function gatherForgeContext() {
   ctx.freeform = document.getElementById('forgeFreeform')?.value || '';
   ctx.voice = document.getElementById('forgeVoice')?.value || 'underground';
   if (_forgeRefImages.length) ctx.reference_images = _forgeRefImages.slice();
+  // A summoned Spirit contributes its reference images + routes to the avatar model.
+  const spirit = _selectedSpirit();
+  if (spirit) {
+    ctx.avatar_id = spirit.id;
+    if (spirit.preview_url) ctx.avatar_image_url = spirit.preview_url;
+  }
   return ctx;
 }
 

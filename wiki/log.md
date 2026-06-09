@@ -1,5 +1,22 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-09] Forge reference-restyle — uploaded flyers now drive the image (bake-off-proven)
+- **Why:** Doug: "FORGE is very much subpar" — uploading reference flyers + asking it to recreate the style did *nothing*. Root cause (confirmed in code): `social_post` routed to **Seedream**, whose endpoint **discards `image_urls`**; flyer types used FLUX.2's **text-to-image** endpoint, not `/edit`; and the image-prompt system prompt **forbade rendering text**. So references were dropped and the capability Doug wanted was switched off.
+- **Bake-off (`scratch/forge_bakeoff/`, gitignored):** ran Doug's pink "Concrete Wonders" flyer through Seedream (no-ref control) vs FLUX.2 `/edit` vs Nano Banana Pro `/edit`. **FLUX.2 `/edit` won** — faithful style + full-res + legible text. Validated the *wired* path across all 4 references (riso / R.O.T.D grunge / neon-glitch / chrome Y2K): every style recreated convincingly. **Overturned my prior claim that "AI can't render this text"** — evidence changed the call.
+- **Fix (shipped, code):** `media_gen.py` — new `JOB_RESTYLE` → `fal-ai/flux-2-pro/edit`; `job_type_for(..., has_style_refs=True)` routes uploaded-reference jobs there; new `build_restyle_prompt()` that *renders* the event text (no Claude call). `content_api.py` `/api/generate-image` — when Forge-uploaded refs are present (and not an avatar), use the restyle prompt + route. No-reference backdrop path and avatar/Spirits path unchanged.
+- **Honest caveat:** style match excellent; **longer text garbles** ("CATURDAY", "PRESRETS") while short headlines stay clean. Recommended workflow: AI for style + rough type, compositor lays the must-be-correct lines (date/venue/ticket) on top.
+- **Spec updated:** `wiki/spec/forge_output_recipes.md` documents the reference-restyle route alongside the backdrop-only recipes.
+- **NOT yet done:** frontend (Forge UI) confirmation that ref-upload → endpoint fires this live (tested via real `media_gen` functions + real fal calls, not the browser). UX reshape still open from the review.
+
+## [2026-06-09] Image Gen v2 Phase 3 — Spirits (avatar system) in the Forge
+Shipped the missing Phase 3 piece: the avatar UI. Avatars are called **SPIRITS** in the UI (Doug's pick; caveman-law on-tone — you *summon* one). Spec: `wiki/spec/image_gen_v2.md`; feature page `wiki/features/firepit_spirits.md`.
+- **Backend gap fixed (the crux):** `/api/generate-image` (content_api.py) computed `has_avatar` but never fetched the avatar's reference images — so avatars were inert. Now, when `avatar_id` is present, it loads the owner-scoped row (`_owned_avatar`) and prepends `reference_image_urls` to `image_refs` (cap 10), keeping the `job_type_for(..., has_avatar)` → `avatar` (Nano Banana Pro) routing. Logs `refs=N (spirit:M + ctx:K)`.
+- **Forge selector** (`firepit.js` + `index.html`): `#forgeSpiritRow` mirrors the brand row; `loadSpirits`/`populateSpiritSelect` (GET `/api/avatars`); shown only for Artist Bio; `gatherForgeContext` adds `avatar_id` + `avatar_image_url`.
+- **Spirits modal** (`js/spirits.js` + markup + CSS): list / summon (name + description + multi-image `FormData` POST `/api/avatars`) / banish; reuses the `.trail-modal-overlay` shell + Cave icon set. Microcopy: `{SUMMON SPIRIT}`.
+- **Infra:** buckets `avatar_refs` + `generated_assets` created this session. ⛔ **`db/0016_avatars.sql` still needs applying** (Supabase SQL editor) — every `/api/avatars` call 500s until then; that's the only gate left.
+- All compiles; API boots clean. **Open gates (verification):** apply 0016 → live-fire the 5 Forge types (model logs ≠ flux-schnell) → summon a spirit + generate Artist Bio → confirm resemblance → screenshot-confirm. NOT pushed yet.
+- Reuse-driven: cloned brand-kit select/CRUD + `saveToStash` FormData pattern; no new API endpoints (Phase 2 CRUD already existed).
+
 ## [2026-06-09] UI rename — Dashboard → Mural, Roster → Clan (+ glossary)
 - **Doug's calls:** the dashboard/overview tab is now **MURAL** (his "cave wall where paintings/markings live" idea); the saved-artists tab reverts to **CLAN** (caveman-fit, was briefly "Roster"). **The Cave ≠ Mural** — The Cave is the umbrella section (Mural · Foraging · Clan · Footprints); the Mural is just its dashboard scene.
 - **Changed (display strings only — no code/API/DB rename):** `index.html` cave sub-nav + terminology cards + Clan heading; `js/clan.js` subtitle.
@@ -670,3 +687,39 @@ So output is low-quality AND undifferentiated — every type generates the same 
   surface — not per-post; left in scope-creep parking).
 - **Still to do:** Phase 1c-full (Konva compositor for campaign posts) — deferred.
 
+
+## 2026-06-09 — The Cave overhaul, Phase 1 (Mural + Foraging quick wins)
+
+Branch `phase-3-v0.6`. First of 4 sign-off-gated phases (plan: `~/.claude/plans/okay-i-want-okay-bright-cook.md`). All four items live-fire screenshot-confirmed via Playwright.
+
+- **P1a — auto-add-to-clan bug FIXED.** `openPanel()` (`js/app.js`) used to call `addFavourite()` on any card click, silently adding viewed artists to the Clan. Now opening a non-clan artist builds a **transient** read-only object (`transientArtistFromTrack` + `findReportTrack`, sourced from live search results then weekly reports) and renders view-only. Clan-only sections (platform links / manual entry / notes / cut-export-remove) hide; a prominent **"+ ADD TO CLAN"** section shows instead (`addArtistToClan` — the only UI path that writes to the Clan now). `refreshArtistLive` caches live stats onto the transient object too. New section IDs in `index.html`: `panelAddClanSection`, `panelPlatformSection`, `panelManualSection`, `panelNotesSection`, `panelActionRow`.
+- **P1b — orange eye.** Watching empty state swapped the emoji eye for the real SVG eye (matches the Watch button), forced to brand orange `#ff4500` via new `WATCH_EYE_ICON` const in `js/foraging.js`.
+- **P1c — Mural scaled up.** `css/dashboard.css`: `.panel-value` 28->40px, labels/trends 9-10->11-12px, panel max-width 240->300px (bl/br 320/340), padding + interior gaps bumped, chip offset 116->150px; panels gained hover lift + pointer cursor. 1024px breakpoint rebalanced.
+- **P1d — widget drill-downs (= clan_tracking_dashboard Phase 2, now SHIPPED).** Hover Followers/Likes/Listens -> `.cave-stat-tooltip` (top-5 movers by delta, reuses `window._caveStatDeltas`). Click any of the 6 widgets -> centered `.stat-modal` (new reusable component, dark palette, backdrop+Esc close): ranked artist table (row -> artist panel) for stat widgets, full breakdown for Genre Mix / New Drops (new caches `window._caveGenreFull` / `window._caveDropsFull`). Wiring via idempotent `wireCaveStatInteractions()` in `renderCave()`. Markup: `#caveStatTooltip` + `#caveStatModal` in `index.html`; styles appended to `css/style.css`.
+
+Verification note: the MCP browser uses a persistent profile that disk-cached pre-edit JS/CSS — real (fresh) loads are unaffected; files pass `node --check` and serve correct bytes.
+
+**Next:** Phase 2 — artist detail right-slide panel -> centered modal + compact L->R platform links (spec first).
+
+## 2026-06-09 — The Cave overhaul, Phase 2 (artist detail modal + compact links)
+
+Spec: `wiki/spec/artist_detail_modal.md` (signed off, then built). Live-fire screenshot-confirmed.
+
+- **P2a — artist panel → centered modal.** `.artist-panel` was a 500px right-slide sidebar; now a centered, wider-than-tall modal (760px / max 92vw, max-height 86vh, internal scroll, fade+scale-in) over a dim+blur `#panelOverlay`. Shares the `.stat-modal` grammar from P1d. `openPanel`/`closePanel` logic unchanged — only CSS geometry — so all callers inherit it. Esc-to-close added (`js/app.js`).
+- **P2b — compact platform links.** Vertical `.plat-row` list + "+ ADD LINK" replaced by a horizontal row of 40px icon-only `.plat-chip` marks (name on hover via `title`). Linked = orange/active (click opens the URL, `https://` prefixed); unlinked = dimmed (click reveals one shared inline `#platEdit` input → saves via existing `savePlatform` → flips linked); hover a linked mark for a ✎ pencil to edit. Handlers via `addEventListener` (no inline JS with user data). Removed `togglePlatformEdit` / `refreshPlatformRow` and the old `.plat-row*` CSS.
+
+Also (mid-Phase-2): commit security review on the P1 commit flagged the stat-modal row's `onclick="…openPanel('${esc(user)}')"` — esc is HTML-attr-safe but not JS-string-safe. Fixed in `80e05d7` (data-user attribute + addEventListener). Applied the same no-inline-handler pattern to P2b's chips.
+
+**Next:** Phase 3 — accurate own-track play tracking (SoundCloud API, all own tracks) + replace the history table with a chart (spec first).
+
+## 2026-06-09 — The Cave overhaul, Phase 3 (accurate play tracking + chart)
+
+Spec: `wiki/spec/play_tracking_accuracy.md` (signed off). Live-fire verified against the real SoundCloud API.
+
+- **P3a — own-track play accuracy (backend).** Both `clan_tracker.py` (`fetch_all_user_tracks`) and `content_api.py` (`sc_fetch_all_user_tracks`) now paginate `/users/{id}/tracks` via `linked_partitioning` (200/page, capped 500/10pg) and sum `playback_count` across the artist's **entire own catalogue** — not just the 5 most recent. Reposts/mixes are excluded by the endpoint. `latest_track` = newest by `created_at`. Fixes wildly-undercounted plays.
+- **P3b — chart, not table (frontend).** Artist panel's "rows and rows" `snap-table` replaced with a **Plays-over-time** chart (`renderPlaysChart` + `buildArtistPlaySeries`, reusing `buildLineChart`), sourced from the backend daily snapshots (`allSnapshots`). Raw series, dips included (Doug's call). Top stats row gains a backend-snapshot fallback so it matches the chart when the live API hasn't synced.
+- **Decision:** chart shows the true daily series (no running-max smoothing) — Doug chose raw over increase-only.
+- **Live run (2026-06-09):** `clan_tracker.py` → `data/snapshots/2026-06-09.json`. Accuracy proven: **dazegxd 297 tracks → 6.71M plays** (old cap saw ~5 tracks); **81zaki 25 tracks → 26,281 plays** vs old 3,858. Chart + consistent stats screenshot-confirmed.
+- Pre-existing, out-of-scope: `fetch_user_by_username` doesn't resolve display names with spaces/unicode (8/20 resolved) — a name→permalink gap, unrelated to play accuracy. Worth a future fix (store `user_id`/permalink at scout time).
+
+**Next:** Phase 4 — real weekly scheduled searches (committed JSON → scout.py → GitHub Action, results tagged by search).

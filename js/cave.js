@@ -41,7 +41,122 @@ function renderCave() {
   renderCaveChart(clan);
   updateStackMeta();
   attachStackInteractions();
+  wireCaveStatInteractions();
 }
+
+// ━━━ Stat-widget drill-downs: hover tooltip + click modal ━━━
+// Spec: wiki/spec/clan_tracking_dashboard.md (Phase 2). Reuses the per-artist
+// delta cache (window._caveStatDeltas) + the genre/drops full-data caches.
+const CAVE_STAT_LABELS = { followers:'Followers gained', likes:'Likes gained', listens:'Listens gained', genre:'Genre mix', drops:'New drops' };
+
+function wireCaveStatInteractions() {
+  // Container divs persist in the DOM, so assigning .onX (not addEventListener)
+  // is idempotent across re-renders — no duplicate handlers.
+  [['caveFollowersPanel','followers'], ['caveLikesPanel','likes'], ['caveListensPanel','listens']]
+    .forEach(([id, metric]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.onclick = () => openCaveStatModal(metric);
+      el.onmouseenter = () => showCaveTooltip(metric, el);
+      el.onmouseleave = hideCaveTooltip;
+    });
+  [['caveGenrePanel','genre'], ['caveTracksPanel','drops']].forEach(([id, kind]) => {
+    const el = document.getElementById(id);
+    if (el) el.onclick = () => openCaveStatModal(kind);
+  });
+}
+
+function showCaveTooltip(metric, anchorEl) {
+  const d = window._caveStatDeltas;
+  const tip = document.getElementById('caveStatTooltip');
+  if (!tip || !d || !d.perArtist[metric]) return;
+  const rows = d.perArtist[metric].slice(0, 5);
+  if (!rows.length) return;
+  tip.innerHTML = `<div class="cst-head">Top movers</div>` +
+    rows.map(r => {
+      const sign = r.delta >= 0 ? '+' : '';
+      return `<div class="cst-row"><span class="cst-name">${esc(r.display)}</span><span class="cst-delta ${r.delta>=0?'up':'down'}">${sign}${fmt(r.delta)}</span></div>`;
+    }).join('') +
+    `<div class="cst-foot">click for full breakdown</div>`;
+  tip.style.display = 'block';
+  // Position below the anchor; right-align if it would overflow the viewport.
+  const r = anchorEl.getBoundingClientRect();
+  const tipW = tip.offsetWidth;
+  let left = r.left;
+  if (left + tipW > window.innerWidth - 8) left = r.right - tipW;
+  tip.style.left = Math.max(8, left) + 'px';
+  tip.style.top = (r.bottom + 8) + 'px';
+}
+
+function hideCaveTooltip() {
+  const tip = document.getElementById('caveStatTooltip');
+  if (tip) tip.style.display = 'none';
+}
+
+function openCaveStatModal(kind) {
+  const modal = document.getElementById('caveStatModal');
+  const body = document.getElementById('caveStatModalBody');
+  const title = document.getElementById('caveStatModalTitle');
+  if (!modal || !body) return;
+  hideCaveTooltip();
+  if (title) title.textContent = CAVE_STAT_LABELS[kind] || kind;
+  body.innerHTML = caveStatModalBody(kind);
+  // Attach row handlers via JS (not inline onclick) so the username never has
+  // to be safe inside an HTML-attribute-embedded JS string literal.
+  body.querySelectorAll('tr[data-user]').forEach(tr => {
+    tr.addEventListener('click', () => { closeCaveStatModal(); openPanel(tr.dataset.user); });
+  });
+  modal.classList.add('open');
+}
+
+function closeCaveStatModal() {
+  const modal = document.getElementById('caveStatModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function caveStatModalBody(kind) {
+  if (kind === 'genre') {
+    const g = window._caveGenreFull;
+    if (!g || !g.rows.length) return '<div class="panel-empty">No genres yet.</div>';
+    return `<div class="stat-modal-list">` + g.rows.map(([name, c]) => {
+      const pct = Math.round((c / g.total) * 100);
+      return `<div class="stat-modal-genre">
+        <span class="smg-name">${esc(name)}</span>
+        <div class="panel-genre-bar"><div class="panel-genre-bar-fill" style="transform:scaleX(${pct / 100})"></div></div>
+        <span class="smg-pct">${c} · ${pct}%</span>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  if (kind === 'drops') {
+    const drops = window._caveDropsFull || [];
+    if (!drops.length) return '<div class="panel-empty">No new drops this week.</div>';
+    return `<div class="stat-modal-list">` + drops.map(t => `
+      <div class="stat-modal-drop">
+        <div class="smd-info"><div class="smd-title">${esc(t.title)}</div><div class="smd-artist">${esc(t.artist)}</div></div>
+        ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener" class="smd-play">▶</a>` : ''}
+      </div>`).join('') + `</div>`;
+  }
+  // followers / likes / listens — full ranked artist table
+  const d = window._caveStatDeltas;
+  if (!d || !d.perArtist[kind] || !d.perArtist[kind].length) return '<div class="panel-empty">No tracking data yet.</div>';
+  const rows = d.perArtist[kind];
+  const span = d.spanDays === 7 ? 'this week' : `over ${d.spanDays} day${d.spanDays === 1 ? '' : 's'}`;
+  return `<div class="stat-modal-sub">${rows.length} tracked artists · ${esc(span)}</div>
+    <table class="stat-modal-table">
+      <thead><tr><th>Artist</th><th>Current</th><th>Δ</th></tr></thead>
+      <tbody>${rows.map(r => {
+        const sign = r.delta >= 0 ? '+' : '';
+        return `<tr data-user="${esc(r.username)}">
+          <td>${esc(r.display)}</td>
+          <td>${fmt(r.current)}</td>
+          <td class="${r.delta >= 0 ? 'up' : 'down'}">${sign}${fmt(r.delta)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// Esc closes the stat modal (registered once at script load).
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCaveStatModal(); });
 
 function renderCaveWelcome() {
   const el = document.getElementById('caveWelcome');
@@ -255,12 +370,15 @@ function renderCaveGenrePanel(clan) {
     setHTML(el, `
       <div class="panel-label">Genre mix</div>
       <div class="panel-empty">add artists to see your mix</div>`);
+    window._caveGenreFull = null;
     return;
   }
   const counts = {};
   clan.forEach(a => { const g = a.genre || 'unknown'; counts[g] = (counts[g] || 0) + 1; });
   const total = clan.length;
-  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  window._caveGenreFull = { rows: sorted, total };   // full breakdown for the click modal
+  const top = sorted.slice(0, 5);
   setHTML(el, `
     <div class="panel-label">Genre mix</div>
     <div class="panel-genre-list">
@@ -287,6 +405,7 @@ function renderCaveTracksPanel(clan) {
       }
     });
   }
+  window._caveDropsFull = drops;   // every clan drop this week for the click modal
   if (!drops.length) {
     setHTML(el, `
       <div class="panel-label">New drops</div>

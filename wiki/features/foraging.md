@@ -14,8 +14,10 @@ Typeable combobox (`<input list="genreSuggestions">`), not a `<select>`. SoundCl
 ## Action icons (Clan / Watch / Cut)
 Inline SVGs styled with brand-orange (`--red #ff4500`) fills, labels in default body colour. Cave-line aesthetic matches the wordmark stroke weight:
 - **Clan** — three solid dots (pack) over a single arc
-- **Watch** — eye with centered iris
+- **Watch** — eye with centered iris (same SVG, brand-orange `#ff4500`, also used in the Watching empty-state hint as of 2026-06-09; replaced the old 👁 emoji)
 - **Cut** — dagger blade with handle
+
+**Clicking a card (2026-06-09):** opens the artist's detail panel **read-only** — it no longer auto-adds them to the Clan (was a bug). Adding is a deliberate click on the Clan action button or the panel's "+ Add to Clan".
 
 ## Why it exists
 The weekly scout is broad and automated. Foraging is targeted: a user has a specific genre, region, or vibe in mind and wants results *now* or on their own cadence, not Monday 8am UTC.

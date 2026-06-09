@@ -1,6 +1,6 @@
 # Clan Tracking Dashboard — Spec
 
-> Status: **Phase 1 SHIPPED 2026-05-12.** Phase 2 (drill-downs) still pending. Spec sections below reflect plan; the log entry has the actual delivered detail.
+> Status: **Phase 1 SHIPPED 2026-05-12. Phase 2 (drill-downs) SHIPPED 2026-06-09** (as P1d of the Cave overhaul — see log). Spec sections below reflect plan; the log entry has the actual delivered detail. Delivered: hover tooltip (top-5 movers) on Followers/Likes/Listens + click `.stat-modal` on all 6 widgets (ranked table for stats, full breakdown for genre/drops). Reusable `.stat-modal` lives in `css/style.css`.
 
 ## Why
 The Cave dashboard shows `+0 THIS WEEK` for Followers / Likes / Listens because the delta is calculated from `allReports` (the weekly *scout* feed, which only contains an artist when scout surfaces them that week) instead of from `data/snapshots/` (the per-artist daily timeseries that `clan_tracker.py` was built to produce). `data/snapshots/` is also empty — the tracker has never run here. Phase 1 fixes the source. Phase 2 adds drill-downs.

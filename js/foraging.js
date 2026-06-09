@@ -5,6 +5,11 @@ let forageSubTab = 'manual';
 let searchLimit = 20;
 let liveSearchResults = [];
 
+// Orange "watch" eye used in the empty-state hint — matches the eye on the
+// Watch button (buildForageCard), forced to the brand orange so it reads as a
+// real icon, not the old 👁 emoji.
+const WATCH_EYE_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#ff4500" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px" aria-hidden="true"><path d="M1.75 8C4 4.75 6 4 8 4s4 .75 6.25 4"/><path d="M1.75 8C4 11.25 6 12 8 12s4-.75 6.25-4"/><circle cx="8" cy="8" r="1.25" fill="#ff4500" stroke="none"/></svg>';
+
 function setForageSubTab(tab, btn) {
   forageSubTab = tab;
   document.querySelectorAll('.forage-tab').forEach(el => el.classList.remove('active'));
@@ -311,7 +316,7 @@ function renderForagingWatching() {
       </div>
       ${watchingArtists.length
         ? `<div class="forage-col-body">${watchingArtists.map(t => buildForageCard(t, 'watching')).join('')}</div>`
-        : '<div class="forage-col-empty">No artists being watched. Hit 👁 Watch on a card to track an artist without adding to your Clan.</div>'}
+        : `<div class="forage-col-empty">No artists being watched. Hit ${WATCH_EYE_ICON} Watch on a card to track an artist without adding to your Clan.</div>`}
     </div>`;
 }
 

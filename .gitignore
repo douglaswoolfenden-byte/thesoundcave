@@ -24,3 +24,6 @@ bypass.html
 *.swo
 Thumbs.db
 brand/logo/*.bak
+
+# Disposable byproducts (bake-offs, mid-iteration screenshots)
+scratch/

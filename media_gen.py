@@ -173,6 +173,42 @@ def build_image_prompt(content_type, ctx, generated_text=''):
     return message.content[0].text.strip()
 
 
+def build_restyle_prompt(content_type, ctx, generated_text=''):
+    """Prompt for JOB_RESTYLE (FLUX.2 /edit): recreate an uploaded flyer's style
+    for a NEW event, rendering the event text legibly.
+
+    Unlike build_image_prompt, this WANTS text in the image — modern edit models
+    render display type cleanly (bake-off 2026-06-09). The uploaded reference
+    carries the aesthetic; this prompt supplies the recreate instruction + the
+    exact words to set. Built directly (no Claude call) — faster, cheaper, and it
+    sidesteps the no-text backdrop system prompt entirely.
+    """
+    lines = []
+    artist = (ctx.get('artist_data') or {}).get('name')
+    if artist:
+        lines.append(artist)
+    for key in ('event', 'artist_list', 'release'):
+        v = ctx.get(key)
+        if v:
+            lines.append(str(v).strip())
+    freeform = ctx.get('freeform')
+    if freeform:
+        lines.append(str(freeform).strip())
+    text_block = '  /  '.join(l for l in lines if l) or (
+        generated_text[:200].strip() if generated_text else 'underground event night')
+
+    return (
+        "Recreate this flyer's exact visual style and treatment for a NEW event — "
+        "same colour palette, print and texture (riso, halftone, grain, distress), "
+        "typographic feel, layout energy and graphic motifs as the reference image. "
+        "Do NOT copy the reference's words. Set this new event text instead, rendered "
+        "legibly in the same bold display-type style:\n"
+        f"{text_block}\n"
+        "Output a finished, print-ready event flyer: high contrast, bold, gritty "
+        "underground aesthetic, every word spelled correctly."
+    )
+
+
 def _ref_image_blocks(reference_images):
     """Convert data-URL reference images to Anthropic image blocks. Silent on
     malformed input — boundary validation happens in content_api._ref_images_to_blocks."""
@@ -357,16 +393,22 @@ JOB_BACKGROUND  = 'background'
 JOB_HERO_ART    = 'hero_art'
 JOB_AVATAR      = 'avatar'
 JOB_EDIT        = 'edit'
+JOB_RESTYLE     = 'restyle'
 
 # job_type → (model_slug, payload_builder). Changing a model = swap the slug
 # (and possibly the builder). One-line swap point as required by the spec.
 # Avatar uses Nano Banana Pro's /edit endpoint — its explicit "character
 # consistency" feature is the strongest fit for our recurring-mascot use.
+# Restyle uses FLUX.2's /edit endpoint — verified (bake-off 2026-06-09) to
+# recreate an uploaded flyer's *style* with new event text, legible and faithful.
+# This is the reference-native route: when a promoter uploads flyers to match,
+# the bytedance/flux text-to-image endpoints ignore or under-use them; /edit does not.
 _JOB_REGISTRY = {
     JOB_BACKGROUND: ('fal-ai/bytedance/seedream/v5/lite/text-to-image', '_payload_for_seedream'),
     JOB_HERO_ART:   ('fal-ai/flux-2-pro',                                '_payload_for_flux2'),
     JOB_AVATAR:     ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
     JOB_EDIT:       ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
+    JOB_RESTYLE:    ('fal-ai/flux-2-pro/edit',                           '_payload_for_flux2'),
 }
 
 
@@ -474,10 +516,18 @@ _CONTENT_JOB_TYPE = {
 }
 
 
-def job_type_for(content_type, has_avatar=False):
-    """Resolve a Forge content_type to a v2 router job_type."""
+def job_type_for(content_type, has_avatar=False, has_style_refs=False):
+    """Resolve a Forge content_type to a v2 router job_type.
+
+    `has_style_refs`: the promoter uploaded reference flyers to match. This
+    overrides the default backdrop routing → FLUX.2 /edit (JOB_RESTYLE), the
+    only route that actually recreates an uploaded flyer's style (bake-off
+    2026-06-09). Avatar/character consistency (JOB_AVATAR) still wins for bios.
+    """
     if content_type == 'artist_bio' and has_avatar:
         return JOB_AVATAR
+    if has_style_refs:
+        return JOB_RESTYLE
     return _CONTENT_JOB_TYPE.get(content_type, JOB_HERO_ART)
 
 

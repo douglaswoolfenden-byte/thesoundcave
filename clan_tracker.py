@@ -111,21 +111,36 @@ def fetch_user_by_username(username: str) -> dict | None:
     return None
 
 
-def fetch_user_tracks(user_id: int, limit: int = 5) -> list:
-    """Fetch an artist's most recent tracks."""
+def fetch_all_user_tracks(user_id: int, max_tracks: int = 500, max_pages: int = 10) -> list:
+    """Fetch ALL of an artist's OWN uploaded tracks.
+
+    The `/users/{id}/tracks` endpoint returns only tracks the user uploaded —
+    reposts/mixes of other people live on a separate endpoint, so they're
+    excluded here by definition. We paginate via `linked_partitioning` (page
+    size 200) and follow `next_href`, bounded by max_tracks / max_pages so a
+    prolific artist can't hang the daily run.
+    """
     headers = {'Authorization': f'OAuth {TOKEN}'}
-    try:
-        r = requests.get(
-            f'https://api.soundcloud.com/users/{user_id}/tracks',
-            params={'limit': limit, 'order': 'created_at'},
-            headers=headers,
-            timeout=10
-        )
-        if r.status_code == 200:
-            return r.json()
-    except Exception:
-        pass
-    return []
+    tracks: list = []
+    url = f'https://api.soundcloud.com/users/{user_id}/tracks'
+    params = {'limit': 200, 'linked_partitioning': 'true'}
+    pages = 0
+    while url and pages < max_pages and len(tracks) < max_tracks:
+        try:
+            r = requests.get(url, params=params, headers=headers, timeout=15)
+            if r.status_code != 200:
+                break
+            data = r.json()
+        except Exception:
+            break
+        if isinstance(data, list):           # non-paginated fallback
+            tracks.extend(data)
+            break
+        tracks.extend(data.get('collection', []))
+        url = data.get('next_href')          # already carries cursor + params
+        params = None
+        pages += 1
+    return tracks[:max_tracks]
 
 
 # ── Build snapshot ─────────────────────────────────────────
@@ -148,20 +163,22 @@ def build_snapshot(artists: dict) -> dict:
             continue
 
         user_id = profile.get('id')
-        tracks  = fetch_user_tracks(user_id) if user_id else []
+        tracks  = fetch_all_user_tracks(user_id) if user_id else []
 
-        # Aggregate track stats from recent tracks
+        # Aggregate across ALL of the artist's own tracks (accurate play count,
+        # not just the 5 most recent). Reposts are excluded by the endpoint.
         total_plays  = sum(t.get('playback_count', 0) or 0 for t in tracks)
         total_likes  = sum((t.get('likes_count') or t.get('favoritings_count') or 0) for t in tracks)
         total_reposts = sum(t.get('reposts_count', 0) or 0 for t in tracks)
 
         latest_track = None
         if tracks:
+            newest = max(tracks, key=lambda t: (t.get('created_at') or ''))
             latest_track = {
-                'title': tracks[0].get('title', ''),
-                'plays': tracks[0].get('playback_count', 0) or 0,
-                'likes': tracks[0].get('likes_count') or tracks[0].get('favoritings_count') or 0,
-                'created_at': (tracks[0].get('created_at', '') or '')[:10].replace('/', '-'),
+                'title': newest.get('title', ''),
+                'plays': newest.get('playback_count', 0) or 0,
+                'likes': newest.get('likes_count') or newest.get('favoritings_count') or 0,
+                'created_at': (newest.get('created_at', '') or '')[:10].replace('/', '-'),
             }
 
         snapshot['artists'][username] = {

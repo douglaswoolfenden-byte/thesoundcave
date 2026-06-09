@@ -1157,15 +1157,38 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .btn-outline:hover { border-color: var(--red); color: var(--red); }
 .btn-outline.active { background: var(--red); border-color: var(--red); color: var(--bg); }
 
-/* ── Artist Detail Panel (slide-out) ───────────────────── */
-.panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 300; display: none; }
+/* ── Artist Detail — centered modal (wider than tall) ──────
+   Spec: wiki/spec/artist_detail_modal.md. Shares the modal grammar of
+   .stat-modal: dim+blur backdrop, centred card, Esc/click-to-close. */
+.panel-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  z-index: 300; display: none;
+}
 .panel-overlay.open { display: block; }
 .artist-panel {
-  position: fixed; right: 0; top: 0; bottom: 0; width: 500px; max-width: 100vw;
-  background: var(--card); border-left: 1px solid var(--border);
-  z-index: 301; overflow-y: auto; transform: translateX(100%); transition: transform .3s;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -48%) scale(0.98);
+  width: 760px; max-width: 92vw;
+  max-height: 86vh;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.65);
+  z-index: 301;
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-soft),
+              transform var(--motion-fast) var(--ease-soft);
 }
-.artist-panel.open { transform: translateX(0); }
+.artist-panel.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
 .panel-head {
   padding: 20px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 14px;
@@ -1692,81 +1715,76 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .panel-growth-tag.up { color: var(--green, #22c55e); }
 .panel-growth-tag.down { color: var(--red); }
 
-/* ── Platform links — single-column list with brand SVGs ──── */
-.platform-grid { display: flex; flex-direction: column; gap: 4px; }
-.plat-row {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--card);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+/* ── Platform links — compact horizontal marks (icon-only) ────
+   Spec: wiki/spec/artist_detail_modal.md. Icon-only, name on hover (title);
+   click dim mark = add inline, click bright = open, hover ✎ = edit. */
+.platform-grid { display: block; }
+.platform-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.plat-chip {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s, transform .15s;
 }
-.plat-row:hover { background: rgba(255,69,0,0.08); border-color: var(--border-lt); }
-.plat-row.linked { border-color: rgba(255,69,0,0.35); }
-.plat-row-mark {
+.plat-chip:hover { transform: translateY(-2px); border-color: var(--border-lt); }
+.plat-chip-ico {
   display: flex; align-items: center; justify-content: center;
-  color: var(--muted);
-  transition: color 0.15s;
+  width: 100%; height: 100%;
 }
-.plat-row.linked .plat-row-mark { color: var(--red); }
-.plat-row:hover .plat-row-mark { color: var(--red); }
-.plat-row-body { min-width: 0; overflow: hidden; }
-.plat-row-name {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--secondary);
-  line-height: 1.2;
-}
-.plat-row-status { font-size: 12px; line-height: 1.3; margin-top: 2px; }
-.plat-row-url {
-  color: var(--body);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-.plat-row-cta { color: var(--muted); font-style: italic; font-size: 11px; }
-.plat-row:hover .plat-row-cta { color: var(--red); font-style: normal; }
-.plat-row-actions {
-  display: flex; align-items: center; gap: 8px;
-  color: var(--muted);
-  font-size: 14px;
-}
-.plat-row-open {
+.plat-chip-ico:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 8px; }
+.plat-chip.linked {
   color: var(--red);
-  text-decoration: none;
-  padding: 2px 4px;
-  border-radius: 4px;
+  border-color: rgba(255,69,0,0.45);
+  background: rgba(255,69,0,0.08);
 }
-.plat-row-open:hover { background: rgba(255,69,0,0.15); }
-.plat-row-edit-hint {
-  font-size: 13px;
-  color: var(--muted);
-  width: 18px; text-align: center;
+.plat-chip.linked:hover { background: rgba(255,69,0,0.16); }
+.plat-chip:not(.linked) { opacity: 0.5; }
+.plat-chip:not(.linked):hover { opacity: 1; color: var(--red); }
+/* edit pencil — appears on hover over a linked mark */
+.plat-chip-edit {
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 16px; height: 16px;
+  display: none;
+  align-items: center; justify-content: center;
+  font-size: 9px;
+  background: var(--elevated);
+  border: 1px solid var(--border-lt);
+  border-radius: 50%;
+  color: var(--secondary);
+  cursor: pointer;
 }
-.plat-row:hover .plat-row-edit-hint { color: var(--red); }
-.plat-row-edit-panel {
-  grid-column: 1 / -1;
-  padding-top: 8px;
+.plat-chip:hover .plat-chip-edit { display: flex; }
+.plat-chip-edit:hover { color: var(--red); border-color: var(--red); }
+/* inline edit box (one at a time, below the row of marks) */
+.plat-edit { margin-top: 12px; }
+.plat-edit[hidden] { display: none; }
+.plat-edit-label {
+  display: block;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 5px;
 }
-.plat-row-edit-panel .plat-input {
+.plat-edit .plat-input {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border-lt);
   color: var(--body);
   font-size: 12px;
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
 }
-.plat-row-edit-panel .plat-input:focus { outline: none; border-color: var(--red); }
+.plat-edit .plat-input:focus { outline: none; border-color: var(--red); }
 
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 900px) {

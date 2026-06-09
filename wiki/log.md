@@ -700,3 +700,14 @@ Branch `phase-3-v0.6`. First of 4 sign-off-gated phases (plan: `~/.claude/plans/
 Verification note: the MCP browser uses a persistent profile that disk-cached pre-edit JS/CSS — real (fresh) loads are unaffected; files pass `node --check` and serve correct bytes.
 
 **Next:** Phase 2 — artist detail right-slide panel -> centered modal + compact L->R platform links (spec first).
+
+## 2026-06-09 — The Cave overhaul, Phase 2 (artist detail modal + compact links)
+
+Spec: `wiki/spec/artist_detail_modal.md` (signed off, then built). Live-fire screenshot-confirmed.
+
+- **P2a — artist panel → centered modal.** `.artist-panel` was a 500px right-slide sidebar; now a centered, wider-than-tall modal (760px / max 92vw, max-height 86vh, internal scroll, fade+scale-in) over a dim+blur `#panelOverlay`. Shares the `.stat-modal` grammar from P1d. `openPanel`/`closePanel` logic unchanged — only CSS geometry — so all callers inherit it. Esc-to-close added (`js/app.js`).
+- **P2b — compact platform links.** Vertical `.plat-row` list + "+ ADD LINK" replaced by a horizontal row of 40px icon-only `.plat-chip` marks (name on hover via `title`). Linked = orange/active (click opens the URL, `https://` prefixed); unlinked = dimmed (click reveals one shared inline `#platEdit` input → saves via existing `savePlatform` → flips linked); hover a linked mark for a ✎ pencil to edit. Handlers via `addEventListener` (no inline JS with user data). Removed `togglePlatformEdit` / `refreshPlatformRow` and the old `.plat-row*` CSS.
+
+Also (mid-Phase-2): commit security review on the P1 commit flagged the stat-modal row's `onclick="…openPanel('${esc(user)}')"` — esc is HTML-attr-safe but not JS-string-safe. Fixed in `80e05d7` (data-user attribute + addEventListener). Applied the same no-inline-handler pattern to P2b's chips.
+
+**Next:** Phase 3 — accurate own-track play tracking (SoundCloud API, all own tracks) + replace the history table with a chart (spec first).

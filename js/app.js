@@ -358,26 +358,39 @@ function savePlatform(username, platform, value) {
   window.rosterSync?.pushArtist(favs[username]);
 }
 
-// Reveal the edit input for a platform row; auto-focuses input.
-function togglePlatformEdit(rowEl) {
-  if (!rowEl) return;
-  // Close any other open editors first
-  document.querySelectorAll('.plat-row-edit-panel:not([hidden])').forEach(p => {
-    if (p.closest('.plat-row') !== rowEl) p.hidden = true;
-  });
-  const panel = rowEl.querySelector('.plat-row-edit-panel');
-  if (!panel) return;
-  panel.hidden = !panel.hidden;
-  if (!panel.hidden) {
-    const inp = panel.querySelector('input');
-    if (inp) { inp.focus(); inp.select(); }
+// Click a platform mark: open its URL if linked, else start adding one.
+function platformPrimary(username, platform) {
+  const favs = getFavourites();
+  const a = favs[username];
+  if (!a) return;
+  const url = (a.platforms || {})[platform] || '';
+  if (url) {
+    const full = url.startsWith('http') ? url : 'https://' + url;
+    window.open(full, '_blank', 'noopener');
+  } else {
+    openPlatformEdit(username, platform);
   }
 }
 
-// Re-render a single platform row after the user blurs the input.
-function refreshPlatformRow(inputEl) {
-  if (!activeArtist) return;
-  if (typeof openPanel === 'function') openPanel(activeArtist);
+// Reveal a single inline URL input below the marks (one at a time).
+function openPlatformEdit(username, platform) {
+  const box = document.getElementById('platEdit');
+  if (!box) return;
+  const favs = getFavourites();
+  const cur = (favs[username]?.platforms || {})[platform] || '';
+  box.hidden = false;
+  box.innerHTML = `<label class="plat-edit-label">${esc(PLAT_LABELS[platform] || platform)} link</label>
+    <input class="plat-input" id="platEditInput" placeholder="Paste ${esc(PLAT_LABELS[platform] || platform)} URL" value="${esc(cur)}">`;
+  const input = document.getElementById('platEditInput');
+  if (!input) return;
+  input.focus();
+  let done = false;
+  const commit = () => { if (done) return; done = true; savePlatform(username, platform, input.value); renderPanel(username); };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { box.hidden = true; box.innerHTML = ''; }
+  });
+  input.addEventListener('blur', commit);
 }
 
 function saveNotes() {
@@ -824,6 +837,11 @@ function closePanel() {
   activeArtist = null;
 }
 
+// Esc closes the artist modal (registered once at load).
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('artistPanel')?.classList.contains('open')) closePanel();
+});
+
 function renderPanel(username) {
   const favs = getFavourites();
   const isClan = !!favs[username];
@@ -889,38 +907,32 @@ function renderPanel(username) {
       ${snaps.length >= 2 ? `<div style="margin-top:12px">${buildSparkline(snaps.map(s=>s.followers||0), 260, 40, '#e63946')}</div>` : ''}`;
   }
 
-  // Platform links — brand marks, single-col list, click-to-edit with clear add-link affordance.
-  // All dynamic values pass through esc(); SVG icons are codebase constants in PLAT_ICONS.
-  const platformRows = PLATFORMS.map(p => {
+  // Platform links — compact horizontal marks (icon-only, name on hover).
+  // Click a dim mark to add a URL inline; click a bright (linked) mark to open
+  // it; hover a linked mark for a ✎ pencil to edit. Handlers are wired via JS
+  // (not inline onclick) so usernames never sit inside attribute-embedded JS.
+  const platformChips = PLATFORMS.map(p => {
     const url = (a.platforms||{})[p] || '';
     const linked = !!url;
-    const fullUrl = linked ? (url.startsWith('http') ? url : 'https://' + url) : '';
-    const displayUrl = linked ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
-    const statusInner = linked
-      ? `<span class="plat-row-url" title="${esc(fullUrl)}">${esc(displayUrl)}</span>`
-      : `<span class="plat-row-cta">+ ADD LINK</span>`;
-    const openLink = linked
-      ? `<a href="${esc(fullUrl)}" target="_blank" rel="noopener" class="plat-row-open" title="Open in new tab" onclick="event.stopPropagation()">↗</a>`
-      : '';
-    return `<div class="plat-row ${linked ? 'linked' : ''}" data-platform="${p}" onclick="togglePlatformEdit(this)">
-      <div class="plat-row-mark" aria-hidden="true">${PLAT_ICONS[p]}</div>
-      <div class="plat-row-body">
-        <div class="plat-row-name">${PLAT_LABELS[p]}</div>
-        <div class="plat-row-status">${statusInner}</div>
-      </div>
-      <div class="plat-row-actions">
-        ${openLink}
-        <span class="plat-row-edit-hint">${linked ? '✎' : '+'}</span>
-      </div>
-      <div class="plat-row-edit-panel" hidden>
-        <input class="plat-input" placeholder="${PLAT_LABELS[p]} URL" value="${esc(url)}"
-          onclick="event.stopPropagation()"
-          onkeydown="if(event.key==='Enter'){this.blur()}"
-          onblur="savePlatform('${esc(username)}','${p}',this.value);refreshPlatformRow(this);">
-      </div>
-    </div>`;
+    const shown = linked ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'add link';
+    return `<span class="plat-chip ${linked ? 'linked' : ''}" data-platform="${p}" title="${esc(PLAT_LABELS[p])} · ${esc(shown)}">
+      <span class="plat-chip-ico" data-act="primary" role="button" tabindex="0" aria-label="${esc(PLAT_LABELS[p])}">${PLAT_ICONS[p]}</span>
+      ${linked ? `<span class="plat-chip-edit" data-act="edit" role="button" tabindex="0" aria-label="Edit ${esc(PLAT_LABELS[p])} link">✎</span>` : ''}
+    </span>`;
   }).join('');
-  document.getElementById('platformGrid').innerHTML = platformRows;
+  const grid = document.getElementById('platformGrid');
+  grid.innerHTML = `<div class="platform-row">${platformChips}</div><div class="plat-edit" id="platEdit" hidden></div>`;
+  grid.querySelectorAll('.plat-chip').forEach(chip => {
+    const p = chip.dataset.platform;
+    const primary = chip.querySelector('[data-act="primary"]');
+    primary.addEventListener('click', () => platformPrimary(username, p));
+    primary.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); platformPrimary(username, p); } });
+    const ed = chip.querySelector('[data-act="edit"]');
+    if (ed) {
+      ed.addEventListener('click', (e) => { e.stopPropagation(); openPlatformEdit(username, p); });
+      ed.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlatformEdit(username, p); } });
+    }
+  });
 
   // Snapshot history
   document.getElementById('snapBody').innerHTML = snaps.length

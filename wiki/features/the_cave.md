@@ -16,7 +16,7 @@ Below the hero, a chart strip plots weekly aggregate stats (followers / likes / 
 
 **Drill-downs (2026-06-09):** the stat panels are interactive. Hover Followers/Likes/Listens for a top-5-movers tooltip; click any of the 6 widgets to open a centered `.stat-modal` — a full ranked artist table (row → artist panel) for the stat widgets, or the complete Genre Mix / New Drops breakdown. Panels are also visibly enlarged (scaled-up type + padding) for legibility.
 
-**Artist panel (2026-06-09):** opening an artist no longer auto-adds them to the Clan. Non-clan artists render **read-only** with a "+ Add to Clan" action; only that button (or the Foraging Clan button) writes to the Clan.
+**Artist panel (2026-06-09):** opening an artist no longer auto-adds them to the Clan. Non-clan artists render **read-only** with a "+ Add to Clan" action; only that button (or the Foraging Clan button) writes to the Clan. The panel is now a **centered modal** (was a right-slide sidebar) with platform links as a compact horizontal row of icon marks (click to add/open, hover ✎ to edit) — spec `wiki/spec/artist_detail_modal.md`. Shared by Mural / Foraging / Clan / Footprints.
 
 ## Why it exists
 The Cave is the entry point — first impression matters. Old version was a stat grid that felt like an admin console. New version is curatorial and visually distinctive, signalling that this is a *content/discovery* product, not just a dashboard.

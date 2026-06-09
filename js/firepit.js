@@ -16,6 +16,9 @@ let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
 let _forgeRefImages = [];
 const REF_IMAGES_MAX_COUNT = 5;
 const REF_IMAGES_MAX_BYTES = 5 * 1024 * 1024; // 5MB per image
+// Must match the backend allow-list in content_api._ref_images_to_blocks.
+// HEIC (Mac), AVIF and SVG are NOT accepted by the image API.
+const REF_IMAGES_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 // Which content types should auto-generate an image alongside the text.
 const OUTPUT_MEDIA = {
@@ -474,7 +477,12 @@ async function generateContent(variation) {
       const j = await r.json().catch(() => ({}));
       throw new Error(`Insufficient credits — this generation costs ${j.cost || 1}.`);
     }
-    if (!r.ok) throw new Error(`API error: ${r.status}`);
+    if (!r.ok) {
+      // Surface the API's actual error (e.g. an unsupported reference image),
+      // not a generic status code.
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || `API error: ${r.status}`);
+    }
     const data = await r.json();
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
@@ -495,10 +503,13 @@ async function generateContent(variation) {
       else document.getElementById('forgeImageArea').style.display = 'none';
     }
   } catch(e) {
+    // Only blame the API connection when the request genuinely couldn't reach it
+    // (network/fetch failure). A 4xx/5xx means the API IS up — show its message.
+    const offline = (e instanceof TypeError) || /failed to fetch|networkerror|load failed/i.test(e.message || '');
     outputArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
       <span style="font-family:var(--font-mono);color:var(--color-accent);font-weight:600">!</span>
-      <span style="color:var(--red)">${e.message}</span>
-      <span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>
+      <span style="color:var(--red)">${esc(e.message)}</span>
+      ${offline ? `<span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>` : ''}
     </div>`;
   }
 }
@@ -645,6 +656,13 @@ function handleRefImagesChange(event) {
   const oversized = files.find(f => f.size > REF_IMAGES_MAX_BYTES);
   if (oversized) {
     errEl.textContent = `"${oversized.name}" is over 5MB.`;
+    errEl.style.display = 'block';
+    event.target.value = '';
+    return;
+  }
+  const badType = files.find(f => !REF_IMAGES_SUPPORTED_TYPES.includes(f.type));
+  if (badType) {
+    errEl.textContent = `"${badType.name}" is ${badType.type || 'an unsupported format'} — use JPG, PNG, WebP or GIF.`;
     errEl.style.display = 'block';
     event.target.value = '';
     return;

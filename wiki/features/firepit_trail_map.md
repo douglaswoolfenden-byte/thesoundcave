@@ -1,9 +1,14 @@
 # Feature: Firepit — Trail Map
 
-> Status: **UI v1 in progress** on branch `feature/trail-map-ui` (Stream 3). Frontend-only, mock data via `localStorage`. Backend wiring is Stream 1 Phase G (Ayrshare).
+> Status: **Backend-wired + campaign-aware (2026-06-09).** Scheduled posts persist to Supabase via `/api/scheduled_posts` (`_trailCache` in `js/trail_map.js` is the live cache, no longer a localStorage mock). Drawer is campaign-grouped; scheduling syncs with Stash. Platform publishing (Ayrshare) still pending.
 
 ## What it does
-Content calendar. Schedule Stash items for publication across platforms (Instagram, TikTok, X, LinkedIn) on specific dates/times. Month + Week views, drag-and-drop from a side drawer.
+Content calendar. Schedule Stash items for publication across platforms (Instagram, Facebook, TikTok, Reddit) on specific dates/times. Month + Week views, drag-and-drop from a side drawer.
+
+### Campaign-aware drawer + schedule-lock (2026-06-09)
+- The side drawer mirrors the Stash: **campaign folders** (click to drill into a Gathering's posts) sit alongside loose draggable cards. Reuses `groupStashByCampaign()` from `js/stash.js` so the two surfaces can't drift.
+- Calendar pills and drawer cards show the post's **countdown label** (`7-DAY`, `ANNOUNCEMENT`…) via `postTypeLabel()`, so it's clear what each post is.
+- **Schedule-lock:** dragging a post onto a date creates a `scheduled_posts` row; that item is then derived as scheduled. In the drawer it's shown **dimmed + non-draggable** (not removed — clarity over hiding, 2026-06-09), and the campaign folder shows `N of M to schedule` / `all scheduled ✓`. Deleting the calendar entry makes it draggable again. Derived from the shared `_trailScheduledIds()` set, no extra write.
 
 ## Why it exists
 Bulk content creation without a schedule is just a pile. Trail Map turns Forge output into a publishing plan — and is the **distribution** half of the product's elevator pitch (scout + create + distribute).

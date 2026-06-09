@@ -1361,6 +1361,108 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .stash-status.published { background: rgba(0,200,150,0.15); color: var(--green); }
 .stash-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
+/* ── Stash — campaign-block grid ────────────────────────────
+   Top level is a grid of blocks: campaign tiles (post-count badge, drill in on
+   click) sit alongside single loose-item tiles. Drill-in reuses the same grid. */
+.stash-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.stash-head-title {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: var(--tracking-wide);
+  text-transform: uppercase; color: var(--body);
+}
+.stash-head-count { font-size: 11px; color: var(--muted); }
+
+.stash-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+}
+
+.stash-block {
+  position: relative; background: var(--elevated); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
+  transition: border-color 0.15s;
+}
+.stash-block:hover { border-color: var(--border-lt); }
+.stash-block--campaign { cursor: pointer; }
+.stash-block--campaign:hover { border-color: var(--red); }
+
+.stash-block-cover {
+  position: relative; aspect-ratio: 16 / 10; background: var(--card); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border);
+}
+.stash-block-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stash-block-noimg { font-size: 32px; opacity: 0.5; }
+
+.stash-block-count {
+  position: absolute; top: 8px; right: 8px; background: var(--red); color: #fff;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.countdown-badge {
+  position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: var(--body);
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 4px; backdrop-filter: blur(4px);
+}
+.countdown-badge--cd { background: var(--red-faint); color: var(--red); }
+
+.stash-block-body { padding: 10px 12px; flex: 1; min-width: 0; }
+.stash-block-title {
+  font-size: 13px; font-weight: 600; color: var(--body); margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stash-block-sub, .stash-block-preview {
+  font-size: 11px; color: var(--secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stash-block-preview { color: var(--muted); }
+.stash-block-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.stash-block-date { font-size: 10px; color: var(--muted); }
+
+.stash-block-actions { display: flex; gap: 4px; padding: 0 10px 10px; opacity: 0; transition: opacity 0.15s; }
+.stash-block:hover .stash-block-actions { opacity: 1; }
+
+.stash-drill-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.stash-back {
+  background: none; border: 1px solid var(--border); color: var(--secondary);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+}
+.stash-back:hover { border-color: var(--red); color: var(--red); }
+.stash-drill-title { font-size: 14px; font-weight: 600; color: var(--body); }
+.stash-drill-count { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* Suggested/proposed send date on a post tile (small print). */
+.stash-block-when {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.03em;
+  color: var(--muted); margin-bottom: 4px;
+}
+
+/* Hover settings overlay on a campaign tile (open Gathering / delete campaign). */
+.stash-block-settings {
+  position: absolute; top: 8px; left: 8px; display: flex; gap: 4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.stash-block--campaign:hover .stash-block-settings { opacity: 1; }
+
+/* Icon action buttons (Cave-style line-art) on tiles. */
+.stash-block-actions .action-btn,
+.stash-block-settings .action-btn {
+  width: 26px; height: 26px; padding: 0; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card); color: var(--secondary); cursor: pointer; transition: all 0.15s;
+}
+.stash-block-settings .action-btn {
+  background: rgba(8,8,8,0.72); border-color: rgba(255,255,255,0.16); backdrop-filter: blur(3px);
+}
+.stash-block-actions .action-btn:hover,
+.stash-block-settings .action-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-faint); }
+.stash-block-actions .icon, .stash-block-settings .icon { width: 14px; height: 14px; }
+
+/* Status badge extras — posted/archived lifecycle (auto-archive TBD). */
+.stash-status.posted   { background: rgba(0,200,150,0.15); color: var(--green); }
+.stash-status.archived { background: var(--card); color: var(--muted); }
+
 .trail-placeholder {
   text-align: center; padding: 80px 20px; color: var(--secondary);
   border: 2px dashed var(--border); border-radius: 12px;

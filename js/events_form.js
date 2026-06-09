@@ -31,7 +31,7 @@
       };
       renderForm();
     } catch (err) {
-      mount(h('div', { class: 'card' }, 'Could not load summons for editing.'));
+      mount(h('div', { class: 'card' }, 'Could not load gathering for editing.'));
     }
   }
 
@@ -81,7 +81,7 @@
     ]);
 
     mount(h('div', null, [
-      topBar(draft.editing_id ? 'EDIT SUMMONS' : 'NEW SUMMONS',
+      topBar(draft.editing_id ? 'EDIT GATHERING' : 'NEW GATHERING',
         draft.editing_id ? (() => window.openEvent(draft.editing_id)) : E.renderList),
       error ? h('div', { class: 'card', style: { borderColor: 'var(--red)', color: 'var(--red)', marginBottom: '12px' } }, error) : null,
       form,
@@ -211,10 +211,10 @@
 
   function renderBrandReferencesField() {
     const wrap = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } });
-    const labelRow = h('span', { style: E.MONO_LABEL }, 'BRAND REFERENCES · STYLE DNA ACROSS ALL SUMMONS');
+    const labelRow = h('span', { style: E.MONO_LABEL }, 'BRAND REFERENCES · STYLE DNA ACROSS ALL GATHERINGS');
     const body = h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } }, 'Loading kit…');
     const helper = h('div', { style: { fontSize: '10px', color: 'var(--muted)' } },
-      'Upload past flyers / promotional pieces to anchor your visual style. Each new summons campaign pulls from these.');
+      'Upload past flyers / promotional pieces to anchor your visual style. Each new gathering campaign pulls from these.');
     wrap.appendChild(labelRow);
     wrap.appendChild(body);
     wrap.appendChild(helper);

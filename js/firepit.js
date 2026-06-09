@@ -63,6 +63,16 @@ function _stashRowToItem(row) {
     status: m.status || 'draft',
     created: row.created_at,
     modified: row.created_at,
+    // Campaign linkage — campaign-bridged rows store these at the metadata
+    // top level (see _upsert_post_into_stash in campaigns_api.py). Carrying
+    // them through is what lets the Stash group posts into campaign blocks
+    // and render countdown labels. Loose Forge items leave them null.
+    source: m.source || null,
+    campaignId: m.campaign_id || null,
+    eventId: m.event_id || null,
+    eventName: m.event_name || null,
+    postType: m.post_type || null,
+    scheduledFor: m.scheduled_for || null,
   };
 }
 
@@ -129,7 +139,12 @@ function setFirepitMode(mode, btn) {
       el.classList.toggle('active', el.dataset.subtab === mode);
     });
   }
-  if (mode === 'stash') renderStash();
+  if (mode === 'stash') {
+    if (typeof resetStashView === 'function') resetStashView();
+    // Refresh the scheduled-id set so items already on the Trail Map stay hidden.
+    if (typeof loadScheduledStashIds === 'function') loadScheduledStashIds().then(renderStash);
+    else renderStash();
+  }
   if (mode === 'trailmap' && typeof renderTrailMap === 'function') renderTrailMap();
 }
 
@@ -137,6 +152,7 @@ async function renderFirepit() {
   updateForgeFields();
   await loadStash();
   await loadBrandKits();
+  if (typeof loadScheduledStashIds === 'function') await loadScheduledStashIds();
   updateStashCount();
   populateStashTypeFilter();
   if (firepitMode === 'stash') renderStash();
@@ -816,63 +832,10 @@ async function saveToStash() {
   setTimeout(() => btn.innerHTML = orig, 1500);
 }
 
-function updateStashCount() {
-  const lib = getContentLibrary();
-  const el = document.getElementById('stashCount');
-  if (el) el.textContent = lib.length || '';
-  const fp = document.getElementById('firepitCount');
-  if (fp) fp.textContent = lib.filter(i => i.status === 'draft').length || '';
-}
-
-function populateStashTypeFilter() {
-  const sel = document.getElementById('stashTypeFilter');
-  if (!sel) return;
-  const types = new Set(getContentLibrary().map(i => i.type));
-  const existing = sel.value;
-  sel.innerHTML = '<option value="">All types</option>' +
-    [...types].map(t => {
-      const ct = CONTENT_TYPES[t];
-      return `<option value="${t}">${ct ? ct.label : t}</option>`;
-    }).join('');
-  sel.value = existing;
-}
-
-function renderStash() {
-  const lib = getContentLibrary();
-  const search = (document.getElementById('stashSearch')?.value || '').toLowerCase();
-  const typeFilter = document.getElementById('stashTypeFilter')?.value || '';
-  const statusFilter = document.getElementById('stashStatusFilter')?.value || '';
-
-  let items = lib;
-  if (search) items = items.filter(i => i.content.toLowerCase().includes(search) || (i.label||'').toLowerCase().includes(search));
-  if (typeFilter) items = items.filter(i => i.type === typeFilter);
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
-
-  const el = document.getElementById('stashList');
-  if (!items.length) {
-    el.innerHTML = `<div class="empty"><div class="ico">📦</div><p>${lib.length ? 'No content matches your filters.' : 'Your stash is empty. Generate content in the Forge and save it here.'}</p></div>`;
-    return;
-  }
-  el.innerHTML = items.map(item => {
-    const preview = item.content.slice(0, 100).replace(/\n/g, ' ');
-    const date = new Date(item.created).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-    const thumb = item.imageUrl ? `<img src="${item.imageUrl}" class="stash-thumb" alt="">` : '';
-    return `<div class="stash-item">
-      ${thumb}
-      <div class="stash-info">
-        <div class="stash-type">${item.label || item.type}</div>
-        <div class="stash-preview">${esc(preview)}</div>
-        <div class="stash-date">${date}</div>
-      </div>
-      <span class="stash-status ${item.status}">${item.status}</span>
-      <div class="stash-actions">
-        <button class="action-btn" onclick="editStashItem('${item.id}')" title="Edit in Forge"><span class="icon">✏️</span></button>
-        <button class="action-btn" onclick="copyStashItem('${item.id}')" title="Copy"><span class="icon">📋</span></button>
-        <button class="action-btn" onclick="deleteStashItem('${item.id}')" title="Delete"><span class="icon">🗑️</span></button>
-      </div>
-    </div>`;
-  }).join('');
-}
+// Stash VIEW (renderStash, updateStashCount, populateStashTypeFilter, campaign
+// grouping, drill-in, postTypeLabel, scheduled-set) lives in js/stash.js.
+// firepit.js owns the stash DATA layer (_stashCache, _stashRowToItem, loadStash,
+// saveToStash) and the Forge-coupled mutations (editStashItem/copy/delete) below.
 
 function editStashItem(id) {
   const lib = getContentLibrary();

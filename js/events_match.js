@@ -31,7 +31,7 @@
       const confirmBtn = h('button', {
         class: 'btn-red', type: 'button', disabled: !allChosen,
         onClick: () => confirmAndSave(results, selections, confirmBtn),
-      }, '{SAVE SUMMONS}');
+      }, '{SAVE GATHERING}');
       const blocks = results.map((r, idx) => renderRow(r, idx, selections, renderMatches));
       mountInto(matchesSlot, [
         ...blocks,
@@ -122,7 +122,7 @@
           body: JSON.stringify({ handle: sel.payload.handle }),
         });
         const j = await r.json();
-        if (!r.ok) { alert(`Scrape failed for ${sel.payload.handle}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE SUMMONS}'; return; }
+        if (!r.ok) { alert(`Scrape failed for ${sel.payload.handle}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE GATHERING}'; return; }
         apid = j.profile.id;
       } else if (sel.kind === 'manual') {
         const r = await authedFetch(`${API}/api/artist-profiles`, {
@@ -130,7 +130,7 @@
           body: JSON.stringify({ display_name: results[i].name }),
         });
         const j = await r.json();
-        if (!r.ok) { alert(`Manual stub failed for ${results[i].name}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE SUMMONS}'; return; }
+        if (!r.ok) { alert(`Manual stub failed for ${results[i].name}: ${j.error || r.status}`); btn.disabled = false; btn.textContent = '{SAVE GATHERING}'; return; }
         apid = j.profile.id;
       }
       lineup.push({ artist_profile_id: apid, billing_position: i === 0 ? 'headliner' : 'support', billing_order: i });

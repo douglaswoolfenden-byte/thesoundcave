@@ -4,9 +4,9 @@
   const { API, h, mount, mountInto, authedFetch, fmtDate, MONO_LABEL, MONO_HEAD, emptyCard } = E;
 
   async function renderList() {
-    const newBtn = h('button', { type: 'button', class: 'btn-red', onClick: E.startNew }, '{NEW SUMMONS}');
+    const newBtn = h('button', { type: 'button', class: 'btn-red', onClick: E.startNew }, '{NEW GATHERING}');
     const headerRow = h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' } }, [
-      h('h2', { style: { ...MONO_HEAD, margin: 0 } }, 'SUMMONS'),
+      h('h2', { style: { ...MONO_HEAD, margin: 0 } }, 'GATHERINGS'),
       newBtn,
     ]);
     const dropZone = renderDropZone();
@@ -20,7 +20,7 @@
       const events = j.events || [];
       const countEl = document.getElementById('eventsCount');
       if (countEl) countEl.textContent = events.length ? events.length : '';
-      if (!events.length) { mountInto(listSlot, emptyCard('No summons yet. Tap {NEW SUMMONS} to call your first.')); return; }
+      if (!events.length) { mountInto(listSlot, emptyCard('No gatherings yet. Tap {NEW GATHERING} to call your first.')); return; }
       mountInto(listSlot, renderEventCards(events));
     } catch (e) {
       mountInto(listSlot, emptyCard('Could not load events. Is the API running?'));
@@ -42,7 +42,7 @@
   function eventCard(e) {
     const delBtn = h('button', {
       type: 'button',
-      title: 'Delete summons',
+      title: 'Delete gathering',
       style: {
         position: 'absolute', top: '8px', right: '8px',
         background: 'transparent', border: '1px solid var(--muted)',
@@ -67,7 +67,7 @@
   }
 
   async function deleteEvent(e) {
-    if (!confirm(`Delete "${e.name}"?\n\nThis removes the summons, lineup, campaign and posts. Cannot be undone.`)) return;
+    if (!confirm(`Delete "${e.name}"?\n\nThis removes the gathering, lineup, campaign and posts. Cannot be undone.`)) return;
     try {
       const res = await E.authedFetch(`${E.API}/api/events/${e.id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -91,7 +91,7 @@
         borderStyle: 'dashed', cursor: 'pointer',
       },
     }, [
-      h('div', { style: { ...MONO_LABEL, marginBottom: '6px' } }, 'DROP MEDIA · AUTO-EXTRACT SUMMONS'),
+      h('div', { style: { ...MONO_LABEL, marginBottom: '6px' } }, 'DROP MEDIA · AUTO-EXTRACT GATHERING'),
       h('div', { style: { fontSize: '11px', color: 'var(--secondary)' } },
         'PNG / JPG / WEBP, up to 10MB. Or click to pick a file.'),
       status,

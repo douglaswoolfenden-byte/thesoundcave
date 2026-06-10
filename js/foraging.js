@@ -41,7 +41,7 @@ function getScheduledSearches() {
 }
 
 async function loadScheduledSearches() {
-  const apiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiUrl = scApiBase();
   try {
     const r = await fetch(`${apiUrl}/api/scheduled-searches`);
     if (r.ok) {
@@ -56,7 +56,7 @@ async function loadScheduledSearches() {
 function saveScheduledSearches(d) {
   _scheduledCache = d;
   localStorage.setItem('sc_scheduled_searches', JSON.stringify(d));   // always keep a local copy
-  const apiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiUrl = scApiBase();
   fetch(`${apiUrl}/api/scheduled-searches`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
   }).catch(() => { /* offline — the local copy holds until next sync */ });
@@ -191,7 +191,7 @@ async function runLiveSearch() {
     <span>SEARCHING SOUNDCLOUD<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
   </div>`;
 
-  const apiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiUrl = scApiBase();
   const params = new URLSearchParams();
   if (genre) params.set('genre', genre);
   if (minF) params.set('min_followers', minF);

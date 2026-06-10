@@ -10,7 +10,7 @@ let _compositorActive = false;
 let _forgeVariants = [];           // last response's variants, when variant mode fired
 let _forgePickedIndex = null;      // index into _forgeVariants the user picked
 let _forgePickedSnapshot = '';     // textarea content at pick time — used to detect edits on swap
-let forgeApiUrl = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+let forgeApiUrl = scApiBase();
 
 // Reference images uploaded for the current generation (base64 data URLs).
 let _forgeRefImages = [];

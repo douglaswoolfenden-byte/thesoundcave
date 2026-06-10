@@ -9,7 +9,7 @@
 // ─────────────────────────────────────────────────────────
 
 (function () {
-  const apiBase = () => localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiBase = () => scApiBase();
 
   // ── State ───────────────────────────────────────────────
   let _kits = [];

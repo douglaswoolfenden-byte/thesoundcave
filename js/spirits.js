@@ -15,7 +15,7 @@
 (function () {
   const apiBase = () =>
     (typeof forgeApiUrl !== 'undefined' && forgeApiUrl) ||
-    localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+    scApiBase();
 
   // Cave-style line-art bin, matching the stash/clan icon set.
   const TRASH = '<svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4 H13.5"/><path d="M5.75 4 V2.5 H10.25 V4"/><path d="M3.75 4 L4.5 13.5 H11.5 L12.25 4"/><path d="M6.5 6.5 V11 M9.5 6.5 V11"/></svg>';

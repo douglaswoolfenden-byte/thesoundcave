@@ -10,7 +10,7 @@
 // Spec: wiki/spec/roster_account_persistence.md. Exposes window.rosterSync.
 // Signed-out → every function is a safe no-op (app runs localStorage-only).
 (function () {
-  const apiBase = () => (typeof localStorage !== 'undefined' && localStorage.getItem('sc_api_url')) || 'http://localhost:8000';
+  const apiBase = () => scApiBase();
 
   let _loading = false;
 

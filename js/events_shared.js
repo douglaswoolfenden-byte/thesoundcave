@@ -4,7 +4,7 @@
 // can read from `window.scEvents`. No build system — plain script tags.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (function () {
-  const API = (typeof localStorage !== 'undefined' && localStorage.getItem('sc_api_url')) || 'http://localhost:8000';
+  const API = scApiBase();
   const root = () => document.getElementById('eventsRoot');
 
   // ── tiny DOM builder ──────────────────────────────────

@@ -2,6 +2,7 @@ requests
 python-dotenv
 flask
 flask-cors
+gunicorn
 anthropic
 supabase
 psycopg[binary]

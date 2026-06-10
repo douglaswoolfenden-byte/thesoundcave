@@ -828,7 +828,7 @@ function addArtistToClan(username) {
 }
 
 async function refreshArtistLive(username) {
-  const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiBase = scApiBase();
   try {
     const r = await fetch(`${apiBase}/api/artist/${encodeURIComponent(username)}`);
     if (!r.ok) return;
@@ -1051,7 +1051,7 @@ function togglePanelStar(username) {
 
   async function hydrate() {
     try {
-      const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+      const apiBase = scApiBase();
       const r = await scAuth.authedFetch(`${apiBase}/api/me`);
       if (!r.ok) return;
       const me = await r.json();
@@ -1101,7 +1101,7 @@ function togglePanelStar(username) {
     }
   });
   connectBtn.addEventListener('click', async () => {
-    const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+    const apiBase = scApiBase();
     try {
       const r = await scAuth.authedFetch(`${apiBase}/api/ayrshare/connect-url`);
       const j = await r.json();
@@ -1141,7 +1141,7 @@ async function openBillingModal() {
   const cards = document.getElementById('billingCards');
   const pack  = document.getElementById('billingPack');
   const note  = document.getElementById('billingNote');
-  const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiBase = scApiBase();
   modal.hidden = false;
   note.textContent = '';
   note.className = 'billing-note';
@@ -1189,7 +1189,7 @@ async function openBillingModal() {
 }
 
 async function startCheckout(btn) {
-  const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiBase = scApiBase();
   const lookup_key = btn.dataset.lookup;
   const orig = btn.textContent;
   btn.disabled = true;
@@ -1213,7 +1213,7 @@ async function startCheckout(btn) {
 }
 
 async function openBillingPortal() {
-  const apiBase = localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+  const apiBase = scApiBase();
   try {
     const r = await scAuth.authedFetch(`${apiBase}/api/billing/portal`, {method: 'POST'});
     const data = await r.json();

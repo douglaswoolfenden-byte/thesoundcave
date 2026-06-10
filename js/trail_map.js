@@ -20,7 +20,7 @@ let trailDrawerCampaign = null;             // campaignId the drawer is drilled 
 
 // ── Storage (Supabase-backed via content_api) ────────────
 let _trailCache = [];
-const _trailApiBase = () => localStorage.getItem('sc_api_url') || 'http://localhost:8000';
+const _trailApiBase = () => scApiBase();
 
 function getScheduled() { return _trailCache; }
 

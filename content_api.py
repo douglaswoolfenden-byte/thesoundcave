@@ -1863,8 +1863,15 @@ def _fire_due_posts():
             print(f'  ✗ exception {rid}: {e}')
 
 
+_executor_started = False
+
+
 def _start_executor():
-    """Start APScheduler. Guarded against Flask debug-mode double-start."""
+    """Start APScheduler once. Guarded against Flask debug-mode double-start and
+    against being called twice (local __main__ + prod wsgi import)."""
+    global _executor_started
+    if _executor_started:
+        return
     if app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return  # parent of debug reloader; child will start it
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -1872,6 +1879,7 @@ def _start_executor():
     sched.add_job(_fire_due_posts, 'interval', seconds=60, id='fire_due_posts',
                   max_instances=1, coalesce=True)
     sched.start()
+    _executor_started = True
     print('[executor] APScheduler tick=60s started')
 
 

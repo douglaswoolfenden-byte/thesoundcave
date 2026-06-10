@@ -2,6 +2,5 @@
 requirements.txt
 venv/
 __pycache__/
-data/snapshots/
 scripts/
 tests/

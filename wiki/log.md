@@ -1,5 +1,44 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-10] Cave dashboard → rails layout (overlap killed, bigger, click-only drill-downs)
+- **Why:** Doug (mural screenshot): floating corner panels overlapped the artist thumbnails; wanted tidier/bigger/no-overlap (scrolling fine). Also disliked the hover *dropdown* (top-movers tooltip) — keep the orange hover ring + lift, detail on click only. Chose "side rails" over "bigger floating glass". Spec: `wiki/spec/cave_dashboard_redesign.md` (Update 2026-06-10).
+- **What shipped:** `.cave-hero` overlay → 3-column grid (left rail: Followers/Listens/Genre · centre stage: artist stack · right rail: Likes/Playlist/New Drops). Overlap now impossible by construction; cinematic CRT/vignette texture moved onto `.cave-stage` which clips the fanned back-cards in the gutter. Stage `min-height:800px`, cards 320→340px, diagonal tightened so the fan stays centred. Hover dropdown deleted (`showCaveTooltip`/`hideCaveTooltip`/`#caveStatTooltip` + CSS gone); hover is pure-CSS ring+lift, click opens the modal. Wheel-cycle rebound to the centre stage (rails scroll the page).
+- **Touched `css/style.css`** (removed dead `.cave-stat-tooltip`/`.cst-*` block) — a concurrent session was also editing this file; coordinate before commit.
+- **Verified:** Playwright, 6 seeded artists — grid 250/585/250, stage clips, 0 cards over rails, click opens modal, wheel cycles, 0 console errors.
+
+## [2026-06-10] Forge posters — structured event fields → overlay lines (shipped, browser-confirmed)
+Spec extension in `wiki/spec/compositor_overlay_forge.md`. Doug's call: the free-text "Event" box gave the overlay an unparsed blob; replace with structured fields so each fact lays down as a clean overlay line (the overlay, not the AI image, is the legible source).
+- **`firepit.js`:** new `event_details` field key on `event_poster` + `event_promo` → Night name + a 2-col grid (Venue/City/Date/Doors/End-curfew/Tickets; night name keeps id `forgeEvent`). `gatherForgeContext` reads them into ctx. New `buildPosterOverlay(ctx)`: headline = lineup (or night name), supporting = stacked `Night / Venue · City / Date · DOORS <d>[–<curfew>] / Tickets` (only present fields). Field grid uses inline `display:grid` (avoided `css/style.css` — a concurrent session was editing it).
+- **`content_api.build_user_prompt`:** appends the structured facts so the 3 copy variants reference venue/date/doors. *(Uncommitted this session — `content_api.py` also holds another session's `top_tracks` WIP; not bundling it. Recommit-coordinate.)*
+- **Browser-confirmed (no brand):** lineup headline + all structured lines render crisp over the styled backdrop; `toBlob()` flattens 1080×1350. Screenshot in `scratch/forge_confirm/overlay_structured.png`.
+- **Still open:** FLUX.2 `/edit` keeps baking *some* backdrop text (stray source date/“doors” persist) — lower impact now the real facts overlay cleanly on top. Options unchanged (prompt-harder / top mask band / editable). Doug to decide.
+
+## [2026-06-10] Forge poster compositor overlay — brand-less legible text (shipped, browser-confirmed)
+Spec: `wiki/spec/compositor_overlay_forge.md` (signed off). Closes the "shippable poster" gap after the restyle confirm.
+- **Problem:** restyle clones flyer *style* but bakes *garbled text*; the Konva text-overlay compositor existed but only mounted **when a brand kit was selected** (`firepit.js:795`), so the common no-brand case got a flat garbled image.
+- **Shipped (5 steps):** (1) `compositor.js` `DEFAULT_STYLE` (S0UNDCAV3 palette + DM Mono/Sans) so text renders on-brand with no kit; `addText` falls back to it (headline=text colour, supporting=body colour). (2) `firepit.js` gate → mounts for `event_poster`/`event_promo` even brand-less (`applyBrandKit(_brand||null)` clears stale brand). (3) Poster text wiring: headline=lineup, supporting=event details (date·venue·time). (4) `build_restyle_prompt` flipped from "render text legibly" → "clean BACKDROP, minimise lettering, leave clean zones for the overlay".
+- **Browser-confirmed (no brand):** compositor mounts (2 Konva layers, `_compositorActive=true`); `CONCRETE WONDERS` + event line render crisp + legible over the styled backdrop; `toBlob()` flattens full 1080×1350. Screenshots in `scratch/forge_confirm/`.
+- **Known rough edge:** FLUX.2 `/edit` still bakes *some* text (a wrong `SATURDAY OCTOBER 26 2024` header + `THE DOME` survived). Body zone clean; top header uncovered. Follow-up options captured in the spec (prompt-harder / top mask band / rely on editable overlay) — Doug to decide.
+- **Out of scope (unchanged):** campaign-post Konva; `artist_bio`/`social_post` auto-mount.
+
+## [2026-06-10] Cave drill-downs — graphic-first modals (shipped)
+- **Why:** Doug (mural screenshot): clicking "Followers gained" / "Genre mix" must pop a *more detailed high-level graphic* — even while data is empty. Click-wiring already existed (Phase 2 of clan_tracking_dashboard), but the modal showed a numbers table and a dead empty state. Spec: `wiki/spec/cave_drilldown_graphics.md` (signed off).
+- **What shipped:** followers/likes/listens modals lead with a clan-aggregate orange line chart over every snapshot day (movers table demoted to supporting detail below); genre modal is now an SVG donut in brand-orange shades + full swatched legend; empty baseline shows a framed "chart draws itself as snapshots land" placeholder instead of dead text; wired widgets get a "↗ details" hover hint.
+- **Verified:** Playwright — chart + movers, donut, simulated baseline-only state, hover hint, 0 console errors.
+
+## [2026-06-10] Artist modal v3 — visual stats, manual entry deleted (shipped)
+- **Why:** Doug's screenshot review: platform links belong up top with the name; *no* manual data input anywhere; followers/plays/likes/reposts must be shown as line graphics, not bare numbers; top-5 suggested tracks; the gold emoji star clashes with the brand orange. Spec: `wiki/spec/artist_modal_v3_visual_stats.md` (signed off, both questions).
+- **What shipped:** centered modal header with the platform chips inline under the name; 4 metric tiles each with an orange sparkline from the daily snapshots (click a tile → big chart switches metric); Manual Data Entry section + `saveManualData` + every `followers_override` read (cave/clan/footprints too) deleted; `/api/artist` now returns `top_tracks` (top 5 by plays, response-only) which the panel merges with scout-discovered tracks; star is an SVG in brand orange.
+- **Bug caught in verification:** tiles initially preferred local scout snapshots (single-track stats) and showed 4.3K plays against the chart's 6.7M — tiles now read the same backend series as the charts.
+- **Verified:** Playwright on seeded clan artist + live API path fired (real top tracks rendered); read-only view correct; 0 console errors.
+
+## [2026-06-10] Forge reference-restyle — browser-confirmed live (closes the open gate)
+- **What:** Drove the full UI path (login → FIREPIT → FORGE → Event Poster → uploaded the pink "Concrete Wonders" flyer as a Reference Image → GENERATE → picked a variant → auto-image). The restyle route fired exactly as designed.
+- **Evidence:** API log `🎨 Forge image — type=event_poster job=restyle refs=1 (spirit:0 + ctx:1)`; output caption `1080x1350 | flux-2-pro/edit`. The 3-variant text step also correctly *read* the reference ("neon magenta and black constructivist grid… angular smiley faces").
+- **Visual verdict:** **Style nailed** — exact magenta-on-black palette, constructivist grid, twin smiley faces, mascot, molecule motifs, "PRESENTS" banner, "CONCRETE WONDERS" all faithfully recreated. **Text garbled** as predicted (kept source "SATURDAY OCTOBER 26 2024", body became nonsense). The new event text did not render cleanly — confirms FLUX.2 `/edit` nails style but mangles long text; the Konva compositor overlay (still deferred, Phase 1c) is what's meant to lay legible date/venue on top.
+- **Bug found + FIXED:** caption read `fal-ai/fal-ai/flux-2-pro/edit` — doubled prefix. Root cause was a source inconsistency: `generate_for_job` (media_gen.py:500) returned the full slug *with* the `fal-ai/` prefix, while every other generator returns a bare model name and callers prepend `provider` themselves. Fix: strip the leading `fal-ai/` from the returned model (keeping `model_slug` intact for the `fal.run/{slug}` URL). Re-confirmed in browser — caption now `fal-ai/flux-2-pro/edit`. Also corrects the video-composite label path (media_gen.py:647).
+- **Takeaway:** restyle backend + UI path are proven end-to-end. The remaining blocker to a *shippable* poster is the compositor overlay, not the restyle itself.
+
 ## [2026-06-09] Forge reference-restyle — uploaded flyers now drive the image (bake-off-proven)
 - **Why:** Doug: "FORGE is very much subpar" — uploading reference flyers + asking it to recreate the style did *nothing*. Root cause (confirmed in code): `social_post` routed to **Seedream**, whose endpoint **discards `image_urls`**; flyer types used FLUX.2's **text-to-image** endpoint, not `/edit`; and the image-prompt system prompt **forbade rendering text**. So references were dropped and the capability Doug wanted was switched off.
 - **Bake-off (`scratch/forge_bakeoff/`, gitignored):** ran Doug's pink "Concrete Wonders" flyer through Seedream (no-ref control) vs FLUX.2 `/edit` vs Nano Banana Pro `/edit`. **FLUX.2 `/edit` won** — faithful style + full-res + legible text. Validated the *wired* path across all 4 references (riso / R.O.T.D grunge / neon-glitch / chrome Y2K): every style recreated convincingly. **Overturned my prior claim that "AI can't render this text"** — evidence changed the call.
@@ -723,3 +762,22 @@ Spec: `wiki/spec/play_tracking_accuracy.md` (signed off). Live-fire verified aga
 - Pre-existing, out-of-scope: `fetch_user_by_username` doesn't resolve display names with spaces/unicode (8/20 resolved) — a name→permalink gap, unrelated to play accuracy. Worth a future fix (store `user_id`/permalink at scout time).
 
 **Next:** Phase 4 — real weekly scheduled searches (committed JSON → scout.py → GitHub Action, results tagged by search).
+
+## 2026-06-09 — The Cave overhaul, Phase 4 (real weekly scheduled searches)
+
+Spec: `wiki/spec/scheduled_searches.md` (signed off, API-backed model). Live-fire verified. **Completes the 4-phase Cave overhaul.**
+
+- Scheduled searches were fake (localStorage only, nothing ran them, the Running tab falsely claimed CI ran them). Now real:
+  - **Store + API:** `data/scheduled_searches.json` + `content_api.py` `GET/POST /api/scheduled-searches`.
+  - **Runner:** new `scheduled_scout.py` runs each active search (genre/keyword + own follower range), writes `data/searches/<id>.json` (results tagged with `search_id`/`search_name`) + `index.json`, sets `last_run`.
+  - **Action:** new `.github/workflows/scheduled_searches.yml` — weekly + manual dispatch, commits results.
+  - **Frontend:** `js/foraging.js` API-backed store (localStorage fallback); Running tab renders **results grouped per search** (name + filters + last-run), triaged via `forageAction`; added a `keyword` field; manual results show their filter summary; **removed the false "runs automatically" claim**.
+- Live run: seeded "Underground Tech House" → 12 results (all ≤5000 followers), tagged + grouped in the UI; API GET/POST + 400 validation confirmed.
+
+### Cave overhaul — all 4 phases shipped (commits)
+- P1 `f5fb908` — auto-add fix, orange eye, bigger Mural, widget tooltip+modal · XSS hardening `80e05d7`
+- P2 `db366a4` — artist detail centered modal + compact platform links
+- P3 `45faff1` — accurate own-track play tracking + plays chart
+- P4 (this) — real weekly scheduled searches
+
+Note: an editor open on Doug's side clobbered some uncommitted edits mid-P3 (auto-saved stale buffers over disk); re-applied + committed. Mitigation: commit promptly / keep project files closed in the editor during a session.

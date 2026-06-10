@@ -71,7 +71,7 @@ function renderFootprints() {
       return `<div class="fp-artist-item ${act?'active':''} ${sel?'in-report':''}" onclick="${click}" style="${sel ? 'border-color:var(--color-accent);background:rgba(255,69,0,0.08)' : ''}">
         ${reportMode ? `<span style="font-size:11px;color:${sel?'var(--color-accent)':'var(--color-faint)'};margin-right:6px">${sel?'☑':'☐'}</span>` : ''}
         <div class="fp-artist-name" style="display:inline-block">${esc(a.display_name)}</div>
-        <div class="fp-artist-meta">${esc(a.genre)} · ${fmt(a.followers_override!=null?a.followers_override:(latest.followers||0))}</div>
+        <div class="fp-artist-meta">${esc(a.genre)} · ${fmt(latest.followers||0)}</div>
       </div>`;
     }).join('')}`;
   setHTML(document.getElementById('fpSidebar'), sidebarHTML);
@@ -181,7 +181,7 @@ function exportFpReport() {
     const linked = Object.values(a.platforms||{}).filter(v=>v).length;
     rows.push([
       a.display_name, a.genre,
-      a.followers_override!=null ? a.followers_override : (latest.followers||0),
+      latest.followers||0,
       latest.plays||0, latest.likes||0, (latest.score||0).toFixed(1),
       trend.label, latest.playlist_adds!=null?latest.playlist_adds:'',
       `${linked}/${PLATFORMS.length}`,

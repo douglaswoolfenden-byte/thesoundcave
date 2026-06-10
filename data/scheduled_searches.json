@@ -1,0 +1,15 @@
+[
+  {
+    "id": "s_techhouse",
+    "name": "Underground Tech House",
+    "genre": "tech house",
+    "keyword": "",
+    "min_followers": 0,
+    "max_followers": 5000,
+    "frequency": "weekly",
+    "limit": 12,
+    "created": "2026-06-09",
+    "last_run": "2026-06-09",
+    "active": true
+  }
+]

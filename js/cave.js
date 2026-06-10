@@ -44,53 +44,61 @@ function renderCave() {
   wireCaveStatInteractions();
 }
 
-// ━━━ Stat-widget drill-downs: hover tooltip + click modal ━━━
-// Spec: wiki/spec/clan_tracking_dashboard.md (Phase 2). Reuses the per-artist
-// delta cache (window._caveStatDeltas) + the genre/drops full-data caches.
+// ━━━ Stat-widget drill-downs: click-only modal ━━━
+// Spec: wiki/spec/cave_drilldown_graphics.md. Hover is a pure-CSS ring + lift
+// (no dropdown — Doug's call 2026-06-10); detail appears only on click. Reuses
+// the per-artist delta cache (window._caveStatDeltas) + genre/drops caches.
 const CAVE_STAT_LABELS = { followers:'Followers gained', likes:'Likes gained', listens:'Listens gained', genre:'Genre mix', drops:'New drops' };
 
 function wireCaveStatInteractions() {
   // Container divs persist in the DOM, so assigning .onX (not addEventListener)
   // is idempotent across re-renders — no duplicate handlers.
-  [['caveFollowersPanel','followers'], ['caveLikesPanel','likes'], ['caveListensPanel','listens']]
-    .forEach(([id, metric]) => {
+  [['caveFollowersPanel','followers'], ['caveLikesPanel','likes'], ['caveListensPanel','listens'],
+   ['caveGenrePanel','genre'], ['caveTracksPanel','drops']]
+    .forEach(([id, kind]) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.onclick = () => openCaveStatModal(metric);
-      el.onmouseenter = () => showCaveTooltip(metric, el);
-      el.onmouseleave = hideCaveTooltip;
+      el.classList.add('drillable');
+      el.onclick = () => openCaveStatModal(kind);
     });
-  [['caveGenrePanel','genre'], ['caveTracksPanel','drops']].forEach(([id, kind]) => {
-    const el = document.getElementById(id);
-    if (el) el.onclick = () => openCaveStatModal(kind);
-  });
 }
 
-function showCaveTooltip(metric, anchorEl) {
-  const d = window._caveStatDeltas;
-  const tip = document.getElementById('caveStatTooltip');
-  if (!tip || !d || !d.perArtist[metric]) return;
-  const rows = d.perArtist[metric].slice(0, 5);
-  if (!rows.length) return;
-  tip.innerHTML = `<div class="cst-head">Top movers</div>` +
-    rows.map(r => {
-      const sign = r.delta >= 0 ? '+' : '';
-      return `<div class="cst-row"><span class="cst-name">${esc(r.display)}</span><span class="cst-delta ${r.delta>=0?'up':'down'}">${sign}${fmt(r.delta)}</span></div>`;
-    }).join('') +
-    `<div class="cst-foot">click for full breakdown</div>`;
-  tip.style.display = 'block';
-  // Position below the anchor; right-align if it would overflow the viewport.
-  const r = anchorEl.getBoundingClientRect();
-  const tipW = tip.offsetWidth;
-  let left = r.left;
-  if (left + tipW > window.innerWidth - 8) left = r.right - tipW;
-  tip.style.left = Math.max(8, left) + 'px';
-  tip.style.top = (r.bottom + 8) + 'px';
+// Clan-aggregate timeseries for one metric across every backend snapshot day.
+// Days where none of the clan appears are skipped (no fake zero dips).
+function caveAggregateSeries(metric) {
+  const field = { followers: 'followers', likes: 'total_likes', listens: 'total_plays' }[metric];
+  if (!field) return [];
+  const clanU = new Set(_caveClanCache.map(a => a.username));
+  const snaps = (typeof allSnapshots !== 'undefined' ? allSnapshots : []);
+  return [...snaps]
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    .map(s => {
+      let total = 0, n = 0;
+      Object.entries(s.artists || {}).forEach(([u, rec]) => {
+        if (clanU.has(u)) { total += rec[field] || 0; n++; }
+      });
+      return n ? { date: s.date, total } : null;
+    })
+    .filter(Boolean);
 }
 
-function hideCaveTooltip() {
-  const tip = document.getElementById('caveStatTooltip');
-  if (tip) tip.style.display = 'none';
+// Donut for the genre modal — brand-orange shade ramp, artist count centred.
+const GENRE_RAMP = ['#ff4500', '#ff7a40', '#c43a08', '#ffb499', '#8a2f10', '#5c2410'];
+function buildGenreDonut(rows, total) {
+  const r = 54, cx = 70, cy = 70, C = 2 * Math.PI * r;
+  let off = 0;
+  const segs = rows.map(([, c], i) => {
+    const frac = c / total;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${GENRE_RAMP[i % GENRE_RAMP.length]}"
+      stroke-width="18" stroke-dasharray="${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}"
+      stroke-dashoffset="${(-off * C).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off += frac;
+    return seg;
+  }).join('');
+  return `<svg viewBox="0 0 140 140" class="genre-donut" aria-hidden="true">${segs}
+    <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="#e8e8e8" font-size="22" font-weight="700" font-family="DM Mono,monospace">${total}</text>
+    <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="#888" font-size="9" letter-spacing="1" font-family="DM Mono,monospace">ARTISTS</text>
+  </svg>`;
 }
 
 function openCaveStatModal(kind) {
@@ -98,7 +106,6 @@ function openCaveStatModal(kind) {
   const body = document.getElementById('caveStatModalBody');
   const title = document.getElementById('caveStatModalTitle');
   if (!modal || !body) return;
-  hideCaveTooltip();
   if (title) title.textContent = CAVE_STAT_LABELS[kind] || kind;
   body.innerHTML = caveStatModalBody(kind);
   // Attach row handlers via JS (not inline onclick) so the username never has
@@ -117,42 +124,56 @@ function closeCaveStatModal() {
 function caveStatModalBody(kind) {
   if (kind === 'genre') {
     const g = window._caveGenreFull;
-    if (!g || !g.rows.length) return '<div class="panel-empty">No genres yet.</div>';
-    return `<div class="stat-modal-list">` + g.rows.map(([name, c]) => {
-      const pct = Math.round((c / g.total) * 100);
-      return `<div class="stat-modal-genre">
-        <span class="smg-name">${esc(name)}</span>
-        <div class="panel-genre-bar"><div class="panel-genre-bar-fill" style="transform:scaleX(${pct / 100})"></div></div>
-        <span class="smg-pct">${c} · ${pct}%</span>
-      </div>`;
-    }).join('') + `</div>`;
+    if (!g || !g.rows.length) return '<div class="chart-empty">No genres yet — add artists to your Clan and the mix draws itself.</div>';
+    return `<div class="stat-modal-genre-wrap">
+      ${buildGenreDonut(g.rows, g.total)}
+      <div class="stat-modal-list">` + g.rows.map(([name, c], i) => {
+        const pct = Math.round((c / g.total) * 100);
+        return `<div class="stat-modal-genre">
+          <span class="smg-swatch" style="background:${GENRE_RAMP[i % GENRE_RAMP.length]}"></span>
+          <span class="smg-name">${esc(name)}</span>
+          <div class="panel-genre-bar"><div class="panel-genre-bar-fill" style="transform:scaleX(${pct / 100})"></div></div>
+          <span class="smg-pct">${c} · ${pct}%</span>
+        </div>`;
+      }).join('') + `</div></div>`;
   }
   if (kind === 'drops') {
     const drops = window._caveDropsFull || [];
-    if (!drops.length) return '<div class="panel-empty">No new drops this week.</div>';
+    if (!drops.length) return '<div class="chart-empty">No new drops from your Clan this week.</div>';
     return `<div class="stat-modal-list">` + drops.map(t => `
       <div class="stat-modal-drop">
         <div class="smd-info"><div class="smd-title">${esc(t.title)}</div><div class="smd-artist">${esc(t.artist)}</div></div>
         ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener" class="smd-play">▶</a>` : ''}
       </div>`).join('') + `</div>`;
   }
-  // followers / likes / listens — full ranked artist table
+  // followers / likes / listens — graphic first: clan-aggregate line chart
+  // over every snapshot day, ranked movers below as supporting detail.
+  const series = caveAggregateSeries(kind);
+  const chart = series.length >= 2
+    ? buildLineChart(
+        [{ label: CAVE_STAT_LABELS[kind], color: '#ff4500', data: series.map(s => s.total) }],
+        series.map(s => (s.date || '').slice(5)), 560, 190)
+    : `<div class="chart-empty">Baseline set today — the chart draws itself as daily snapshots land. No manual entry, ever.</div>`;
+
   const d = window._caveStatDeltas;
-  if (!d || !d.perArtist[kind] || !d.perArtist[kind].length) return '<div class="panel-empty">No tracking data yet.</div>';
-  const rows = d.perArtist[kind];
-  const span = d.spanDays === 7 ? 'this week' : `over ${d.spanDays} day${d.spanDays === 1 ? '' : 's'}`;
-  return `<div class="stat-modal-sub">${rows.length} tracked artists · ${esc(span)}</div>
-    <table class="stat-modal-table">
-      <thead><tr><th>Artist</th><th>Current</th><th>Δ</th></tr></thead>
-      <tbody>${rows.map(r => {
-        const sign = r.delta >= 0 ? '+' : '';
-        return `<tr data-user="${esc(r.username)}">
-          <td>${esc(r.display)}</td>
-          <td>${fmt(r.current)}</td>
-          <td class="${r.delta >= 0 ? 'up' : 'down'}">${sign}${fmt(r.delta)}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
+  const rows = (d && d.perArtist[kind]) || [];
+  let movers = '';
+  if (rows.length && d.spanDays > 0) {
+    const span = d.spanDays === 7 ? 'this week' : `over ${d.spanDays} day${d.spanDays === 1 ? '' : 's'}`;
+    movers = `<div class="stat-modal-sub">Top movers · ${rows.length} tracked artists · ${esc(span)}</div>
+      <table class="stat-modal-table">
+        <thead><tr><th>Artist</th><th>Current</th><th>Δ</th></tr></thead>
+        <tbody>${rows.map(r => {
+          const sign = r.delta >= 0 ? '+' : '';
+          return `<tr data-user="${esc(r.username)}">
+            <td>${esc(r.display)}</td>
+            <td>${fmt(r.current)}</td>
+            <td class="${r.delta >= 0 ? 'up' : 'down'}">${sign}${fmt(r.delta)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+  return `<div class="stat-modal-chart">${chart}</div>${movers}`;
 }
 
 // Esc closes the stat modal (registered once at script load).
@@ -198,12 +219,18 @@ function renderCaveStack(clan) {
          <div class="stack-card-fallback" style="display:none">${initial}</div>`
       : `<div class="stack-card-fallback">${initial}</div>`;
     return `
-      <article class="stack-card" data-idx="${i}" onclick="openPanel('${esc(a.username)}')">
+      <article class="stack-card" data-idx="${i}" data-username="${esc(a.username)}">
         ${inner}
         <div class="stack-card-caption">${esc(name)}</div>
       </article>`;
   }).join('');
   setHTML(stage, html);
+  // Bind clicks programmatically (no inline handler) — username is external
+  // SoundCloud data; an inline onclick string is an attribute-context XSS vector.
+  // Mirrors the stat-modal row fix (see addEventListener above).
+  stage.querySelectorAll('.stack-card').forEach(card => {
+    card.addEventListener('click', () => openPanel(card.dataset.username));
+  });
   applyStackOffsets();
 }
 
@@ -241,7 +268,7 @@ function updateStackMeta() {
   if (!a) { setHTML(el, ''); return; }
   const snaps = a.snapshots || [];
   const latest = snaps[snaps.length - 1] || {};
-  const followers = a.followers_override != null ? a.followers_override : (latest.followers || 0);
+  const followers = latest.followers || 0;
   setHTML(el, `
     <div class="stack-meta-name">${esc(a.display_name || a.username)}</div>
     <div class="stack-meta-sub">
@@ -250,11 +277,13 @@ function updateStackMeta() {
 }
 
 function attachStackInteractions() {
-  const hero = document.getElementById('caveHero');
-  if (!hero || hero._stackBound) return;
-  hero._stackBound = true;
+  // Wheel cycles the stack only when the cursor is over the CENTER stage —
+  // scrolling over the side rails scrolls the page (the rails own that gesture).
+  const stage = document.getElementById('caveStage') || document.getElementById('caveHero');
+  if (!stage || stage._stackBound) return;
+  stage._stackBound = true;
 
-  hero.addEventListener('wheel', (e) => {
+  stage.addEventListener('wheel', (e) => {
     if (!_caveClanCache.length) return;
     if (_caveWheelLock) { e.preventDefault(); return; }
     const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;

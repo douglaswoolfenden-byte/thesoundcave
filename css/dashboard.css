@@ -25,26 +25,45 @@
   text-transform: uppercase;
 }
 
-/* ─── Hero zone ─── */
+/* ─── Hero zone — 3-column rails layout (spec: cave_drilldown_graphics +
+   Doug 2026-06-10: no overlap, tidier, bigger). Side panels live in left/right
+   rails; the cinematic artist stage sits in the centre column. Overlap between
+   the stack and the panels is impossible by construction. ─── */
 .cave-hero {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) minmax(230px, 290px);
+  gap: var(--space-7);
+  align-items: stretch;
   width: 100%;
-  height: 78vh;
-  min-height: 620px;
+  min-height: 800px;
   margin-bottom: var(--space-6);
+  user-select: none;
+}
+
+/* Side rails — three evenly-spaced panels, vertically centred in the rail */
+.cave-rail {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+/* ─── Centre stage — the cinematic zone (textured bg + the stack) ─── */
+.cave-stage {
+  position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 2px;
   background:
     radial-gradient(ellipse at 50% 50%, rgba(255,69,0,0.04) 0%, transparent 55%),
     var(--color-bg-warm);
-  border: 1px solid rgba(255,255,255,0.04);
-  border-radius: 2px;
-  user-select: none;
   cursor: grab;
 }
-.cave-hero:active { cursor: grabbing; }
+.cave-stage:active { cursor: grabbing; }
 
 /* CRT-ish scanlines for cohesion with splash/entrance language */
-.cave-hero::before {
+.cave-stage::before {
   content: '';
   position: absolute; inset: 0;
   background-image: repeating-linear-gradient(
@@ -60,7 +79,7 @@
 }
 
 /* Soft vignette */
-.cave-hero::after {
+.cave-stage::after {
   content: '';
   position: absolute; inset: 0;
   background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,var(--vignette-strength)) 100%);
@@ -86,9 +105,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 320px;
-  height: 320px;
-  margin: -160px 0 0 -160px;
+  width: 340px;
+  height: 340px;
+  margin: -170px 0 0 -170px;
   background: #1a1a1a;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow:
@@ -98,8 +117,8 @@
   transform-origin: center center;
   transform:
     translate3d(
-      calc(var(--offset) * 92px),
-      calc(var(--offset) * -68px),
+      calc(var(--offset) * 70px),
+      calc(var(--offset) * -56px),
       0
     )
     scale(calc(1 - var(--abs) * 0.07));
@@ -170,8 +189,8 @@
 .stack-card:hover:not([data-focus="true"]) {
   transform:
     translate3d(
-      calc(var(--offset) * 92px),
-      calc(var(--offset) * -68px - 14px),
+      calc(var(--offset) * 70px),
+      calc(var(--offset) * -56px - 14px),
       0
     )
     scale(calc(1 - var(--abs) * 0.07 + 0.04));
@@ -250,65 +269,50 @@
   line-height: 1.6;
 }
 
-/* ─── Floating glass panels (4 corners) ─── */
-/* Panels are interactive: hover surfaces a top-5 tooltip, click opens the
-   detail modal (see .cave-stat-tooltip / .stat-modal in style.css). */
+/* ─── Glass panels — now seated in the side rails (no longer absolute) ───
+   Panels are interactive: hover is a CSS-only ring + lift (no dropdown — Doug
+   2026-06-10); click opens the detail modal (see .stat-modal in style.css). */
 .cave-hero-panel {
-  position: absolute;
-  z-index: 20;
-  padding: var(--space-5) var(--space-6);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-6) var(--space-6);
   background: rgba(10,10,10,0.62);
   backdrop-filter: blur(14px) saturate(120%);
   -webkit-backdrop-filter: blur(14px) saturate(120%);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 2px;
-  min-width: 220px;
-  max-width: 300px;
+  min-width: 0;
   cursor: pointer;
   transition:
     border-color var(--motion-fast) var(--ease-soft),
     background var(--motion-fast) var(--ease-soft),
     transform var(--motion-fast) var(--ease-soft);
 }
-.cave-hero-panel:hover,
-.cave-hero-chip:hover {
+.cave-rail-right .cave-hero-panel { text-align: right; }
+.cave-hero-panel:hover {
   border-color: rgba(255,69,0,0.3);
   background: rgba(10,10,10,0.8);
   transform: translateY(-2px);
 }
-
-.panel-tl { top: var(--space-5); left: var(--space-5); }
-.panel-tr { top: var(--space-5); right: var(--space-5); text-align: right; }
-.panel-bl { bottom: var(--space-5); left: var(--space-5); max-width: 320px; }
-.panel-br { bottom: var(--space-5); right: var(--space-5); max-width: 340px; }
-
-/* Secondary stat chips — sit just below the primary top panels */
-.panel-tl-2 { top: calc(var(--space-5) + 150px); left: var(--space-5); }
-.panel-tr-2 { top: calc(var(--space-5) + 150px); right: var(--space-5); text-align: right; }
-
-.cave-hero-chip {
+/* click-ability cue on drill-down widgets (spec: cave_drilldown_graphics.md) */
+.cave-hero-panel.drillable::after {
+  content: '↗ details';
   position: absolute;
-  z-index: 20;
-  padding: var(--space-4) var(--space-5);
-  background: rgba(10,10,10,0.55);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 2px;
-  min-width: 190px;
-  cursor: pointer;
-  transition:
-    border-color var(--motion-fast) var(--ease-soft),
-    background var(--motion-fast) var(--ease-soft),
-    transform var(--motion-fast) var(--ease-soft);
+  bottom: 6px; right: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-soft);
+  pointer-events: none;
 }
-.cave-hero-chip .panel-value {
-  font-size: 26px;
-}
-.cave-hero-chip .panel-trend {
-  margin-top: 6px;
-  font-size: 10px;
-}
+.cave-hero-panel.drillable:hover::after { opacity: 1; }
+
+/* New Drops keeps its track list left-aligned even in the right rail */
+#caveTracksPanel { text-align: left; }
 
 .panel-label {
   font-family: var(--font-mono);
@@ -339,7 +343,7 @@
 .panel-trend.down { color: var(--color-faint); }
 .panel-coverage { color: var(--color-muted); font-weight: normal; }
 
-/* Genre rows inside panel-bl */
+/* Genre rows inside the Genre Mix panel (left rail) */
 .panel-genre-list {
   margin-top: var(--space-4);
   display: flex;
@@ -375,7 +379,7 @@
   text-align: right;
 }
 
-/* Drops list inside panel-br */
+/* Drops list inside the New Drops panel (right rail) */
 .panel-drops-list {
   margin-top: var(--space-4);
   display: flex;
@@ -475,24 +479,29 @@
   opacity: 0.7;
 }
 
-/* Responsive — collapse panels on small screens */
-@media (max-width: 1024px) {
-  .cave-hero { height: 70vh; min-height: 540px; }
-  .stack-card { width: 240px; height: 240px; margin: -120px 0 0 -120px; }
-  .cave-hero-panel { min-width: 180px; max-width: 240px; padding: var(--space-4); }
-  .cave-hero-chip { min-width: 160px; padding: var(--space-3) var(--space-4); }
-  .panel-tl-2, .panel-tr-2 { top: calc(var(--space-5) + 122px); }
-  .panel-value { font-size: 30px; }
-  .cave-hero-chip .panel-value { font-size: 22px; }
-}
-@media (max-width: 720px) {
-  .cave-hero { height: auto; min-height: 0; padding: var(--space-4); }
-  .stack-stage { position: relative; height: 360px; }
-  .stack-card { width: 180px; height: 180px; margin: -90px 0 0 -90px; }
-  .cave-hero-panel {
-    position: static;
-    max-width: none;
-    margin-top: var(--space-3);
-    text-align: left;
+/* Responsive — narrower rails, then collapse to a single column */
+@media (max-width: 1200px) {
+  .cave-hero {
+    grid-template-columns: minmax(200px, 250px) minmax(0, 1fr) minmax(200px, 250px);
+    gap: var(--space-5);
+    min-height: 720px;
   }
+  .panel-value { font-size: 32px; }
+}
+@media (max-width: 920px) {
+  /* Stage on top, rails become two side-by-side rows of panels beneath it */
+  .cave-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .cave-stage { order: -1; min-height: 520px; }
+  .cave-rail { flex-direction: row; flex-wrap: wrap; }
+  .cave-rail .cave-hero-panel { flex: 1 1 240px; }
+  .cave-rail-right .cave-hero-panel,
+  #caveTracksPanel { text-align: left; }
+}
+@media (max-width: 560px) {
+  .cave-stage { min-height: 420px; }
+  .stack-card { width: 240px; height: 240px; margin: -120px 0 0 -120px; }
+  .cave-rail { flex-direction: column; }
 }

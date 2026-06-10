@@ -311,7 +311,6 @@ function addSnapshot(favs, username, track) {
     plays:         track.plays || 0,
     likes:         track.likes || 0,
     reposts:       track.reposts || 0,
-    playlist_adds: favs[username].playlist_adds || null,
     score:         track.score || 0,
     source:        'scout',
   };
@@ -401,25 +400,11 @@ function saveNotes() {
   saveFavourites(favs);
 }
 
-function saveManualData() {
-  if (!activeArtist) return;
-  const favs = getFavourites();
-  if (!favs[activeArtist]) return;
-  const snaps = favs[activeArtist].snapshots;
-  const followers = parseInt(document.getElementById('manualFollowers').value);
-  const playlists = parseInt(document.getElementById('manualPlaylists').value);
-  if (!isNaN(followers)) {
-    favs[activeArtist].followers_override = followers;
-    if (snaps.length) snaps[snaps.length-1].followers = followers;
-  }
-  if (!isNaN(playlists)) {
-    favs[activeArtist].playlist_adds = playlists;
-    if (snaps.length) snaps[snaps.length-1].playlist_adds = playlists;
-  }
-  saveFavourites(favs);
-  renderPanel(activeArtist);
-  refreshCurrentTab();
-}
+// Live top-tracks cache — the artist API only returns top_tracks on a cache
+// miss (the Supabase row has no column for them), so we keep the last-fetched
+// set per artist here and the panel always has a top 5 to show.
+function getTopTracksCache()  { return JSON.parse(localStorage.getItem('sc_top_tracks') || '{}'); }
+function saveTopTracksCache(d){ localStorage.setItem('sc_top_tracks', JSON.stringify(d)); }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UTILITIES
@@ -463,7 +448,7 @@ function buildSparkline(data, w=80, h=28, color='#e63946') {
   const uid = 'sp'+Math.random().toString(36).slice(2,8);
   const first = pts[0].split(','), last = pts[pts.length-1].split(',');
   const area = `M ${first[0]},${h} L ${pts.join(' L ')} L ${last[0]},${h} Z`;
-  return `<svg width="${w}" height="${h}" style="display:block">
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block">
     <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
       <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
@@ -528,29 +513,36 @@ function buildArtistPlaySeries(username) {
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     .map(s => {
       const rec = (s.artists || {})[username];
-      return rec ? { date: s.date, plays: rec.total_plays || 0, followers: rec.followers || 0, likes: rec.total_likes || 0 } : null;
+      return rec ? { date: s.date, plays: rec.total_plays || 0, followers: rec.followers || 0, likes: rec.total_likes || 0, reposts: rec.total_reposts || 0 } : null;
     })
     .filter(Boolean);
 }
 
-// Render the plays-over-time chart into #playsChart (raw series, dips and all).
-function renderPlaysChart(username) {
+// The four auto-tracked panel metrics. Tiles + the big chart both key off this.
+const PANEL_METRICS = [
+  { key: 'followers', label: 'Followers' },
+  { key: 'plays',     label: 'Plays' },
+  { key: 'likes',     label: 'Likes' },
+  { key: 'reposts',   label: 'Reposts' },
+];
+let activeMetric = 'plays';
+
+// Render the <metric>-over-time chart into #playsChart (raw series, dips and all).
+function renderMetricChart(username) {
   const el = document.getElementById('playsChart');
   if (!el) return;
+  const m = PANEL_METRICS.find(m => m.key === activeMetric) || PANEL_METRICS[1];
+  const titleEl = document.getElementById('metricChartTitle');
+  if (titleEl) titleEl.textContent = `${m.label} over time`;
   const series = buildArtistPlaySeries(username);
   if (series.length < 2) {
-    const tail = series.length === 1 ? ` Latest: ${fmt(series[0].plays)} plays.` : '';
-    el.innerHTML = `<div class="chart-empty">Tracking builds daily — the plays chart appears after a couple of days of snapshots.${tail}</div>`;
+    const tail = series.length === 1 ? ` Latest: ${fmt(series[0][m.key])} ${m.label.toLowerCase()}.` : '';
+    el.innerHTML = `<div class="chart-empty">Tracking builds daily — charts appear after a couple of days of snapshots.${tail}</div>`;
     return;
   }
   const labels = series.map(s => (s.date || '').slice(5));   // MM-DD
-  const datasets = [{ label: 'Plays', color: '#ff4500', data: series.map(s => s.plays) }];
-  const latest = series[series.length - 1];
-  el.innerHTML = `<div class="chart-readout">
-      <span><b>${fmt(latest.plays)}</b> plays</span>
-      <span><b>${fmt(latest.followers)}</b> followers</span>
-      <span><b>${fmt(latest.likes)}</b> likes</span>
-    </div>${buildLineChart(datasets, labels, 660, 200)}`;
+  const datasets = [{ label: m.label, color: '#ff4500', data: series.map(s => s[m.key] || 0) }];
+  el.innerHTML = buildLineChart(datasets, labels, 660, 200);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -819,6 +811,7 @@ function openPanel(username) {
   // click on the "Add to Clan" button only.
   _panelTransient = favs[username] ? null : transientArtistFromTrack(username, findReportTrack(username));
   activeArtist = username;
+  activeMetric = 'plays';
   renderPanel(username);
   document.getElementById('panelOverlay').classList.add('open');
   document.getElementById('artistPanel').classList.add('open');
@@ -849,6 +842,13 @@ async function refreshArtistLive(username) {
       updated_at: live.updated_at,
       age_seconds: live.age_seconds || 0,
     };
+    // top_tracks only arrives on an API cache miss — persist the latest set so
+    // the panel always has a top 5 between refreshes.
+    if (Array.isArray(live.top_tracks) && live.top_tracks.length) {
+      const cache = getTopTracksCache();
+      cache[username] = live.top_tracks;
+      saveTopTracksCache(cache);
+    }
     const favs = getFavourites();
     if (favs[username]) {
       favs[username].live = liveObj;          // clan member (in-memory only)
@@ -882,7 +882,7 @@ function renderPanel(username) {
   if (!a) return;
 
   // Editable / clan-only sections are hidden for read-only (non-clan) views.
-  ['panelPlatformSection','panelManualSection','panelNotesSection','panelActionRow'].forEach(id => {
+  ['platformGrid','panelNotesSection','panelActionRow'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isClan ? '' : 'none';
   });
@@ -897,52 +897,71 @@ function renderPanel(username) {
   document.getElementById('panelGenre').textContent = a.genre;
   document.getElementById('panelSCLink').href = a.artist_url;
 
-  // Star toggle
+  // Star toggle — inline SVG so it takes the brand orange (emoji stars render
+  // gold and can't be CSS-coloured). Wired via listener, no inline JS.
   const starEl = document.getElementById('panelStar');
   if (starEl) {
-    starEl.innerHTML = `<span class="panel-star ${a.starred?'starred':''}" onclick="togglePanelStar('${esc(username)}')" title="Star this artist">${a.starred?'⭐':'☆'}</span>`;
+    const starSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="${a.starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.95 6.1 6.55.83-4.82 4.52 1.25 6.55L12 17.3l-5.93 3.2 1.25-6.55L2.5 9.43l6.55-.83z"/></svg>`;
+    starEl.innerHTML = `<span class="panel-star ${a.starred?'starred':''}" role="button" tabindex="0" title="Star this artist" aria-pressed="${!!a.starred}">${starSvg}</span>`;
+    const star = starEl.firstElementChild;
+    star.addEventListener('click', () => togglePanelStar(username));
+    star.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePanelStar(username); } });
   }
 
-  // Tracking duration + growth rates
+  // Metric tiles — one auto-tracked graphic per metric (spec:
+  // artist_modal_v3_visual_stats.md). Series come from the backend daily
+  // snapshots; "now" values prefer the live API, never manual input.
   const snaps = a.snapshots||[];
   const latest = snaps[snaps.length-1]||{};
-  const first = snaps[0]||{};
   const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
   const live = a.live || null;
-  // Backend daily snapshot (accurate own-track totals) as a fallback when the
-  // live API hasn't synced and there's no local snapshot — keeps the top stats
-  // consistent with the Plays-over-time chart below.
   const bkSeries = buildArtistPlaySeries(username);
   const bk = bkSeries.length ? bkSeries[bkSeries.length - 1] : null;
-  const followers = live ? live.followers
-                    : (a.followers_override != null ? a.followers_override : (latest.followers || bk?.followers || 0));
-  const livePlays = live ? live.plays : (latest.plays || bk?.plays || 0);
-  const liveLikes = live ? live.likes : (latest.likes || bk?.likes || 0);
+  // Prefer live API, then the backend daily series (same source as the charts
+  // — keeps tile numbers and chart in agreement). Local snapshots last: scout
+  // entries hold single-track stats, not artist totals.
+  const nowVals = {
+    followers: live ? live.followers : (bk?.followers ?? latest.followers ?? 0),
+    plays:     live ? live.plays     : (bk?.plays     ?? latest.plays     ?? 0),
+    likes:     live ? live.likes     : (bk?.likes     ?? latest.likes     ?? 0),
+    reposts:   bk?.reposts ?? (latest.reposts || 0),
+  };
   const syncedHint = live
     ? `<span class="panel-growth-tag" style="background:#1a4d2e;color:#a7f3d0">● Live · synced ${live.age_seconds < 60 ? 'just now' : Math.floor(live.age_seconds/60)+'m ago'}</span>`
     : '';
 
   const growthEl = document.getElementById('panelGrowth');
   if (growthEl) {
-    const fGrowth = first.followers ? (((latest.followers||0) - first.followers) / first.followers * 100).toFixed(1) : null;
-    const pGrowth = first.plays ? (((latest.plays||0) - first.plays) / first.plays * 100).toFixed(1) : null;
-    const lGrowth = first.likes ? (((latest.likes||0) - first.likes) / first.likes * 100).toFixed(1) : null;
+    const tiles = PANEL_METRICS.map(m => {
+      const data = bkSeries.map(s => s[m.key] || 0);
+      // No delta from a zero baseline (the % is meaningless); cap runaway ones.
+      let t = (data.length >= 2 && data[0] > 0) ? getTrend(data[0], data[data.length-1]) : null;
+      if (t && t.pct > 999) t = { ...t, label: '+999%+' };
+      return `<button type="button" class="metric-tile ${m.key === activeMetric ? 'active' : ''}" data-metric="${m.key}" title="Show ${m.label.toLowerCase()} over time">
+        <span class="metric-tile-top">
+          <span class="metric-tile-label">${m.label}</span>
+          ${t ? `<span class="metric-tile-delta ${t.cls}">${t.arrow} ${t.label}</span>` : ''}
+        </span>
+        <span class="metric-tile-val">${fmt(nowVals[m.key])}</span>
+        <span class="metric-tile-spark">${data.length >= 2 ? buildSparkline(data, 150, 34, '#ff4500') : '<span class="metric-tile-flat"></span>'}</span>
+      </button>`;
+    }).join('');
 
     growthEl.innerHTML = `
-      <div class="panel-stats-row">
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(followers)}</span><span class="panel-stat-label">Followers</span></div>
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(livePlays)}</span><span class="panel-stat-label">Plays</span></div>
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(liveLikes)}</span><span class="panel-stat-label">Likes</span></div>
-        <div class="panel-stat"><span class="panel-stat-val">${fmt(latest.reposts||0)}</span><span class="panel-stat-label">Reposts</span></div>
-      </div>
+      <div class="metric-tiles">${tiles}</div>
       <div class="panel-growth-row">
         ${syncedHint}
         ${daysTracked > 0 ? `<span class="panel-growth-tag">TRACKED ${daysTracked} DAYS</span>` : ''}
-        ${fGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(fGrowth)>=0?'up':'down'}">Followers ${parseFloat(fGrowth)>=0?'+':''}${fGrowth}%</span>` : ''}
-        ${pGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(pGrowth)>=0?'up':'down'}">Plays ${parseFloat(pGrowth)>=0?'+':''}${pGrowth}%</span>` : ''}
-        ${lGrowth !== null ? `<span class="panel-growth-tag ${parseFloat(lGrowth)>=0?'up':'down'}">Likes ${parseFloat(lGrowth)>=0?'+':''}${lGrowth}%</span>` : ''}
-      </div>
-      ${snaps.length >= 2 ? `<div style="margin-top:12px">${buildSparkline(snaps.map(s=>s.followers||0), 260, 40, '#e63946')}</div>` : ''}`;
+        ${bkSeries.length < 2 ? '<span class="panel-growth-tag">CHARTS BUILD DAILY — AUTO-TRACKED, NO MANUAL ENTRY</span>' : ''}
+      </div>`;
+
+    growthEl.querySelectorAll('.metric-tile').forEach(tile => {
+      tile.addEventListener('click', () => {
+        activeMetric = tile.dataset.metric;
+        growthEl.querySelectorAll('.metric-tile').forEach(t => t.classList.toggle('active', t === tile));
+        renderMetricChart(username);
+      });
+    });
   }
 
   // Platform links — compact horizontal marks (icon-only, name on hover).
@@ -972,27 +991,31 @@ function renderPanel(username) {
     }
   });
 
-  // Plays over time — chart from the backend daily snapshots (the real
-  // timeseries), replacing the old "rows and rows" table.
-  renderPlaysChart(username);
+  // Metric chart — backend daily snapshots, switched by the tiles above.
+  renderMetricChart(username);
 
-  document.getElementById('manualFollowers').value = a.followers_override != null ? a.followers_override : (latest.followers||'');
-  document.getElementById('manualPlaylists').value = latest.playlist_adds != null ? latest.playlist_adds : '';
-
-  // Suggested tracks (from tracks_seen)
-  const tracks = a.tracks_seen||[];
-  document.getElementById('tracksSeen').innerHTML = `
-    <h4 style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--heading)">Suggested Tracks</h4>
-    ${tracks.length
-      ? tracks.map(t => `
-        <div style="background:var(--elevated);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-          <div style="overflow:hidden">
-            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.title)}</div>
-            <div style="font-size:11px;color:var(--secondary)">${t.date} · Score ${t.score?.toFixed(1)||'—'}</div>
+  // Suggested tracks — top 5: scout-discovered first (they carry a score),
+  // then the artist's live top tracks by plays, deduped by URL/title.
+  const seen = (a.tracks_seen||[]).map(t => ({ ...t, _scout: true }));
+  const liveTop = getTopTracksCache()[username] || [];
+  const merged = [...seen];
+  for (const t of liveTop) {
+    const dupe = merged.find(m =>
+      (m.url && t.url && m.url.replace(/\/$/,'') === t.url.replace(/\/$/,'')) ||
+      (m.title && t.title && m.title.toLowerCase() === t.title.toLowerCase()));
+    if (!dupe) merged.push(t);
+  }
+  const tracks = merged.slice(0, 5);
+  document.getElementById('tracksSeen').innerHTML = tracks.length
+    ? tracks.map(t => `
+        <div class="track-row">
+          <div class="track-row-info">
+            <div class="track-row-title">${esc(t.title)}</div>
+            <div class="track-row-meta">${esc(t.date || '')}${t._scout ? ` · Score ${t.score?.toFixed(1)||'—'}` : (t.plays != null ? ` · ${fmt(t.plays)} plays` : '')}</div>
           </div>
-          ${t.url ? `<a href="${t.url}" target="_blank" rel="noopener" style="color:var(--red);font-size:18px;text-decoration:none" title="Listen on SoundCloud">▶</a>` : ''}
+          ${t.url ? `<a class="track-row-play" href="${esc(t.url)}" target="_blank" rel="noopener" title="Listen on SoundCloud">▶</a>` : ''}
         </div>`).join('')
-      : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>'}`;
+    : '<div style="color:var(--muted);font-size:13px">No tracks recorded yet.</div>';
 
   document.getElementById('artistNotes').value = a.notes||'';
   document.getElementById('cutBtn').textContent = a.status === 'cut' ? 'RESTORE TO TRACKING' : 'CUT FROM TRACKING';

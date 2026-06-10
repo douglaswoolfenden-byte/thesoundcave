@@ -793,7 +793,7 @@ select, select option {
 .artist-tile-name, .clan-card-name, .track-drop-title { font-size: 12px; }
 .forage-name { font-size: 11px; }
 .plan-name, .panel-name { font-size: 14px; }
-.empty p, .panel-stat-val { font-size: 12px; }
+.empty p { font-size: 12px; }
 .trend-arrow, .action-btn .icon, .insight-icon, .fp-ico { font-size: 12px; }
 .stash-type { font-size: 11px; }
 /* Forge form-label baseline — was already mono 11px; keep it */
@@ -1190,19 +1190,28 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   transform: translate(-50%, -50%) scale(1);
 }
 .panel-head {
-  padding: 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px;
+  position: relative;
+  padding: 26px 24px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 4px;
+}
+.panel-head-corner {
+  position: absolute; top: 14px; right: 14px;
+  display: flex; align-items: center; gap: 4px;
 }
 .panel-avatar {
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   background: var(--elevated); overflow: hidden; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; font-size: 24px;
+  margin-bottom: 6px;
 }
 .panel-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .panel-name { font-size: 18px; font-weight: bold; color: var(--heading); }
 .panel-genre { font-size: 13px; color: var(--secondary); margin-top: 2px; }
+.panel-head .platform-grid { margin-top: 12px; width: 100%; }
 .panel-close {
-  margin-left: auto; background: none; border: none; color: var(--secondary);
+  background: none; border: none; color: var(--secondary);
   font-size: 22px; cursor: pointer; padding: 4px 8px;
 }
 .panel-close:hover { color: var(--heading); }
@@ -1212,13 +1221,6 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   font-size: 12px; color: var(--secondary); text-transform: uppercase;
   letter-spacing: .8px; margin-bottom: 12px;
 }
-.platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.plat-row {
-  background: var(--elevated); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 12px;
-}
-.plat-row.linked { border-color: var(--green); }
-.plat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .plat-input {
   background: none; border: none; color: var(--body);
   font-size: 12px; width: 100%; outline: none;
@@ -1691,23 +1693,67 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .empty .ico { font-size: 48px; margin-bottom: 16px; }
 .empty p { font-size: 14px; line-height: 1.6; }
 
-/* ── Panel star ────────────────────────────────────────── */
+/* ── Panel star — SVG, brand orange (never the gold emoji) ── */
 .panel-star {
-  font-size: 22px; cursor: pointer; opacity: 0.4;
-  transition: opacity 0.15s, transform 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px; cursor: pointer; color: var(--secondary);
+  transition: color 0.15s, transform 0.15s;
 }
-.panel-star:hover { opacity: 0.8; transform: scale(1.2); }
-.panel-star.starred { opacity: 1; }
+.panel-star:hover { color: var(--red); transform: scale(1.15); }
+.panel-star.starred { color: var(--red); }
+.panel-star:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 4px; }
 
-/* ── Panel stats & growth ─────────────────────────────── */
-.panel-stats-row {
+/* ── Metric tiles — one auto-tracked sparkline per metric ──
+   Spec: wiki/spec/artist_modal_v3_visual_stats.md. The graphic is the
+   point; the number is secondary. Click a tile → big chart switches. */
+.metric-tiles {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
   margin-bottom: 12px;
 }
-.panel-stat { text-align: center; }
-.panel-stat-val { font-size: 18px; font-weight: 700; color: var(--heading); display: block; }
-.panel-stat-label { font-size: 11px; color: var(--secondary); }
-.panel-growth-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.metric-tile {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 12px 8px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.metric-tile:hover { border-color: var(--border-lt); transform: translateY(-2px); }
+.metric-tile.active { border-color: var(--red); background: rgba(255,69,0,0.06); }
+.metric-tile-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.metric-tile-label { font-size: 10px; color: var(--secondary); }
+.metric-tile-delta { font-size: 10px; font-family: var(--font-mono); letter-spacing: var(--tracking-mono); }
+.metric-tile-delta.up { color: var(--green, #22c55e); }
+.metric-tile-delta.down { color: var(--red); }
+.metric-tile-delta.flat { color: var(--muted); }
+.metric-tile-val { font-size: 17px; font-weight: 700; color: var(--heading); }
+.metric-tile-spark { display: block; min-height: 34px; }
+.metric-tile-spark svg { width: 100%; height: 34px; }
+.metric-tile-flat {
+  display: block; height: 34px;
+  background: linear-gradient(to top, rgba(255,69,0,0.05), transparent 60%);
+  border-bottom: 1px dashed var(--border-lt);
+}
+
+/* ── Suggested tracks rows ────────────────────────────── */
+.track-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;
+}
+.track-row-info { overflow: hidden; }
+.track-row-title {
+  font-size: 13px; font-weight: bold; color: var(--heading);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.track-row-meta { font-size: 11px; color: var(--secondary); margin-top: 2px; }
+.track-row-play { color: var(--red); font-size: 16px; text-decoration: none; flex-shrink: 0; }
+.track-row-play:hover { color: var(--red-dark); }
+
+.panel-growth-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .panel-growth-tag {
   font-size: 11px; padding: 3px 8px; border-radius: 10px;
   background: var(--elevated); color: var(--secondary);
@@ -1722,6 +1768,7 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .platform-row {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 .plat-chip {
@@ -1768,7 +1815,7 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .plat-chip:hover .plat-chip-edit { display: flex; }
 .plat-chip-edit:hover { color: var(--red); border-color: var(--red); }
 /* inline edit box (one at a time, below the row of marks) */
-.plat-edit { margin-top: 12px; }
+.plat-edit { margin-top: 12px; max-width: 420px; margin-left: auto; margin-right: auto; }
 .plat-edit[hidden] { display: none; }
 .plat-edit-label {
   display: block;
@@ -1803,7 +1850,7 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   .detail-grid { grid-template-columns: 1fr; }
   .stats-row { flex-direction: column; }
   .htab span:not(.count) { display: none; }
-  .panel-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .metric-tiles { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ── Print stylesheet (PDF export) ────────────────────── */
@@ -1861,7 +1908,7 @@ h4 { font-size: 12px; }
 
 /* Pills/badges/chips — mono micro-treatment */
 .pill, .badge, .chip, .stash-status, .insight-detail,
-.htab .count, .panel-stat-label, .panel-genre,
+.htab .count, .metric-tile-label, .panel-genre,
 .summary-suffix, .stat-trend {
   font-family: var(--font-mono);
   letter-spacing: var(--tracking-mono);
@@ -1896,7 +1943,7 @@ h4 { font-size: 12px; }
 .panel-overlay { background: rgba(10,8,7,0.65); }
 
 /* Numeric data — mono everywhere it appears */
-.stat-value, .panel-stat-val,
+.stat-value, .metric-tile-val,
 [class*="-count"], [class*="-num"], [class*="-followers"], [class*="-plays"] {
   font-family: var(--font-mono);
   letter-spacing: var(--tracking-mono);
@@ -1980,52 +2027,6 @@ h4 { font-size: 12px; }
    Spec: wiki/spec/clan_tracking_dashboard.md (Phase 2).
    Dark Sound Cave palette only (rule: feedback_soundcave_palette).
    ────────────────────────────────────────────────────────── */
-.cave-stat-tooltip {
-  position: fixed;
-  z-index: 400;
-  display: none;
-  min-width: 220px;
-  max-width: 280px;
-  padding: 12px 14px;
-  background: rgba(12,10,9,0.96);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.55);
-  pointer-events: none;
-  font-family: var(--font-mono);
-}
-.cave-stat-tooltip .cst-head {
-  font-size: 9px;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.cave-stat-tooltip .cst-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  padding: 3px 0;
-  color: var(--heading);
-}
-.cave-stat-tooltip .cst-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cave-stat-tooltip .cst-delta.up { color: var(--color-accent); }
-.cave-stat-tooltip .cst-delta.down { color: var(--muted); }
-.cave-stat-tooltip .cst-foot {
-  margin-top: 8px;
-  font-size: 9px;
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--color-faint);
-}
-
 /* Reusable centered modal (also adopted by Phase-2 artist detail later) */
 .stat-modal {
   position: fixed;
@@ -2122,6 +2123,15 @@ h4 { font-size: 12px; }
 .stat-modal-table td.up { color: var(--color-accent); }
 .stat-modal-table td.down { color: var(--muted); }
 .stat-modal-list { display: flex; flex-direction: column; gap: 10px; }
+/* graphic-first drill-downs (spec: cave_drilldown_graphics.md) */
+.stat-modal-chart { margin-bottom: 18px; }
+.stat-modal-genre-wrap { display: flex; align-items: center; gap: 28px; }
+.stat-modal-genre-wrap .stat-modal-list { flex: 1; min-width: 0; }
+.genre-donut { width: 150px; height: 150px; flex-shrink: 0; }
+.smg-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .stat-modal-genre-wrap { flex-direction: column; }
+}
 .stat-modal-genre {
   display: flex;
   align-items: center;

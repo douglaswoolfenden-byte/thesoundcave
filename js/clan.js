@@ -27,7 +27,7 @@ function getClanFiltered() {
     const aSnaps = a.snapshots||[], bSnaps = b.snapshots||[];
     const aLatest = aSnaps[aSnaps.length-1]||{}, bLatest = bSnaps[bSnaps.length-1]||{};
     switch (clanSortBy) {
-      case 'followers': return (b.followers_override ?? bLatest.followers ?? 0) - (a.followers_override ?? aLatest.followers ?? 0);
+      case 'followers': return (bLatest.followers ?? 0) - (aLatest.followers ?? 0);
       case 'plays': return (bLatest.plays||0) - (aLatest.plays||0);
       case 'likes': return (bLatest.likes||0) - (aLatest.likes||0);
       case 'genre': return (a.genre||'').localeCompare(b.genre||'');
@@ -66,7 +66,7 @@ function renderClan() {
     const latest = snaps[snaps.length-1]||{};
     const first = snaps[0]||{};
     const trend = getTrend(first.followers||0, latest.followers||0);
-    const followers = a.followers_override != null ? a.followers_override : (latest.followers||0);
+    const followers = latest.followers||0;
     const isStarred = a.starred;
     const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
 
@@ -142,7 +142,7 @@ function exportSingleArtist(username) {
     ['Field','Value'],
     ['Name', a.display_name],
     ['Genre', a.genre],
-    ['Followers', a.followers_override!=null ? a.followers_override : (latest.followers||0)],
+    ['Followers', latest.followers||0],
     ['Plays', latest.plays||0],
     ['Likes', latest.likes||0],
     ['Playlist Adds', latest.playlist_adds!=null ? latest.playlist_adds : ''],

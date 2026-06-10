@@ -231,16 +231,23 @@
     <div id="caveWelcome" class="cave-welcome"></div>
 
     <div class="cave-hero" id="caveHero">
-      <div class="cave-hero-panel panel-tl" id="caveFollowersPanel"></div>
-      <div class="cave-hero-chip panel-tl-2" id="caveListensPanel"></div>
-      <div class="cave-hero-panel panel-tr" id="caveLikesPanel"></div>
-      <div class="cave-hero-chip panel-tr-2" id="cavePlaylistPanel"></div>
-      <div class="cave-hero-panel panel-bl" id="caveGenrePanel"></div>
-      <div class="cave-hero-panel panel-br" id="caveTracksPanel"></div>
+      <div class="cave-rail cave-rail-left">
+        <div class="cave-hero-panel" id="caveFollowersPanel"></div>
+        <div class="cave-hero-panel" id="caveListensPanel"></div>
+        <div class="cave-hero-panel" id="caveGenrePanel"></div>
+      </div>
 
-      <div class="stack-stage" id="caveStack"></div>
-      <div class="stack-meta" id="caveStackMeta"></div>
-      <div class="scroll-hint" id="caveScrollHint">scroll · click · explore</div>
+      <div class="cave-stage" id="caveStage">
+        <div class="stack-stage" id="caveStack"></div>
+        <div class="stack-meta" id="caveStackMeta"></div>
+        <div class="scroll-hint" id="caveScrollHint">scroll · click · explore</div>
+      </div>
+
+      <div class="cave-rail cave-rail-right">
+        <div class="cave-hero-panel" id="caveLikesPanel"></div>
+        <div class="cave-hero-panel" id="cavePlaylistPanel"></div>
+        <div class="cave-hero-panel" id="caveTracksPanel"></div>
+      </div>
     </div>
 
     <div class="cave-chart-strip" id="caveChart" data-empty="true"></div>
@@ -305,6 +312,7 @@
         <div class="forage-search-grid">
           <input class="input" id="schedName" placeholder="Search name (e.g. UK Techno Hunt)">
           <input class="input" id="schedGenre" list="genreSuggestions" autocomplete="off" placeholder="All genres — type to filter">
+          <input class="input" id="schedKeyword" placeholder="Keyword (optional)">
           <input class="input" id="schedMinFollow" type="number" placeholder="Min followers">
           <input class="input" id="schedMaxFollow" type="number" placeholder="Max followers">
         </div>
@@ -846,14 +854,15 @@
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="artist-panel" id="artistPanel">
   <div class="panel-head">
-    <div class="panel-avatar" id="panelAvatar"></div>
-    <div>
-      <div class="panel-name" id="panelName"></div>
-      <div class="panel-genre" id="panelGenre"></div>
-      <a id="panelSCLink" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--red)">SoundCloud ↗</a>
+    <div class="panel-head-corner">
+      <div id="panelStar"></div>
+      <button class="panel-close" onclick="closePanel()">✕</button>
     </div>
-    <div id="panelStar"></div>
-    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="panel-avatar" id="panelAvatar"></div>
+    <div class="panel-name" id="panelName"></div>
+    <div class="panel-genre" id="panelGenre"></div>
+    <a id="panelSCLink" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--red)">SoundCloud ↗</a>
+    <div class="platform-grid" id="platformGrid"></div>
   </div>
   <div class="panel-body">
     <div class="panel-section" id="panelAddClanSection" style="display:none">
@@ -861,29 +870,12 @@
       <p style="font-size:11px;color:var(--muted);margin-top:8px">Viewing only — not in your Clan. Add to track stats, edit links and take notes.</p>
     </div>
     <div class="panel-section" id="panelGrowth"></div>
-    <div class="panel-section" id="panelPlatformSection">
-      <h3>Platform links</h3>
-      <div class="platform-grid" id="platformGrid"></div>
-    </div>
     <div class="panel-section">
-      <h3>Plays over time</h3>
+      <h3 id="metricChartTitle">Plays over time</h3>
       <div id="playsChart" class="plays-chart"></div>
     </div>
-    <div class="panel-section" id="panelManualSection">
-      <h3>Manual data entry</h3>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:10px">SoundCloud's API can lag. Use these fields to correct values.</p>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:12px;color:var(--secondary);width:110px;flex-shrink:0">Followers</span>
-        <input class="input input-sm" id="manualFollowers" type="number" min="0" placeholder="Correct follower count">
-        <button class="btn-red" style="padding:7px 14px;font-size:12px" onclick="saveManualData()">Save</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:12px;color:var(--secondary);width:110px;flex-shrink:0">Playlist adds</span>
-        <input class="input input-sm" id="manualPlaylists" type="number" min="0" placeholder="Enter current count">
-      </div>
-    </div>
     <div class="panel-section">
-      <h3>Tracks discovered</h3>
+      <h3>Suggested tracks</h3>
       <div id="tracksSeen"></div>
     </div>
     <div class="panel-section" id="panelNotesSection">
@@ -900,8 +892,7 @@
   </div>
 </div>
 
-<!-- Mural stat-widget drill-downs: hover tooltip + click modal -->
-<div class="cave-stat-tooltip" id="caveStatTooltip"></div>
+<!-- Mural stat-widget drill-downs: click-only modal (hover = CSS ring only) -->
 <div class="stat-modal" id="caveStatModal">
   <div class="stat-modal-backdrop" onclick="closeCaveStatModal()"></div>
   <div class="stat-modal-card" role="dialog" aria-modal="true">

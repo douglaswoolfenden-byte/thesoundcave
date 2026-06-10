@@ -4,6 +4,7 @@ Lightweight Flask server that calls Claude API to generate music industry conten
 Run: python content_api.py
 """
 import os
+import re
 import json
 import time
 from datetime import datetime, timezone
@@ -224,6 +225,15 @@ def build_user_prompt(ctx):
     event = ctx.get('event')
     if event:
         parts.append(f"\nEvent: {event}")
+
+    # Structured event facts (Forge event_details fields) — so the copy references
+    # the real venue/date/doors, matching what the compositor overlay shows.
+    detail_labels = [('venue', 'Venue'), ('city', 'Location'), ('date', 'Date'),
+                     ('doors', 'Doors'), ('curfew', 'Curfew'), ('tickets', 'Tickets')]
+    for key, label in detail_labels:
+        val = ctx.get(key)
+        if val:
+            parts.append(f"{label}: {val}")
 
     release = ctx.get('release')
     if release:
@@ -1410,6 +1420,16 @@ def artist_stats(username):
     total_plays = sum((t.get('playback_count') or 0) for t in tracks)
     total_likes = sum((t.get('likes_count') or t.get('favoritings_count') or 0) for t in tracks)
 
+    # Top 5 own tracks by plays — returned in the response only, never upserted
+    # (the artists table has no column for it; recomputed fresh each cache miss).
+    top_tracks = [{
+        'title': t.get('title') or '',
+        'url': t.get('permalink_url') or '',
+        'plays': t.get('playback_count') or 0,
+        'likes': t.get('likes_count') or t.get('favoritings_count') or 0,
+        'date': (t.get('created_at') or '')[:10],
+    } for t in sorted(tracks, key=lambda t: t.get('playback_count') or 0, reverse=True)[:5]]
+
     record = {
         'soundcloud_id': str(user_id),
         'username': username,
@@ -1427,7 +1447,84 @@ def artist_stats(username):
     except Exception as e:
         record['warning'] = f'cache write failed: {e}'
 
-    return jsonify({**record, 'cached': False, 'age_seconds': 0})
+    return jsonify({**record, 'top_tracks': top_tracks, 'cached': False, 'age_seconds': 0})
+
+
+# ── Scheduled searches store (committed JSON the weekly Action runs) ──────
+SCHEDULED_SEARCHES_PATH = os.path.join(os.path.dirname(__file__), 'data', 'scheduled_searches.json')
+
+# The `id` becomes a filename in scheduled_scout.py (data/searches/<id>.json),
+# so it MUST be a strict slug — no path separators / traversal. This endpoint
+# is the write boundary; we sanitise here so nothing dangerous ever reaches disk.
+_SEARCH_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
+
+
+def _sanitise_search(item):
+    """Return a clean search dict, or None if it's invalid (rejects the POST)."""
+    if not isinstance(item, dict):
+        return None
+    sid = item.get('id', '')
+    if not isinstance(sid, str) or not _SEARCH_ID_RE.match(sid):
+        return None
+
+    def _str(v, n):
+        return (v if isinstance(v, str) else '')[:n]
+
+    def _int(v):
+        try:
+            return max(0, int(v))
+        except (TypeError, ValueError):
+            return 0
+
+    return {
+        'id':            sid,
+        'name':          _str(item.get('name', ''), 120) or sid,
+        'genre':         _str(item.get('genre', ''), 80),
+        'keyword':       _str(item.get('keyword', ''), 80),
+        'min_followers': _int(item.get('min_followers')),
+        'max_followers': _int(item.get('max_followers')),
+        'frequency':     _str(item.get('frequency', 'weekly'), 20) or 'weekly',
+        'limit':         max(1, min(200, _int(item.get('limit')) or 50)),
+        'created':       _str(item.get('created', ''), 20),
+        'last_run':      _str(item.get('last_run', '') or '', 20) or None,
+        'active':        bool(item.get('active')),
+    }
+
+
+def _read_scheduled_searches():
+    try:
+        with open(SCHEDULED_SEARCHES_PATH) as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except FileNotFoundError:
+        return []
+    except Exception:
+        return []
+
+
+@app.route('/api/scheduled-searches', methods=['GET'])
+def get_scheduled_searches():
+    return jsonify(_read_scheduled_searches())
+
+
+@app.route('/api/scheduled-searches', methods=['POST'])
+def save_scheduled_searches():
+    """Overwrite the committed list with the posted full list (the frontend
+    sends the whole array on every create/edit/delete/toggle). Every item is
+    sanitised; any invalid item rejects the whole request with 400."""
+    body = request.get_json(silent=True)
+    if not isinstance(body, list):
+        return jsonify({'error': 'expected a JSON array of searches'}), 400
+    cleaned = []
+    for item in body:
+        c = _sanitise_search(item)
+        if c is None:
+            return jsonify({'error': 'invalid search — id must match [A-Za-z0-9_-]{1,64}'}), 400
+        cleaned.append(c)
+    os.makedirs(os.path.dirname(SCHEDULED_SEARCHES_PATH), exist_ok=True)
+    with open(SCHEDULED_SEARCHES_PATH, 'w') as f:
+        json.dump(cleaned, f, indent=2)
+    return jsonify({'ok': True, 'count': len(cleaned)})
 
 
 @app.route('/api/search', methods=['GET'])

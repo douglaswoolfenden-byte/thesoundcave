@@ -81,3 +81,13 @@ A diagonal stack of Clan artists flowing bottom-left → top-right across the ca
 - Mobile diagonal stack (defer; mobile gets vertical card list).
 - Filter / Index secondary view.
 - Multi-image carousel per artist (just avatar for now).
+
+## Update 2026-06-10 — rails layout (overlap fix)
+
+Doug: the floating corner panels overlapped the artist thumbnails; wanted it tidier, bigger, no overlap, scrolling OK. Also: the hover *dropdown* (top-movers tooltip) annoyed him — keep the orange ring + lift on hover, but show detail only on **click**.
+
+- **Overlay → 3-column grid.** `.cave-hero` is now `grid-template-columns: rail | stage | rail`. The six panels sit in a **left rail** (Followers, Listens, Genre Mix) and **right rail** (Likes, Playlist, New Drops); the cinematic stack lives in the centre `.cave-stage`. Overlap is now impossible by construction. The CRT/vignette/warm-bg texture moved from `.cave-hero` to `.cave-stage`; `.cave-stage { overflow:hidden }` clips the fanned back-cards in the gutter so nothing ever reaches a panel.
+- **Bigger:** stage `min-height: 800px`, cards 320→340px, diagonal tightened (92/68 → 70/56) so the fan stays in the centre lane. Page scrolls.
+- **Hover dropdown removed:** deleted `showCaveTooltip`/`hideCaveTooltip`, the `#caveStatTooltip` element and its CSS. Hover is now pure-CSS ring+lift; click opens the modal. Wheel-cycle rebound from the whole hero to `.cave-stage` only (scrolling over a rail scrolls the page).
+- Right-rail stat panels right-align (facing inward); New Drops list stays left-aligned. Responsive: 2-narrower-rails < 1200px, single column (stage on top) < 920px.
+- Verified via Playwright (6 seeded artists): grid `250 / 585 / 250`, stage clips, 0 cards drawn over rails, click opens modal, wheel still cycles, 0 console errors.

@@ -174,38 +174,27 @@ def build_image_prompt(content_type, ctx, generated_text=''):
 
 
 def build_restyle_prompt(content_type, ctx, generated_text=''):
-    """Prompt for JOB_RESTYLE (FLUX.2 /edit): recreate an uploaded flyer's style
-    for a NEW event, rendering the event text legibly.
+    """Prompt for JOB_RESTYLE (FLUX.2 /edit): recreate an uploaded flyer's STYLE
+    as a clean BACKDROP — the legible event text is composited on top afterwards
+    (Konva compositor), so we deliberately suppress baked-in lettering here.
 
-    Unlike build_image_prompt, this WANTS text in the image — modern edit models
-    render display type cleanly (bake-off 2026-06-09). The uploaded reference
-    carries the aesthetic; this prompt supplies the recreate instruction + the
-    exact words to set. Built directly (no Claude call) — faster, cheaper, and it
-    sidesteps the no-text backdrop system prompt entirely.
+    Earlier this prompt asked the model to *render* the event text. Edit models
+    garble dense display type (browser-confirm 2026-06-10), so the decision is:
+    let the reference carry the aesthetic, keep the generated image text-light with
+    clean zones, and let the compositor be the legible source of truth for
+    date/venue/lineup. Built directly (no Claude call) — faster + cheaper.
     """
-    lines = []
-    artist = (ctx.get('artist_data') or {}).get('name')
-    if artist:
-        lines.append(artist)
-    for key in ('event', 'artist_list', 'release'):
-        v = ctx.get(key)
-        if v:
-            lines.append(str(v).strip())
-    freeform = ctx.get('freeform')
-    if freeform:
-        lines.append(str(freeform).strip())
-    text_block = '  /  '.join(l for l in lines if l) or (
-        generated_text[:200].strip() if generated_text else 'underground event night')
-
     return (
-        "Recreate this flyer's exact visual style and treatment for a NEW event — "
-        "same colour palette, print and texture (riso, halftone, grain, distress), "
-        "typographic feel, layout energy and graphic motifs as the reference image. "
-        "Do NOT copy the reference's words. Set this new event text instead, rendered "
-        "legibly in the same bold display-type style:\n"
-        f"{text_block}\n"
-        "Output a finished, print-ready event flyer: high contrast, bold, gritty "
-        "underground aesthetic, every word spelled correctly."
+        "Take this flyer and REMOVE every piece of text from it — no words, letters, "
+        "numbers, dates, names, prices or typography of ANY kind, anywhere in the image. "
+        "Keep ONLY its visual style: the exact colour palette, print texture (riso, "
+        "halftone, grain, distress), graphic motifs, shapes and overall layout energy. "
+        "Wherever the reference had text, replace it with clean empty background or "
+        "abstract graphic texture in the same style — leave generous uncluttered "
+        "negative space in the upper-centre and lower-centre. The output is a completely "
+        "TEXT-FREE poster BACKDROP; the real event text is added on top separately "
+        "afterwards. High-contrast, gritty, dark underground aesthetic. "
+        "Absolutely no lettering, captions, signatures, watermarks or placeholder text."
     )
 
 
@@ -497,7 +486,12 @@ def generate_for_job(job_type, prompt, *, image_refs=None, width=1080, height=13
     out_url = data['images'][0]['url']
     img_r = http_requests.get(out_url, timeout=timeout)
     img_r.raise_for_status()
-    return img_r.content, 'fal-ai', model_slug
+    # Return the BARE model name (consistent with the other generators, which return
+    # e.g. 'flux-schnell'). model_slug keeps its 'fal-ai/' prefix for the fal.run URL
+    # above; callers prepend `provider` themselves, so stripping it here avoids the
+    # doubled 'fal-ai/fal-ai/…' label in the Forge caption + video-composite path.
+    bare_model = model_slug[len('fal-ai/'):] if model_slug.startswith('fal-ai/') else model_slug
+    return img_r.content, 'fal-ai', bare_model
 
 
 def job_registry():

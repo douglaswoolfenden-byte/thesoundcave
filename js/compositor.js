@@ -22,6 +22,15 @@
 // ─────────────────────────────────────────────────────────
 
 (function () {
+  // Brand-less default — the locked S0UNDCAV3 palette + fonts (css/style.css :root).
+  // Used when no brand kit is selected so posters still get on-brand, legible text
+  // (no logo is drawn brand-less — addLogo() returns null without a logo_url).
+  const DEFAULT_STYLE = {
+    palette: { text: '#f5f5f5', body: '#e0dcd9', text_stroke: '#0f0d0c', accent: '#ff4500' },
+    display_font: 'DM Mono, monospace',
+    body_font: 'DM Sans, sans-serif',
+  };
+
   // Lightweight internal state
   let stage = null;
   let bgLayer = null;
@@ -179,12 +188,16 @@
     const ax = layerDef.x * cw;
     const ay = layerDef.y * ch;
     const fontSize = (layerDef.size || 0.05) * cw;
-    const palette = currentBrand?.palette || {};
+    const palette = currentBrand?.palette || DEFAULT_STYLE.palette;
     const text = layerDef.text != null ? layerDef.text : '';
 
     const fontFamily = role === 'headline_text'
-      ? (displayFontFamily || 'DM Mono, monospace')
-      : (bodyFontFamily || displayFontFamily || 'DM Sans, sans-serif');
+      ? (displayFontFamily || DEFAULT_STYLE.display_font)
+      : (bodyFontFamily || displayFontFamily || DEFAULT_STYLE.body_font);
+
+    const fill = role === 'headline_text'
+      ? (palette.text || DEFAULT_STYLE.palette.text)
+      : (palette.body || palette.text || DEFAULT_STYLE.palette.body);
 
     const node = new Konva.Text({
       x: ax, y: ay,
@@ -192,8 +205,8 @@
       fontSize,
       fontFamily,
       fontStyle: role === 'headline_text' ? 'bold' : 'normal',
-      fill: palette.text || '#ffffff',
-      stroke: palette.text_stroke || '#000000',
+      fill,
+      stroke: palette.text_stroke || DEFAULT_STYLE.palette.text_stroke,
       strokeWidth: role === 'headline_text' ? Math.max(2, fontSize * 0.05) : 0,
       align: layerDef.anchor?.endsWith('c') ? 'center' : (layerDef.anchor?.endsWith('r') ? 'right' : 'left'),
       width: cw * 0.88,

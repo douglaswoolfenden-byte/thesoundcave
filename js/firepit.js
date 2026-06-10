@@ -35,8 +35,8 @@ const OUTPUT_MEDIA = {
 const CONTENT_TYPES = {
   social_post:     { label:'Post',                  icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
   social_carousel: { label:'Carousel',              icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
-  event_promo:     { label:'Event Promotion',       icon:'', iconKey:'event_promo',  fields:['event','artist','freeform'] },
-  event_poster:    { label:'Event Poster',          icon:'', iconKey:'lineup',       fields:['event','artist_list','freeform'] },
+  event_promo:     { label:'Event Promotion',       icon:'', iconKey:'event_promo',  fields:['event_details','artist','freeform'] },
+  event_poster:    { label:'Event Poster',          icon:'', iconKey:'lineup',       fields:['event_details','artist_list','freeform'] },
   artist_bio:      { label:'Artist Spotlight / Bio', icon:'', iconKey:'artist_bio',   fields:['artist','freeform'] },
 };
 
@@ -419,6 +419,22 @@ function updateForgeFields() {
       <input class="input" id="forgeEvent" placeholder="Event name, venue, date...">
     </div>`;
   }
+  if (ct.fields.includes('event_details')) {
+    // Structured event facts — each becomes a clean overlay line (buildPosterOverlay).
+    // The compositor (not the AI image) is the legible source of truth for these.
+    html += `<div class="forge-input-group">
+      <label class="forge-label">Event details</label>
+      <input class="input" id="forgeEvent" placeholder="Night / event name (e.g. WAREHOUSE TECHNO)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <input class="input" id="forgeVenue"   placeholder="Venue (e.g. THE DOME)">
+        <input class="input" id="forgeCity"    placeholder="City / location (e.g. LONDON)">
+        <input class="input" id="forgeDate"    placeholder="Date (e.g. FRI 12 DEC)">
+        <input class="input" id="forgeDoors"   placeholder="Doors open (e.g. 10PM)">
+        <input class="input" id="forgeCurfew"  placeholder="End / curfew (e.g. 6AM)">
+        <input class="input" id="forgeTickets" placeholder="Tickets (e.g. £12/£14)">
+      </div>
+    </div>`;
+  }
   if (ct.fields.includes('release')) {
     html += `<div class="forge-input-group">
       <label class="forge-label">Release</label>
@@ -475,6 +491,15 @@ function gatherForgeContext() {
     const el = document.getElementById('forgeEvent');
     if (el) ctx.event = el.value;
   }
+  if (ct.fields.includes('event_details')) {
+    ctx.event   = document.getElementById('forgeEvent')?.value   || '';  // night / event name
+    ctx.venue   = document.getElementById('forgeVenue')?.value   || '';
+    ctx.city    = document.getElementById('forgeCity')?.value    || '';
+    ctx.date    = document.getElementById('forgeDate')?.value    || '';
+    ctx.doors   = document.getElementById('forgeDoors')?.value   || '';
+    ctx.curfew  = document.getElementById('forgeCurfew')?.value  || '';
+    ctx.tickets = document.getElementById('forgeTickets')?.value || '';
+  }
   if (ct.fields.includes('release')) {
     const el = document.getElementById('forgeRelease');
     if (el) ctx.release = el.value;
@@ -489,6 +514,30 @@ function gatherForgeContext() {
     if (spirit.preview_url) ctx.avatar_image_url = spirit.preview_url;
   }
   return ctx;
+}
+
+// Compose the poster text overlay from structured event fields. Lineup is the hero
+// headline; the supporting block stacks only the facts that were filled in:
+//   Night name / Venue · City / Date · DOORS <doors>[–<curfew>] / Tickets
+function buildPosterOverlay(ctx) {
+  const v = k => (ctx[k] || '').trim();
+  const lineup = v('artist_list');
+  const night = v('event');
+  const headline = lineup || night;
+
+  const lines = [];
+  if (night && night !== headline) lines.push(night);
+  const place = [v('venue'), v('city')].filter(Boolean).join(' · ');
+  if (place) lines.push(place);
+  const doors = v('doors');
+  const when = [
+    v('date'),
+    doors ? `DOORS ${doors}${v('curfew') ? `–${v('curfew')}` : ''}` : '',
+  ].filter(Boolean).join(' · ');
+  if (when) lines.push(when);
+  if (v('tickets')) lines.push(v('tickets'));
+
+  return { headline, supporting: lines.join('\n') };
 }
 
 // Short-form content types that support 3-variant generation. Long-form stays single-shot.
@@ -792,16 +841,30 @@ async function generateImage(ctx) {
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
     const _brand = _selectedBrandKit();
-    if (_brand && window.scCompositor) {
+    // Poster types mount the text-overlay compositor even with NO brand kit, so the
+    // restyle backdrop becomes a legible, shippable poster (brand-less falls back to
+    // the S0UNDCAV3 DEFAULT_STYLE in compositor.js). Other types still require a brand.
+    const _posterType = ctx.content_type === 'event_poster' || ctx.content_type === 'event_promo';
+    if (window.scCompositor && (_brand || _posterType)) {
       _compositorActive = true;
       imgArea.style.display = 'none';
       window.scCompositor.show(ctx.content_type);
-      window.scCompositor.applyBrandKit(_brand);
+      window.scCompositor.applyBrandKit(_brand || null);  // null → DEFAULT_STYLE + clears any stale brand
       window.scCompositor.applyBackground(forgeGeneratedImageUrl);
-      window.scCompositor.applyContent({
-        supporting: forgeGeneratedContent || '',
-        event: ctx.event || '',
-      });
+      if (_posterType) {
+        // Poster overlay: lineup as the hero headline, structured event facts stacked below.
+        const ov = buildPosterOverlay(ctx);
+        window.scCompositor.applyContent({
+          headline: ov.headline,
+          supporting: ov.supporting,
+          event: ctx.event || '',
+        });
+      } else {
+        window.scCompositor.applyContent({
+          supporting: forgeGeneratedContent || '',
+          event: ctx.event || '',
+        });
+      }
     } else {
       _compositorActive = false;
       const _cmp = document.getElementById('forgeCompositor');

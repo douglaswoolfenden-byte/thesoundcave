@@ -27,6 +27,7 @@ Four Python scripts + a multi-file static frontend (no build step):
 - **`update_manifest.py`** — Rebuilds `data/manifest.json` (index of all weekly reports and daily snapshots). The frontend reads this to know which data files exist.
 - **`content_api.py`** — Flask server for AI content generation. Calls Claude API (Haiku) to produce social posts, event copy, press releases, etc. Also serves `/api/generate-image` for AI image generation via Fal AI / Replicate. Run locally during dev, deploy to Vercel/Railway for prod.
 - **`image_gen.py`** — Image generation module. Claude builds optimised image prompts, then routes to Fal AI (FLUX schnell, primary) or Replicate (fallback). Saves images to `data/generated_images/`.
+- **`db/`** — numbered Supabase SQL migrations (`0001_…` → `0018_audio_rights.sql`, append-only); `db/README.md` is the index. Apply in order in the Supabase SQL editor.
 
 ### Frontend structure
 

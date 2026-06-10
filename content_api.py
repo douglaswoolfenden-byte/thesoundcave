@@ -226,6 +226,15 @@ def build_user_prompt(ctx):
     if event:
         parts.append(f"\nEvent: {event}")
 
+    # Structured event facts (Forge event_details fields) — so the copy references
+    # the real venue/date/doors, matching what the compositor overlay shows.
+    detail_labels = [('venue', 'Venue'), ('city', 'Location'), ('date', 'Date'),
+                     ('doors', 'Doors'), ('curfew', 'Curfew'), ('tickets', 'Tickets')]
+    for key, label in detail_labels:
+        val = ctx.get(key)
+        if val:
+            parts.append(f"{label}: {val}")
+
     release = ctx.get('release')
     if release:
         parts.append(f"\nRelease: {release}")

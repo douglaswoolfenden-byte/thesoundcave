@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-10",
+  "artist_count": 8,
+  "artists": {
+    "Lucki": {
+      "display_name": "val",
+      "genre": "Techno",
+      "followers": 24,
+      "following": 2,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "81zaki": {
+      "display_name": "81zaki",
+      "genre": "UK Garage",
+      "followers": 830,
+      "following": 1149,
+      "track_count": 25,
+      "total_plays": 26339,
+      "total_likes": 1905,
+      "total_reposts": 51,
+      "avatar_url": "https://i1.sndcdn.com/avatars-3EqU6MMZ38QfzKfX-VLuDmg-large.jpg",
+      "latest_track": {
+        "title": "Alicia Keys - Feeling U, Feeling Me (81zaki Remix)",
+        "plays": 325,
+        "likes": 42,
+        "created_at": "2026-04-27"
+      }
+    },
+    "BELFORT": {
+      "display_name": "belfort",
+      "genre": "Tech house",
+      "followers": 1,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "SKH": {
+      "display_name": "skh",
+      "genre": "Bassline",
+      "followers": 8,
+      "following": 14,
+      "track_count": 3,
+      "total_plays": 233,
+      "total_likes": 2,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-5dxz4xUc7JrK9tk4-xMUnzg-large.jpg",
+      "latest_track": {
+        "title": "First draft 16",
+        "plays": 18,
+        "likes": 0,
+        "created_at": "2013-03-10"
+      }
+    },
+    "Dom3x": {
+      "display_name": "Country Club \u26f3\ufe0f",
+      "genre": "House",
+      "followers": 14,
+      "following": 0,
+      "track_count": 2,
+      "total_plays": 489,
+      "total_likes": 26,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-L92VpaPmmULy90YD-stAPkQ-large.jpg",
+      "latest_track": {
+        "title": "ORION + DOMEX // BENEVENTO FREESTYLE",
+        "plays": 144,
+        "likes": 12,
+        "created_at": "2021-11-22"
+      }
+    },
+    "TREMUR": {
+      "display_name": "tremur",
+      "genre": "House",
+      "followers": 19,
+      "following": 286,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-BLyyKbfF6OeImt08-RBxHxg-large.jpg",
+      "latest_track": null
+    },
+    "dazegxd": {
+      "display_name": "dazegxd",
+      "genre": "Jungle",
+      "followers": 16003,
+      "following": 319,
+      "track_count": 297,
+      "total_plays": 6715968,
+      "total_likes": 146617,
+      "total_reposts": 7562,
+      "avatar_url": "https://i1.sndcdn.com/avatars-MJyzcFo8JOiSnaKz-iPVfIw-large.jpg",
+      "latest_track": {
+        "title": "touch & kiss",
+        "plays": 0,
+        "likes": 0,
+        "created_at": "2026-03-19"
+      }
+    },
+    "annias": {
+      "display_name": "annias",
+      "genre": "UK Garage",
+      "followers": 3700,
+      "following": 2000,
+      "track_count": 19,
+      "total_plays": 9127,
+      "total_likes": 221,
+      "total_reposts": 32,
+      "avatar_url": "https://i1.sndcdn.com/avatars-IytSMjQynMCGfR9Y-WLOu8A-large.jpg",
+      "latest_track": {
+        "title": "annias - lil dubby (deep dubstep instrumental)",
+        "plays": 178,
+        "likes": 6,
+        "created_at": "2026-04-28"
+      }
+    }
+  }
+}

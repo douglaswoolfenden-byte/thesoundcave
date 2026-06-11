@@ -6,10 +6,7 @@ let forgeGeneratedContent = '';
 let forgeGeneratedImageUrl = '';
 let _brandKits = [];
 let _compositorActive = false;
-// Three-angle variant state (Phase A of Forge text rework)
-let _forgeVariants = [];           // last response's variants, when variant mode fired
-let _forgePickedIndex = null;      // index into _forgeVariants the user picked
-let _forgePickedSnapshot = '';     // textarea content at pick time — used to detect edits on swap
+let _forgePickedSnapshot = '';     // draft content at load time — detects unsaved edits
 let forgeApiUrl = scApiBase();
 
 // Reference-image upload state + handlers live in js/forge_refs.js (role-tagged
@@ -294,39 +291,9 @@ async function _patchBrandTemplates(kitId, templates) {
   return j.kit;
 }
 
-async function saveDraftAsTemplate() {
-  const brand = _selectedBrandKit();
-  if (!brand) {
-    window.alert('Pick a brand first — templates are saved against the selected brand.');
-    return;
-  }
-  const ta = document.getElementById('forgeOutputText');
-  const text = (ta?.value || '').trim();
-  if (!text) {
-    window.alert('Nothing to save — generate or paste a draft first.');
-    return;
-  }
-  const ct = _currentContentType();
-  const suggested = (document.getElementById('forgeEvent')?.value || '').trim() || 'Untitled template';
-  const name = window.prompt('Template name:', suggested);
-  if (name == null) return;
-  const trimmed = name.trim().slice(0, 80);
-  if (!trimmed) { window.alert('Name cannot be empty.'); return; }
-  const next = (Array.isArray(brand.templates) ? brand.templates : []).concat([{
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    name: trimmed,
-    text,
-    content_type: ct || null,
-    created_at: new Date().toISOString(),
-  }]);
-  try {
-    await _patchBrandTemplates(brand.id, next);
-    populateTemplateSelect();
-  } catch (e) {
-    console.error('saveDraftAsTemplate failed', e);
-    window.alert(`Save failed: ${e.message || e}`);
-  }
-}
+// (saveDraftAsTemplate deleted 2026-06-11 with the SAVE TEMPLATE button — the
+// P1.5 button cull. Existing templates still load via the select below; a
+// create path can return inside Marks if needed.)
 
 function _loadTemplateIntoDraft(template) {
   if (!template) return;
@@ -350,8 +317,6 @@ function _loadTemplateIntoDraft(template) {
   }
   ta.value = template.text || '';
   forgeGeneratedContent = ta.value;
-  _forgeVariants = [];
-  _forgePickedIndex = null;
   _forgePickedSnapshot = ta.value;
   document.getElementById('forgeActions').style.display = 'block';
   updateCharCount();
@@ -419,8 +384,8 @@ function updateForgeFields() {
     </div>`;
   }
   if (ct.fields.includes('event_details')) {
-    // Structured event facts — each becomes a clean overlay line (buildPosterOverlay).
-    // The compositor (not the AI image) is the legible source of truth for these.
+    // Structured event facts — baked into the generated image as quoted text
+    // lines (media_gen._baked_text_lines) since P1.5 (2026-06-11).
     html += `<div class="forge-input-group">
       <label class="forge-label">Event details</label>
       <input class="input" id="forgeEvent" placeholder="Night / event name (e.g. WAREHOUSE TECHNO)">
@@ -531,40 +496,14 @@ function gatherForgeContext() {
   return ctx;
 }
 
-// Compose the poster text overlay from structured event fields. Lineup is the hero
-// headline; the supporting block stacks only the facts that were filled in:
-//   Night name / Venue · City / Date · DOORS <doors>[–<curfew>] / Tickets
-function buildPosterOverlay(ctx) {
-  const v = k => (ctx[k] || '').trim();
-  const lineup = v('artist_list');
-  const night = v('event');
-  const headline = lineup || night;
+// (buildPosterOverlay deleted 2026-06-11 — flyers bake text into the image now;
+// the server-side equivalent lives in media_gen._baked_text_lines.)
 
-  const lines = [];
-  if (night && night !== headline) lines.push(night);
-  const place = [v('venue'), v('city')].filter(Boolean).join(' · ');
-  if (place) lines.push(place);
-  const doors = v('doors');
-  const when = [
-    v('date'),
-    doors ? `DOORS ${doors}${v('curfew') ? `–${v('curfew')}` : ''}` : '',
-  ].filter(Boolean).join(' · ');
-  if (when) lines.push(when);
-  if (v('tickets')) lines.push(v('tickets'));
-
-  return { headline, supporting: lines.join('\n') };
-}
-
-// Short-form content types that support 3-variant generation. Long-form stays single-shot.
-const VARIANT_TYPES = new Set(['social_post','social_carousel','event_promo','event_poster']);
-
+// Straight to output (P1.5, 2026-06-11): no variant-pick step — copy + image in
+// one hit, iterate via REGEN. The 3-angle picker died with Doug's live review.
 async function generateContent(variation) {
   const ctx = gatherForgeContext();
   if (variation) ctx.variation = variation;
-  // Three-angle variant mode for short-form types — but not on a SHORTER/LONGER/TONE refine.
-  if (!variation && VARIANT_TYPES.has(ctx.content_type)) {
-    ctx.n_variants = 3;
-  }
 
   const outputArea = document.getElementById('forgeOutputArea');
   const actionsEl = document.getElementById('forgeActions');
@@ -572,9 +511,6 @@ async function generateContent(variation) {
     <span>Generating<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
   </div>`;
   actionsEl.style.display = 'none';
-  // Reset variant state — we're starting a fresh generation
-  _forgeVariants = [];
-  _forgePickedIndex = null;
   _forgePickedSnapshot = '';
 
   try {
@@ -596,21 +532,18 @@ async function generateContent(variation) {
     const data = await r.json();
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
-    if (Array.isArray(data.variants) && data.variants.length > 0) {
-      // VARIANT MODE — show picker. Image gen waits for the user to pick one.
-      _forgeVariants = data.variants;
-      renderVariantPicker(ctx);
-      // Hide actions until a variant is picked
-      actionsEl.style.display = 'none';
-      document.getElementById('forgeImageArea').style.display = 'none';
+    // Backend may still return variants (legacy callers) — take the first.
+    forgeGeneratedContent = data.content
+      || (Array.isArray(data.variants) && data.variants[0] && data.variants[0].text)
+      || '';
+    outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
+    actionsEl.style.display = 'block';
+    updateCharCount();
+    if (OUTPUT_MEDIA[ctx.content_type] === 'image') {
+      // Pass the copy along — it feeds the image prompt's mood cues.
+      generateImage({ ...ctx, generated_text: forgeGeneratedContent });
     } else {
-      // SINGLE-BLOCK MODE — long-form types, variations, or backend fallback.
-      forgeGeneratedContent = data.content || '';
-      outputArea.innerHTML = `<textarea class="forge-output" id="forgeOutputText" oninput="forgeGeneratedContent=this.value;updateCharCount()">${esc(forgeGeneratedContent)}</textarea>`;
-      actionsEl.style.display = 'block';
-      updateCharCount();
-      if (OUTPUT_MEDIA[ctx.content_type] === 'image') generateImage(ctx);
-      else document.getElementById('forgeImageArea').style.display = 'none';
+      document.getElementById('forgeImageArea').style.display = 'none';
     }
   } catch(e) {
     // Only blame the API connection when the request genuinely couldn't reach it
@@ -631,124 +564,38 @@ function updateCreditsDisplay(n) {
   if (el) el.textContent = n;
 }
 
-function generateVariation(type) { generateContent(type); }
-
-// ── Variant picker (Phase A of Forge text rework) ───────────
-function renderVariantPicker(ctx) {
-  const out = document.getElementById('forgeOutputArea');
-  out.replaceChildren();
-
-  const hint = document.createElement('div');
-  hint.className = 'forge-variant-hint';
-  hint.textContent = 'Three takes on the same brief. Pick one to edit and ship.';
-  out.appendChild(hint);
-
-  const cards = document.createElement('div');
-  cards.className = 'forge-variant-cards';
-  _forgeVariants.forEach((v, i) => {
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'forge-variant-card';
-    card.dataset.index = String(i);
-
-    const label = document.createElement('div');
-    label.className = 'forge-variant-label';
-    label.textContent = v.angle || `VARIANT ${i + 1}`;
-    card.appendChild(label);
-
-    const preview = document.createElement('div');
-    preview.className = 'forge-variant-preview';
-    preview.textContent = v.text || '';
-    card.appendChild(preview);
-
-    card.addEventListener('click', () => pickVariant(i, ctx));
-    cards.appendChild(card);
-  });
-  out.appendChild(cards);
-}
-
-function pickVariant(i, ctx) {
-  const v = _forgeVariants[i];
-  if (!v) return;
-  // If the user is swapping after edits, confirm.
-  if (_forgePickedIndex !== null && _forgePickedIndex !== i) {
-    const ta = document.getElementById('forgeOutputText');
-    if (ta && ta.value !== _forgePickedSnapshot) {
-      if (!window.confirm('Discard your edits and load this variant?')) return;
-    }
-  }
-  _forgePickedIndex = i;
-  forgeGeneratedContent = v.text || '';
-  _forgePickedSnapshot = forgeGeneratedContent;
-
-  // Replace the picker contents with the editable textarea, keep the cards visible above.
-  const out = document.getElementById('forgeOutputArea');
-  // Remove previous textarea if present (re-pick path)
-  const old = document.getElementById('forgeOutputText');
-  if (old) old.remove();
-  // Highlight the picked card
-  out.querySelectorAll('.forge-variant-card').forEach((c) => {
-    c.classList.toggle('is-picked', Number(c.dataset.index) === i);
-  });
-  // Append the editable textarea below the cards
-  const ta = document.createElement('textarea');
-  ta.className = 'forge-output';
-  ta.id = 'forgeOutputText';
-  ta.value = forgeGeneratedContent;
-  ta.addEventListener('input', () => {
-    forgeGeneratedContent = ta.value;
-    updateCharCount();
-  });
-  out.appendChild(ta);
-
-  document.getElementById('forgeActions').style.display = 'block';
+// ── Discard (P1.5) — clear the output column back to its resting state ──
+function resetForgeOutput() {
+  forgeGeneratedContent = '';
+  forgeGeneratedImageUrl = '';
+  _forgePickedSnapshot = '';
+  _compositorActive = false;
+  if (window.scCompositor) try { scCompositor.hide(); } catch (e) {}
+  document.getElementById('forgeOutputArea').innerHTML =
+    `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px">
+      <span style="color:var(--muted)">Select a content type and hit Generate</span>
+    </div>`;
+  const imgArea = document.getElementById('forgeImageArea');
+  imgArea.style.display = 'none';
+  imgArea.innerHTML = '';
+  document.getElementById('forgeActions').style.display = 'none';
   updateCharCount();
-
-  // Fire image gen once per pick, with the chosen text + image_direction in ctx.
-  if (OUTPUT_MEDIA[ctx.content_type] === 'image') {
-    const imageCtx = { ...ctx, generated_text: forgeGeneratedContent };
-    if (v.image_direction) imageCtx.image_direction = v.image_direction;
-    generateImage(imageCtx);
-  } else {
-    document.getElementById('forgeImageArea').style.display = 'none';
-  }
 }
 
-// ── Enhance current draft (Phase A) ─────────────────────────
-async function enhanceDraft(btn) {
-  const ta = document.getElementById('forgeOutputText');
-  const draft = (ta?.value || '').trim();
-  if (!draft) return;
-  const orig = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '⏳ Enhancing…'; btn.disabled = true; }
-  try {
-    const ctx = gatherForgeContext();
-    const body = { ...ctx, text: draft };
-    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/enhance`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body),
-    });
-    if (r.status === 402) {
-      const j = await r.json().catch(() => ({}));
-      throw new Error(`Insufficient credits — enhance costs ${j.cost || 1}.`);
-    }
-    if (!r.ok) throw new Error(`enhance ${r.status}`);
-    const j = await r.json();
-    if (typeof j.credits_balance === 'number') updateCreditsDisplay(j.credits_balance);
-    const refined = j.content || draft;
-    ta.value = refined;
-    forgeGeneratedContent = refined;
-    _forgePickedSnapshot = refined;
-    updateCharCount();
-  } catch (e) {
-    console.error('enhanceDraft failed', e);
-    if (btn) btn.textContent = '❌ Failed';
-    setTimeout(() => { if (btn) { btn.textContent = orig; btn.disabled = false; } }, 1500);
-    return;
-  }
-  if (btn) { btn.textContent = orig; btn.disabled = false; }
+// ── Image lightbox (P1.5) — click the generated image to zoom ──
+function openForgeLightbox(url) {
+  const box = document.getElementById('forgeLightbox');
+  if (!box || !url) return;
+  document.getElementById('forgeLightboxImg').src = url;
+  box.classList.add('open');
 }
+function closeForgeLightbox() {
+  const box = document.getElementById('forgeLightbox');
+  if (box) box.classList.remove('open');
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeForgeLightbox();
+});
 
 // (Reference-image upload handlers moved to js/forge_refs.js.)
 
@@ -783,35 +630,25 @@ async function generateImage(ctx) {
     if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
 
     const _brand = _selectedBrandKit();
-    // Poster types mount the text-overlay compositor even with NO brand kit, so the
-    // restyle backdrop becomes a legible, shippable poster (brand-less falls back to
-    // the S0UNDCAV3 DEFAULT_STYLE in compositor.js). Other types still require a brand.
+    // P1.5 (2026-06-11): flyers NEVER mount the text-overlay compositor — the
+    // event text is baked into the generated image by the model. The overlay
+    // stays available only for brand-kit Post/Carousel.
     const _posterType = ctx.content_type === 'event_poster' || ctx.content_type === 'event_promo';
-    if (window.scCompositor && (_brand || _posterType)) {
+    if (window.scCompositor && _brand && !_posterType) {
       _compositorActive = true;
       imgArea.style.display = 'none';
       window.scCompositor.show(ctx.content_type);
-      window.scCompositor.applyBrandKit(_brand || null);  // null → DEFAULT_STYLE + clears any stale brand
+      window.scCompositor.applyBrandKit(_brand);
       window.scCompositor.applyBackground(forgeGeneratedImageUrl);
-      if (_posterType) {
-        // Poster overlay: lineup as the hero headline, structured event facts stacked below.
-        const ov = buildPosterOverlay(ctx);
-        window.scCompositor.applyContent({
-          headline: ov.headline,
-          supporting: ov.supporting,
-          event: ctx.event || '',
-        });
-      } else {
-        window.scCompositor.applyContent({
-          supporting: forgeGeneratedContent || '',
-          event: ctx.event || '',
-        });
-      }
+      window.scCompositor.applyContent({
+        supporting: forgeGeneratedContent || '',
+        event: ctx.event || '',
+      });
     } else {
       _compositorActive = false;
       const _cmp = document.getElementById('forgeCompositor');
       if (_cmp) _cmp.style.display = 'none';
-      imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">
+      imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image" title="Click to zoom" onclick="openForgeLightbox(this.src)">
         <div class="forge-image-meta">
           ${data.dimensions.width}x${data.dimensions.height} | ${data.provider}/${data.model}
         </div>`;
@@ -839,16 +676,6 @@ function downloadForgeImage() {
   a.href = forgeGeneratedImageUrl;
   a.download = `soundcave_${Date.now()}.png`;
   a.click();
-}
-
-async function copyForgeOutput() {
-  try {
-    await navigator.clipboard.writeText(forgeGeneratedContent);
-    const btn = event.target;
-    const orig = btn.textContent;
-    btn.textContent = '✅ Copied!';
-    setTimeout(() => btn.textContent = orig, 1500);
-  } catch(e) {}
 }
 
 async function saveToStash() {
@@ -932,7 +759,7 @@ function editStashItem(id) {
   const imgArea = document.getElementById('forgeImageArea');
   if (forgeGeneratedImageUrl) {
     imgArea.style.display = 'block';
-    imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image">`;
+    imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image" title="Click to zoom" onclick="openForgeLightbox(this.src)">`;
     document.getElementById('btnRegenImage').style.display = '';
     document.getElementById('btnDownloadImage').style.display = '';
   } else {

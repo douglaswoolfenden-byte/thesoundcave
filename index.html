@@ -489,15 +489,11 @@
             <div class="forge-char-count" id="forgeCharCount"></div>
           </div>
 
-          <div id="forgeOutputArea">
-            <div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px">
-              <span style="color:var(--muted)">Select a content type and hit Generate</span>
-            </div>
-          </div>
-
+          <!-- P1.5 layout: IMAGE on top, caption text below — like the post it becomes. -->
           <div id="forgeImageArea" class="forge-image-area" style="display:none"></div>
 
-          <!-- Compositor — replaces image preview when a brand kit is applied (Phase 3) -->
+          <!-- Compositor — replaces image preview when a brand kit is applied
+               (Post/Carousel only since P1.5; flyers bake text into the image) -->
           <div id="forgeCompositor" class="forge-compositor" style="display:none">
             <div class="compositor-toolbar">
               <div class="compositor-tool-group">
@@ -521,22 +517,28 @@
             </div>
           </div>
 
-          <div id="forgeActions" style="display:none">
-            <div class="forge-actions">
-              <button class="btn-outline" type="button" onclick="generateContent()">REGENERATE</button>
-              <button class="btn-outline" type="button" onclick="enhanceDraft(this)">ENHANCE</button>
-              <button class="btn-outline" type="button" onclick="generateVariation('shorter')">SHORTER</button>
-              <button class="btn-outline" type="button" onclick="generateVariation('longer')">LONGER</button>
-              <button class="btn-outline" type="button" onclick="generateVariation('tone')">CHANGE TONE</button>
-              <button class="btn-outline" type="button" id="btnSaveTemplate" onclick="saveDraftAsTemplate()" title="Save current draft as a template for the selected brand">SAVE TEMPLATE</button>
-            </div>
-            <div class="forge-actions" style="margin-top:8px">
-              <button class="btn-red" type="button" onclick="copyForgeOutput()">COPY TEXT</button>
-              <button class="btn-outline" type="button" id="btnRegenImage" onclick="regenerateImage()" style="display:none">NEW IMAGE</button>
-              <button class="btn-outline" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">DOWNLOAD</button>
-              <button class="btn-red" type="button" onclick="saveToStash()" style="background:var(--card);border:1px solid var(--border);color:var(--body)">SAVE TO STASH</button>
+          <div id="forgeOutputArea">
+            <div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px">
+              <span style="color:var(--muted)">Select a content type and hit Generate</span>
             </div>
           </div>
+
+          <!-- P1.5 controls: the 10-button wall died. Save is the hero. -->
+          <div id="forgeActions" style="display:none">
+            <div class="forge-actions">
+              <button class="btn-red" type="button" onclick="saveToStash()">SAVE TO STASH</button>
+              <button class="btn-outline" type="button" onclick="generateContent()">REGEN</button>
+              <button class="btn-outline" type="button" id="btnRegenImage" onclick="regenerateImage()" style="display:none">NEW IMAGE</button>
+              <button class="btn-outline" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">DOWNLOAD</button>
+              <button class="btn-outline" type="button" onclick="resetForgeOutput()" title="Clear this output">DISCARD</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image lightbox — click any generated image to zoom (Esc / click-away closes) -->
+        <div id="forgeLightbox" class="forge-lightbox" onclick="if(event.target===this)closeForgeLightbox()">
+          <img id="forgeLightboxImg" alt="Generated image, zoomed">
+          <button type="button" class="forge-lightbox-close" onclick="closeForgeLightbox()" aria-label="Close">×</button>
         </div>
       </div>
     </div>

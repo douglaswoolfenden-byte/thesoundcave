@@ -27,7 +27,7 @@
 From `https://thesoundcave.vercel.app` in-browser: `scApiBase()` → Railway URL; `/api/config` 200; `/api/artist/djcarlosmanaca` 200 (follower_count 21,862). CORS works cross-origin. API smoke also confirmed `top_tracks` (5) on a fresh cache miss.
 
 ## Open follow-ups (not blocking)
-1. **Supabase Auth redirect/Site URL** — for magic-link login to land back on `https://thesoundcave.vercel.app`, add it as Site URL + allowed redirect in the Supabase dashboard (Auth → URL Config). Until then, magic links may redirect to a stale URL.
+1. ~~**Supabase Auth redirect/Site URL**~~ ✅ Resolved 2026-06-11 — already configured by Doug; verified live (magic link redirected to the Vercel URL, login landed). See log [2026-06-11].
 2. **Snapshots not on prod** — `.vercelignore` excludes `data/snapshots/` (0006), so the Cave dashboard charts have no history on prod (degrades to the "tracking builds daily" empty state). Decide: serve snapshots, or have the frontend read them from the API/Supabase.
 3. **CORS hardening** — `CORS(app)` is open; consider restricting to the Vercel origin once stable.
 4. **Cost:** Railway Hobby ~$5/mo (single always-on service). Watch usage.

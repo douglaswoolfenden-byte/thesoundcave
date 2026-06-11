@@ -1,5 +1,14 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-11] ✅ Auth-redirect blocker closed — login verified on prod (no change needed)
+The handoff's "DO THIS FIRST" item (Supabase Auth URL config) turned out to be **already configured** — Doug had set it himself. No config was changed; this session *verified* it end-to-end on production:
+- `scAuth.signInWithEmail('…')` fired from `https://thesoundcave.vercel.app` → `{}` (no "invalid redirect URL").
+- Magic-link email inspected via Gmail: `redirect_to=https://thesoundcave.vercel.app/` ✅.
+- Supabase `/auth/v1/verify` bounces to the prod origin (even on a bad token it landed on `thesoundcave.vercel.app/#error=…`).
+- Doug clicked the real link from his inbox and logged in on the live site ("seems to be working good").
+Also observed: prod now serves **4** daily snapshots (CI fix accruing as designed); minor `favicon.ico` 404 on every page load (cosmetic, open). **Gotcha:** reading a magic-link out of Gmail via the Gmail MCP mangles the token — for Playwright logins use the admin `generate_link` API instead.
+**Remaining open (re-ranked):** CORS hardening → snapshots-via-API → favicon. Item 1 of the handoff list below is closed.
+
 ## [2026-06-11] 🧭 SESSION HANDOFF — dashboard viz + deploy hardening + OPEN items
 > Resume point for switching tools/sessions. Read this + [decisions/0007_backend_live_on_railway.md](decisions/0007_backend_live_on_railway.md) first.
 
@@ -12,7 +21,7 @@
 - **Charts-on-prod fix (`9b95612`)** — `.vercelignore` was hiding `data/snapshots/` from the Vercel bundle → chart data 404'd → empty charts. Removed the exclusion; prod now serves snapshots (verified 200). Combined with the CI fix, fresh snapshots land daily.
 
 **⚠️ OPEN / NEXT (do these to finish):**
-1. **Supabase auth redirect — NOT done. Blocks login on the live site.** In the Supabase dashboard → Auth → URL Configuration (project ref `agmmdrqmjywggtsycsri`): set **Site URL** = `https://thesoundcave.vercel.app`; add **Redirect URLs** `https://thesoundcave.vercel.app/**` and `http://localhost:3000/**`. Frontend uses `origin+pathname` as `emailRedirectTo`/reset `redirectTo` (`js/lib/supabase.js`). Until set, magic-link / password-reset redirects fail on prod. Verify by firing `scAuth.signInWithEmail` from the live site (expect no "invalid redirect URL").
+1. ~~**Supabase auth redirect**~~ ✅ CLOSED 2026-06-11 — was already configured; verified live (see entry above). In the Supabase dashboard → Auth → URL Configuration (project ref `agmmdrqmjywggtsycsri`): set **Site URL** = `https://thesoundcave.vercel.app`; add **Redirect URLs** `https://thesoundcave.vercel.app/**` and `http://localhost:3000/**`. Frontend uses `origin+pathname` as `emailRedirectTo`/reset `redirectTo` (`js/lib/supabase.js`). Until set, magic-link / password-reset redirects fail on prod. Verify by firing `scAuth.signInWithEmail` from the live site (expect no "invalid redirect URL").
 2. **Live charts need data** — populate only with ≥2 snapshot days AND the artist in your Clan. 3 days on record now (05-12, 06-09, 06-10); accrues daily via the now-fixed tracker.
 3. **CORS hardening** — `content_api` uses `CORS(app)` (open). Restrict to the Vercel origin once stable.
 4. **Snapshots delivery (proper)** — current fix ships static JSON in the Vercel bundle (only refreshes on redeploy). Better: serve from `content_api`/Supabase (decision 0007 follow-up #2).

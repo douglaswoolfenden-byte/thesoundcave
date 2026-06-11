@@ -29,16 +29,20 @@ const OUTPUT_MEDIA = {
   artist_bio:      'image',
 };
 
-// Forge content types — slim set focused on Meta + TikTok + Reddit.
-// Captions are auto-generated inside the social types; no standalone "caption" type.
-// Per wiki/spec/forge_output_recipes.md (Approved 2026-06-09): 5 types, each with its own recipe.
+// Forge formats — 3 since 2026-06-11 (wiki/spec/forge_context_pipeline.md):
+// Flyer absorbed Event Poster + Event Promo; Artist Bio folds into Post later
+// (Spotlight mode). Internal keys unchanged so backend templates, image routing,
+// compositor templates and stashed items all keep resolving.
 const CONTENT_TYPES = {
-  social_post:     { label:'Post',                  icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
-  social_carousel: { label:'Carousel',              icon:'', iconKey:'carousel',     fields:['artist','freeform'], maxLength:2200 },
-  event_promo:     { label:'Event Promotion',       icon:'', iconKey:'event_promo',  fields:['event_details','artist','freeform'] },
-  event_poster:    { label:'Event Poster',          icon:'', iconKey:'lineup',       fields:['event_details','artist_list','freeform'] },
-  artist_bio:      { label:'Artist Spotlight / Bio', icon:'', iconKey:'artist_bio',   fields:['artist','freeform'] },
+  social_post:     { label:'Post',     icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
+  social_carousel: { label:'Carousel', icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
+  event_poster:    { label:'Flyer',    icon:'', iconKey:'lineup',   fields:['event_details','artist_list','freeform'] },
 };
+// Retired picker formats: legacy Stash items keep readable labels and reopen in
+// the nearest current format.
+const LEGACY_TYPE_LABELS   = { event_promo:'Event Promo', artist_bio:'Artist Bio' };
+const LEGACY_TYPE_FALLBACK = { event_promo:'event_poster', artist_bio:'social_post' };
+function contentTypeLabel(t) { return CONTENT_TYPES[t]?.label || LEGACY_TYPE_LABELS[t] || t; }
 
 // Stash storage moved from localStorage to Supabase via /api/stash backend proxy.
 // Render functions stay sync by reading from this in-memory cache, hydrated on
@@ -970,7 +974,9 @@ function editStashItem(id) {
   const item = lib.find(i => i.id === id);
   if (!item) return;
   setFirepitMode('forge', document.querySelector('.firepit-mode'));
-  document.getElementById('forgeContentType').value = item.type;
+  // Legacy types (event_promo, artist_bio) reopen in the nearest current format.
+  const formatKey = CONTENT_TYPES[item.type] ? item.type : (LEGACY_TYPE_FALLBACK[item.type] || 'social_post');
+  document.getElementById('forgeContentType').value = formatKey;
   updateForgeFields();
   const ctx = item.context || {};
   if (ctx.artist_username) { const el = document.getElementById('forgeArtist'); if (el) el.value = ctx.artist_username; }

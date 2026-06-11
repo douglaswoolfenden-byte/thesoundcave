@@ -177,7 +177,7 @@ function _postTileHTML(item) {
     ? `<img src="${esc(item.imageUrl)}" alt="">`
     : `<span class="stash-block-noimg">${esc(item.icon || '📝')}</span>`;
   const title = esc(item.label
-    || (item.postType ? postTypeLabel(item.postType) : (CONTENT_TYPES[item.type]?.label || item.type)));
+    || (item.postType ? postTypeLabel(item.postType) : contentTypeLabel(item.type)));
   const status = _effectiveStatus(item);
   // Suggested date — campaign posts carry a proposed send date; loose items show
   // when they were saved. Small print, so it's clear WHEN each is meant to go out.
@@ -283,10 +283,7 @@ function populateStashTypeFilter() {
   const types = new Set(getContentLibrary().map(i => i.type));
   const existing = sel.value;
   sel.innerHTML = '<option value="">All types</option>' +
-    [...types].map(t => {
-      const ct = CONTENT_TYPES[t];
-      return `<option value="${t}">${ct ? ct.label : t}</option>`;
-    }).join('');
+    [...types].map(t => `<option value="${t}">${contentTypeLabel(t)}</option>`).join('');
   sel.value = existing;
 }
 

@@ -437,25 +437,17 @@
           <div class="forge-input-group">
             <label class="forge-label">Content Type</label>
             <select class="input" id="forgeContentType" onchange="updateForgeFields()">
-              <optgroup label="Social">
-                <option value="social_post">Post</option>
-                <option value="social_carousel">Carousel</option>
-              </optgroup>
-              <optgroup label="Events">
-                <option value="event_promo">Event Promo</option>
-                <option value="event_poster">Event Poster</option>
-              </optgroup>
-              <optgroup label="Editorial">
-                <option value="artist_bio">Artist Bio</option>
-              </optgroup>
+              <option value="social_post">Post</option>
+              <option value="social_carousel">Carousel</option>
+              <option value="event_poster">Flyer</option>
             </select>
           </div>
 
           <div id="forgeDynamicFields"></div>
 
           <!-- Spirit selector — a reusable character/face reference set (avatar).
-               Shown for Artist Bio; summoning one routes to Nano Banana Pro for
-               character consistency. -->
+               Available on every format; summoning one routes image gen to
+               Nano Banana Pro for character consistency. -->
           <div class="forge-input-group" id="forgeSpiritRow">
             <label class="forge-label">Spirit</label>
             <div class="forge-brand-selector">

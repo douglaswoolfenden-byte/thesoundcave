@@ -1,5 +1,14 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-11] 📈 Clan Data Tracking v2 — Phase 1 LIVE (registry + robust collector + Supabase time-series)
+Spec: `wiki/spec/clan_data_tracking_v2.md` (approved via plan sign-off). Commit `deb67e7`, deployed to Railway. The "data I can't trust" problem diagnosed and fixed — it was our pipeline, not SoundCloud:
+- **Root causes found:** display-name `/resolve` (fails on spaces/unicode — 12/20 scouted artists never tracked; worse, `Lucki`/`BELFORT`/`TREMUR` in old snapshots were a *different user's* numbers); failed fetches stored as zeros; pagination failures silently undercounting; tracker reading stale weekly reports instead of the Clan roster.
+- **Shipped:** `db/0019` (`tracked_artists` registry + `artist_snapshots` time-series + `snapshot_runs` log); `tracking_collector.py` (identity = numeric SoundCloud user id resolved once from `artist_url`; retries w/ backoff; **failed ⇒ NULL metrics, never zeros**; partial pagination flagged; resume-safe upserts); `tracking_api.py` (`/api/tracking/snapshots` mirrors the legacy static shape for a one-line Phase 2 cutover; `/artist/<key>/series`, `/run`, `/runs`, `/artists`); scheduler cron 07:00Z + hourly catch-up inside `_start_executor()`.
+- **Backfill:** registry seeded — **10/10 Clan+Watching artists resolved**, incl. every previously-impossible name ("Mulda (NL)", "Blam!", "𝐇𝐚𝐭𝐬𝐮𝐦𝐢 𝐂𝐡𝐚𝐧"); legacy snapshots imported with honesty flags (wrong-user rows → `failed`, 05-12 undercounts → `partial`).
+- **Calibration vs public SoundCloud pages: EXACT.** Followers 4/4 exact (Blam!, real Lucki, Mulda (NL), James Ray); Blam! per-track plays hand-summed from public pages = 807 = ours, to the play. Negative test: invalid id ⇒ `failed` + NULL metrics, omitted from the snapshots endpoint (gap, not zero-dip). First full collection run: 10/10 ok.
+- **Verified live post-deploy:** health 200, tracking routes 401-without-auth, Railway log shows `tracking cron=07:00Z + hourly catch-up`. Data accrues daily from tomorrow.
+- **Next:** Phase 2 frontend cutover (charts read `/api/tracking/snapshots`; clean toggle chart in Footprints), Phase 3 screenshot-ingest lane (extract→confirm→image deleted), Phase 4 retire GH-Actions/static pipeline (needs ≥3-day parity window — keep dual-running until then).
+
 ## [2026-06-11] 🔒 CORS hardened — API restricted to known origins (deployed + live-verified)
 - `content_api.py`: `CORS(app)` (open to any origin) → `CORS(app, origins=[https://thesoundcave.vercel.app, http://localhost:3000, http://127.0.0.1:3000])`. Vercel *preview* deploys are deliberately not allowed — test against prod or localhost. Commit `9aa16f9`.
 - **Deploy fact worth remembering:** Railway does NOT auto-deploy from GitHub pushes — deploys are CLI uploads. Recipe: `railway link -p 1d496daa-30f8-45e3-af72-5bb478b2790f -e production -s soundcave-api && railway up`. Deployed from an isolated `git worktree` of `main` so a parallel session's WIP couldn't ride along.

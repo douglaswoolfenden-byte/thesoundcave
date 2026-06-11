@@ -234,90 +234,140 @@ def _vibe_cues(ctx, generated_text='', include_brand=True):
     return cues
 
 
-def build_restyle_prompt(content_type, ctx, generated_text=''):
-    """Prompt for JOB_RESTYLE (FLUX.2 /edit): recreate an uploaded flyer's STYLE
-    as a clean BACKDROP — the legible event text is composited on top afterwards
-    (Konva compositor), so we deliberately suppress baked-in lettering here.
+def _baked_text_lines(ctx):
+    """Event facts as render-in-image text instructions — each string quoted and
+    given a per-line typographic job, per Google's Nano Banana prompting guide.
+    Returns [] when no facts exist; callers then forbid text instead.
 
-    Earlier this prompt asked the model to *render* the event text. Edit models
-    garble dense display type (browser-confirm 2026-06-10), so the decision is:
-    let the reference carry the aesthetic, keep the generated image text-light with
-    clean zones, and let the compositor be the legible source of truth for
-    date/venue/lineup. Built directly (no Claude call) — faster + cheaper.
-
-    The promoter's vibe inputs (genre, theme, freeform mood, voice energy, brand
-    palette) ARE appended as style cues — the input-usage audit found they were
-    being discarded entirely, leaving the reference as the only input.
+    P1.5 (2026-06-11): text is BAKED INTO the generated image. This supersedes
+    the compositor-overlay split for flyers — the model renders the real
+    venue/date/lineup in the reference's typographic style.
     """
+    v = lambda k: (ctx.get(k) or '').strip()
+    lineup = v('artist_list')
+    night = v('event')
+    headline = lineup.replace('\n', ' · ') if lineup else night
+    lines = []
+    if headline:
+        lines.append(f'- Headline: "{headline}" — the dominant display type, '
+                     'biggest element in the hierarchy')
+    if night and night != headline:
+        lines.append(f'- Night name: "{night}" — secondary display line')
+    place = ' — '.join(x for x in (v('venue'), v('city')) if x)
+    if place:
+        lines.append(f'- Venue line: "{place}"')
+    when = v('date')
+    if v('doors'):
+        doors = f"DOORS {v('doors')}" + (f"–{v('curfew')}" if v('curfew') else '')
+        when = f'{when} · {doors}' if when else doors
+    if when:
+        lines.append(f'- Date line: "{when}"')
+    if v('tickets'):
+        lines.append(f'- Tickets line: "{v("tickets")}"')
+    return lines
+
+
+def build_restyle_prompt(content_type, ctx, generated_text=''):
+    """Prompt for JOB_RESTYLE: recreate the uploaded reference's design with the
+    REAL event text baked in.
+
+    P1.5 verdict (Doug, 2026-06-11, live review): outputs must follow the style
+    reference much more closely, and text is rendered by the model — no editable
+    overlay. This reverses the text-free-backdrop approach (which literally
+    instructed the model to deviate from the reference by stripping its
+    type-driven layout). Built directly (no Claude call).
+    """
+    n_refs = len(ctx.get('reference_images') or []) or 1
+    ref_word = ('these reference flyers — they are one designer\'s series; treat '
+                'their shared design language as law' if n_refs > 1
+                else 'this exact flyer design')
     base = (
-        "Take this flyer and REMOVE every piece of text from it — no words, letters, "
-        "numbers, dates, names, prices or typography of ANY kind, anywhere in the image. "
-        "Keep ONLY its visual style: the exact colour palette, print texture (riso, "
-        "halftone, grain, distress), graphic motifs, shapes and overall layout energy. "
-        "Wherever the reference had text, replace it with clean empty background or "
-        "abstract graphic texture in the same style — leave generous uncluttered "
-        "negative space in the upper-centre and lower-centre. The output is a completely "
-        "TEXT-FREE poster BACKDROP; the real event text is added on top separately "
-        "afterwards. High-contrast, gritty, dark underground aesthetic. "
-        "Absolutely no lettering, captions, signatures, watermarks or placeholder text."
+        f"Recreate {ref_word}. Keep the layout, colour palette, print texture, "
+        "graphic elements, motifs, mascots and composition IDENTICAL to the "
+        "reference — this is the same designer making the next flyer in the series."
     )
+    text_lines = _baked_text_lines(ctx)
+    if text_lines:
+        base += (
+            "\nReplace ALL existing text with the new event text below, matching "
+            "the reference's typographic style (same font feel, weight, case and "
+            "placement hierarchy):\n" + '\n'.join(text_lines) +
+            "\nRender every quoted string EXACTLY as written, correctly spelled, "
+            "crisp and legible. Every other piece of text in the reference — "
+            "small print, address blocks, badges, dates, slogans — must NOT "
+            "appear: where it has no replacement above, fill the zone with "
+            "graphic texture in the same style. No other text anywhere in the image."
+        )
+    else:
+        base += (
+            "\nThis piece carries no text: replace the reference's lettering with "
+            "clean graphic texture in the same style."
+        )
     # Style law (context-pipeline spec): an uploaded style ref outranks the brand
     # palette, so brand cues stay out of the restyle path.
     cues = _vibe_cues(ctx, generated_text, include_brand=False)
     if cues:
-        base += (
-            "\nAdapt the mood toward (style only — do NOT render any of this as text): "
-            + '; '.join(cues) + '.'
-        )
+        base += "\nAdapt the mood toward (style only): " + '; '.join(cues) + '.'
     return base
-
-
-# Each role's job line for the compose prompt — names what every reference IS,
-# so multi-ref /edit models stop treating uploads as one anonymous style pile.
-_ROLE_PROMPT_JOBS = {
-    'who':   ('a PERSON to feature — keep this exact person clearly recognisable '
-              '(face, hair, build); do not replace them with a different figure'),
-    'where': ('the PLACE / SETTING — stage the final image in this location or scene'),
-    'what':  ('an OBJECT / MOTIF to include — recreate it faithfully but rendered '
-              'in the final image\'s style'),
-    'style': ('the STYLE REFERENCE — its colour palette, print texture, graphic '
-              'language and layout energy govern the whole output'),
-}
 
 
 def build_compose_prompt(content_type, ctx, roled_refs, generated_text=''):
     """Prompt for JOB_COMPOSE / JOB_COMPOSE_PERSON (multi-reference /edit models).
 
-    Per wiki/spec/forge_context_pipeline.md (signed off 2026-06-11): every
-    reference is named by its role (WHO/WHERE/WHAT/STYLE) so the model composes
-    them — person at the place with the object, all in the style — instead of
-    blending an anonymous pile. Built directly (no Claude call), like
-    build_restyle_prompt. roled_refs order must match the image_refs order.
+    Narrative creative-director prose, not a keyword list — Google's Nano Banana
+    guidance (and Doug's P1.5 live verdict: WHO/Spirit output quality was poor on
+    the terse role-list version). Each reference's role is named in the sentence;
+    the STYLE ref governs everything; event facts are BAKED IN via
+    _baked_text_lines. roled_refs order must match the image_refs order.
     """
-    lines = [f'Compose ONE new image from these {len(roled_refs)} reference images.']
+    intent = {
+        'event_poster':    'a flyer for an underground music event',
+        'event_promo':     'an atmospheric event teaser image',
+        'social_post':     'a single striking social-feed image',
+        'social_carousel': 'a social carousel slide',
+        'artist_bio':      'an artist spotlight image',
+    }.get(content_type, 'a piece of underground music artwork')
+
+    who, where, what, style = [], [], [], []
     for i, ref in enumerate(roled_refs, 1):
-        job = _ROLE_PROMPT_JOBS.get(ref.get('role'), _ROLE_PROMPT_JOBS['style'])
         note = (ref.get('note') or '').strip()
-        suffix = f' (the promoter says: "{note}")' if note else ''
-        lines.append(f'Image {i} is {job}{suffix}.')
+        tag = f'image {i}' + (f' ("{note}")' if note else '')
+        {'who': who, 'where': where, 'what': what}.get(ref.get('role'), style).append(tag)
 
-    has_style_ref = any(r.get('role') == 'style' for r in roled_refs)
-    if has_style_ref:
-        lines.append('The STYLE reference wins every visual conflict — render all '
-                     'people, places and objects in its visual language.')
+    parts = [f'Create {intent}']
+    if who:
+        parts.append(f"featuring the person from {' and '.join(who)} — preserve "
+                     "their exact face, hair and build; never swap them for a "
+                     "different figure")
+    if where:
+        parts.append(f"set in the location from {' and '.join(where)}")
+    if what:
+        parts.append(f"including the object from {' and '.join(what)}, recreated "
+                     "faithfully but rendered to fit the final style")
+    lines = [', '.join(parts) + '.']
 
+    if style:
+        lines.append(f"The entire image is rendered in the visual style of "
+                     f"{' and '.join(style)}: its colour palette, print texture, "
+                     "graphic language and layout energy govern everything and win "
+                     "every visual conflict.")
     hint = STYLE_HINTS.get(content_type)
     if hint:
         lines.append(f'Output intent: {hint}')
     # Style law: a STYLE ref outranks the brand palette (spec sign-off 2026-06-11).
-    cues = _vibe_cues(ctx, generated_text, include_brand=not has_style_ref)
+    cues = _vibe_cues(ctx, generated_text, include_brand=not style)
     if cues:
-        lines.append('Mood (style only — do NOT render any of this as text): '
-                     + '; '.join(cues) + '.')
-    lines.append('Do NOT paint any text, lettering, numbers, dates or typography — '
-                 'leave clean negative space where type would sit; the real event '
-                 'text is composited on top afterwards. Dark, high-contrast '
-                 'underground aesthetic.')
+        lines.append('Mood: ' + '; '.join(cues) + '.')
+
+    text_lines = _baked_text_lines(ctx)
+    if text_lines:
+        lines.append('Render the following text in the image, in typography that '
+                     'matches the style' + (' reference' if style else '') + ':\n'
+                     + '\n'.join(text_lines) +
+                     '\nEvery quoted string EXACTLY as written, correctly spelled, '
+                     'crisp and legible. No other text anywhere.')
+    else:
+        lines.append('Do not render any text, lettering or typography.')
     return '\n'.join(lines)
 
 
@@ -522,7 +572,10 @@ _JOB_REGISTRY = {
     JOB_HERO_ART:       ('fal-ai/flux-2-pro',                                '_payload_for_flux2'),
     JOB_AVATAR:         ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
     JOB_EDIT:           ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
-    JOB_RESTYLE:        ('fal-ai/flux-2-pro/edit',                           '_payload_for_flux2'),
+    # Restyle moved FLUX.2-pro/edit → Nano Banana Pro (bake-off 2, 2026-06-11,
+    # Doug's verdict): best style fidelity AND perfect baked-in typography on
+    # both seeds; FLUX garbled small print on 1 of 2. scratch/forge_bakeoff2/.
+    JOB_RESTYLE:        ('fal-ai/nano-banana-pro/edit',                      '_payload_for_nano_banana'),
     # Role-tagged compose routes (context-pipeline spec, 2026-06-11):
     # person present → Nano Banana Pro (strongest character consistency, ≤14 refs);
     # mixed refs without a person → FLUX.2 /edit (strong multi-ref blending, cheaper).
@@ -558,11 +611,26 @@ def _payload_for_seedream(prompt, image_refs, width, height, seed):
     }
 
 
+def _nearest_aspect_ratio(width, height):
+    """Snap pixel dims to nano-banana-pro's aspect_ratio enum."""
+    options = {'1:1': 1.0, '4:5': 0.8, '3:4': 0.75, '2:3': 2 / 3, '9:16': 9 / 16,
+               '5:4': 1.25, '4:3': 4 / 3, '3:2': 1.5, '16:9': 16 / 9}
+    target = width / height
+    return min(options, key=lambda k: abs(options[k] - target))
+
+
 def _payload_for_nano_banana(prompt, image_refs, width, height, seed):
-    """Nano Banana Pro — conversational edits + character consistency."""
+    """Nano Banana Pro — conversational edits + character consistency.
+
+    BUG FIX 2026-06-11: this endpoint does NOT accept image_size — it wants
+    aspect_ratio (enum) + resolution. We were silently generating at auto-ratio
+    and 1K on every avatar/person call. 2K keeps baked-in typography sharp.
+    """
     p = {
         'prompt': prompt,
-        'image_size': {'width': width, 'height': height},
+        'aspect_ratio': _nearest_aspect_ratio(width, height),
+        'resolution': '2K',
+        'output_format': 'png',
         'num_images': 1,
     }
     if seed is not None:

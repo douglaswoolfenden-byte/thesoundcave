@@ -1,5 +1,25 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-11] 🧭 SESSION HANDOFF — dashboard viz + deploy hardening + OPEN items
+> Resume point for switching tools/sessions. Read this + [decisions/0007_backend_live_on_railway.md](decisions/0007_backend_live_on_railway.md) first.
+
+**Shipped this session (all on `main`, deployed):**
+- **Artist modal v3** — numeric stats → 4 sparkline metric tiles (followers/plays/likes/reposts, click a tile to switch the chart); manual data entry + `followers_override` deleted everywhere; top-5 suggested tracks (new `/api/artist` `top_tracks`); brand-orange SVG star. Spec: `spec/artist_modal_v3_visual_stats.md`.
+- **Cave drill-downs** — graphic-first modals (clan-aggregate line chart + movers; genre donut; framed empty-baseline). Hover = CSS ring only (dropdown removed); detail on click. Spec: `spec/cave_drilldown_graphics.md`.
+- **Cave dashboard → rails layout** — overlay corners → 3-column grid (panels in left/right rails, artist stack in centre stage); overlap impossible; bigger. Spec update in `spec/cave_dashboard_redesign.md`.
+- **Backend LIVE on Railway** — see decision 0007. `soundcave-api-production.up.railway.app`; frontend wired via `js/config.js` (`scApiBase()`); verified end-to-end from prod.
+- **CI fix (`af68b8e`)** — Daily Clan Tracker + Weekly Scout were failing ~5 days: job ran fine but `git push` 403'd (read-only `GITHUB_TOKEN`). Added `permissions: contents: write` to both workflows. Verified green via manual branch run.
+- **Charts-on-prod fix (`9b95612`)** — `.vercelignore` was hiding `data/snapshots/` from the Vercel bundle → chart data 404'd → empty charts. Removed the exclusion; prod now serves snapshots (verified 200). Combined with the CI fix, fresh snapshots land daily.
+
+**⚠️ OPEN / NEXT (do these to finish):**
+1. **Supabase auth redirect — NOT done. Blocks login on the live site.** In the Supabase dashboard → Auth → URL Configuration (project ref `agmmdrqmjywggtsycsri`): set **Site URL** = `https://thesoundcave.vercel.app`; add **Redirect URLs** `https://thesoundcave.vercel.app/**` and `http://localhost:3000/**`. Frontend uses `origin+pathname` as `emailRedirectTo`/reset `redirectTo` (`js/lib/supabase.js`). Until set, magic-link / password-reset redirects fail on prod. Verify by firing `scAuth.signInWithEmail` from the live site (expect no "invalid redirect URL").
+2. **Live charts need data** — populate only with ≥2 snapshot days AND the artist in your Clan. 3 days on record now (05-12, 06-09, 06-10); accrues daily via the now-fixed tracker.
+3. **CORS hardening** — `content_api` uses `CORS(app)` (open). Restrict to the Vercel origin once stable.
+4. **Snapshots delivery (proper)** — current fix ships static JSON in the Vercel bundle (only refreshes on redeploy). Better: serve from `content_api`/Supabase (decision 0007 follow-up #2).
+5. `APP_BASE_URL` on Railway set to `https://thesoundcave.vercel.app` (Stripe/reset redirects).
+
+**State:** work branch `phase-3-v0.6`, merged to `main`, both pushed. Railway env has 13 vars (CLI-pushed from workspace `.env`; `SOUNDCLOUD_OAUTH_TOKEN` omitted/optional; `DEV_USER_ID` deliberately unset in prod). Note: a parallel session has been doing Forge work in the same repo — coordinate before big merges.
+
 ## [2026-06-10] 🚀 LIVE: full product on production + Forge inputs wired into image gen
 **S0UNDCAV3 is now a working product on the public internet.** Verified end-to-end on production: `thesoundcave.vercel.app` (Vercel) → `soundcave-api-production.up.railway.app` (Railway, health 200, CORS pass) → real Forge generation (Claude copy + FLUX.2 restyle via fal) → Supabase Storage → compositor overlay. First production poster: `scratch/forge_confirm/live_poster_first.png`.
 - **Input-usage fixes shipped (`5bea4b2`)** — actioned the audit same-day at Doug's direction: `_vibe_cues()` appends genre/theme/freeform/voice-energy/brand-palette to the restyle prompt (style-only framing); `build_image_prompt` gains lineup, venue·city setting, voice energy, brand palette; `gatherForgeContext` sends `ctx.brand`; `job_type_for` routes Spirit-on-non-bio to FLUX.2. **Visually proven:** same pink reference flyer + S0UNDCAV3 kit → brand orange-on-black poster (`vibe_poster_v1.png`). Audit finding 3 corrected in the page (Post+refs already restyled; real hole was Spirit-on-Post).

@@ -1,5 +1,16 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-11] Forge context pipeline P1 + formats 5→3 (shipped, browser-confirmed)
+Branch `forge-output-ux` (naming rule: branches say what's being built now — workspace CLAUDE.md). Spec: [spec/forge_context_pipeline.md](spec/forge_context_pipeline.md), signed off same day (4 calls: auto-guess+tap-to-fix roles · style ref wins over brand · combined P1 pass · WHO/WHERE/WHAT/STYLE labels).
+- **Formats consolidated 5→3 (`084de16`):** picker = Post / Carousel / **Flyer** (`event_poster` relabeled; `event_promo` + `artist_bio` retired display-only — `contentTypeLabel()` keeps legacy Stash items readable, `LEGACY_TYPE_FALLBACK` reopens them in the nearest current format). Internal keys untouched; backend/compositor/DB unchanged. Bio returns later as a Spotlight mode inside Post.
+- **Role-tagged references (`b0a507a`, the core):** every upload gets a WHO/WHERE/WHAT/STYLE chip — auto-guessed by Haiku vision (new `/api/classify-ref`, fail-safe to STYLE), click chip to cycle, ✎ for a note ("my logo"). New `js/forge_refs.js` (took the upload machinery out of firepit.js: 1119→1049 lines).
+- **Compose routing (media_gen):** any WHO → `compose_person` (Nano Banana Pro /edit, ≤14 refs, best person-consistency; Spirits enter as WHO refs); mixed roles no person → `compose` (FLUX.2 /edit); STYLE-only → proven `restyle`; no refs → backdrop. `build_compose_prompt` names each image's job ("Image 1 is a PERSON to feature…") — Doug's me+palace+crown+flyer composition is now one call.
+- **Style law:** an uploaded STYLE ref outranks the brand palette (brand cue dropped from restyle + compose prompts when style ref present; brand still leads otherwise).
+- **Freeform fact-mining:** `_merge_freeform_facts` (Haiku, strict JSON) extracts venue/city/date/doors/curfew/tickets/lineup from Additional Context to fill EMPTY structured slots only — typed input always wins. Echoed in the response as `extracted_facts`.
+- **Verified:** 18/18 routing+prompt unit checks; 10/10 normalize+extraction (real Haiku calls — pulled "Canning Town"/"11pm"/"£15 first release"/lineup from a paragraph, left typed venue alone); browser-confirmed chips render + cycle + payload roles correct, 0 console errors. Screenshot `scratch/forge_role_chips3.png`.
+- **NOT yet live-fired:** a real compose generation (fal spend) — Doug's 4-image test (me + palace + crown + loved flyer) is the acceptance gate, to run on his account.
+- **Next (parked in spec):** P2 real multi-image carousel (IG ≤20, TikTok ≤35, optimal 5–8); P3 post-generation reveal + button reshape (hero = poster reveal).
+
 ## [2026-06-11] ✅ Auth-redirect blocker closed — login verified on prod (no change needed)
 The handoff's "DO THIS FIRST" item (Supabase Auth URL config) turned out to be **already configured** — Doug had set it himself. No config was changed; this session *verified* it end-to-end on production:
 - `scAuth.signInWithEmail('…')` fired from `https://thesoundcave.vercel.app` → `{}` (no "invalid redirect URL").

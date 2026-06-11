@@ -11,6 +11,8 @@ SQL migrations for Sound Cave's Supabase project.
 - `0005_credits.sql` — credits ledger helpers (Phase C)
 - `0006_billing.sql` — Stripe billing + subscriptions (Phase D)
 - `0007_audio_tracks.sql` — audio_tracks table + clipping-ready columns on stash_items (Stream 2)
+- `0008`–`0018` — see file headers (this index went stale; each migration's first comment block describes it)
+- `0019_artist_tracking.sql` — Clan Data Tracking v2: `tracked_artists` registry + `artist_snapshots` time-series + `snapshot_runs` log (spec: wiki/spec/clan_data_tracking_v2.md)
 
 All idempotent — safe to re-run.
 

@@ -42,6 +42,7 @@ from campaigns_api import campaigns_bp
 from brand_kits_api import brand_kits_bp
 from avatars_api import avatars_bp, generate_bp, _owned_avatar
 from roster_api import roster_bp
+from tracking_api import tracking_bp
 app.register_blueprint(events_bp)
 app.register_blueprint(artist_profiles_bp)
 app.register_blueprint(campaigns_bp)
@@ -49,6 +50,7 @@ app.register_blueprint(brand_kits_bp)
 app.register_blueprint(avatars_bp)
 app.register_blueprint(generate_bp)
 app.register_blueprint(roster_bp)
+app.register_blueprint(tracking_bp)
 
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
@@ -1882,12 +1884,17 @@ def _start_executor():
     if app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return  # parent of debug reloader; child will start it
     from apscheduler.schedulers.background import BackgroundScheduler
+    from tracking_collector import catchup_daily_snapshot, run_daily_snapshot
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(_fire_due_posts, 'interval', seconds=60, id='fire_due_posts',
                   max_instances=1, coalesce=True)
+    sched.add_job(run_daily_snapshot, 'cron', hour=7, minute=0, id='daily_tracking',
+                  max_instances=1, coalesce=True)
+    sched.add_job(catchup_daily_snapshot, 'interval', minutes=60, id='tracking_catchup',
+                  max_instances=1, coalesce=True)
     sched.start()
     _executor_started = True
-    print('[executor] APScheduler tick=60s started')
+    print('[executor] APScheduler started: posts tick=60s, tracking cron=07:00Z + hourly catch-up')
 
 
 if __name__ == '__main__':

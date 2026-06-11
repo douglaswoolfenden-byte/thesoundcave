@@ -7,6 +7,7 @@ duplicate this logic; we don't refactor those yet.
 """
 import os
 import re
+import time
 import urllib.parse
 
 import requests as http_requests
@@ -95,6 +96,34 @@ def fetch_user_tracks(user_id, limit=3):
     except Exception:
         pass
     return []
+
+
+def request_with_retry(url, params=None, attempts=3, backoff=(1, 2, 4), timeout=15):
+    """GET with retries. Returns (json_or_none, error_str_or_none).
+
+    A 404 is returned immediately (retrying won't change it); 429/5xx and
+    network errors are retried with backoff. Never raises.
+    """
+    last_err = None
+    for i in range(attempts):
+        try:
+            r = http_requests.get(url, params=params, headers=_headers(), timeout=timeout)
+            if r.status_code == 200:
+                return r.json(), None
+            if r.status_code == 404:
+                return None, 'HTTP 404'
+            last_err = f'HTTP {r.status_code}'
+        except Exception as e:
+            last_err = f'{type(e).__name__}: {e}'
+        if i < attempts - 1:
+            time.sleep(backoff[min(i, len(backoff) - 1)])
+    return None, last_err
+
+
+def fetch_user_by_id(user_id):
+    """Fetch a user profile by stable numeric id. Returns (profile_or_none, error).
+    Once an id is known, daily fetches never go through /resolve again."""
+    return request_with_retry(f'https://api.soundcloud.com/users/{user_id}')
 
 
 def handle_from_url(url):

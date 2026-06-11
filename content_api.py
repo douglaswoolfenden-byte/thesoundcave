@@ -26,7 +26,14 @@ from media_gen import (
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 app = Flask(__name__)
-CORS(app)
+# Browser origins allowed to call this API: prod frontend + local dev only.
+# Vercel preview deploys are NOT allowed — test against prod or localhost.
+ALLOWED_ORIGINS = [
+    'https://thesoundcave.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
+CORS(app, origins=ALLOWED_ORIGINS)
 
 # Phase 2/3 module split (2026-05-13). Routes register here as they land.
 from events_api import events_bp

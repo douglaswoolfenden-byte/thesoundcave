@@ -4,6 +4,7 @@
 let firepitMode = 'forge';
 let forgeGeneratedContent = '';
 let forgeGeneratedImageUrl = '';
+let forgeGeneratedVideoUrl = '';   // Phase D: composite MP4 once a Beat is added
 let _brandKits = [];
 let _compositorActive = false;
 let _forgePickedSnapshot = '';     // draft content at load time — detects unsaved edits
@@ -590,7 +591,10 @@ function updateCreditsDisplay(n) {
 function resetForgeOutput() {
   forgeGeneratedContent = '';
   forgeGeneratedImageUrl = '';
+  forgeGeneratedVideoUrl = '';
   _forgePickedSnapshot = '';
+  const _mv = document.getElementById('btnMakeVideo'); if (_mv) _mv.style.display = 'none';
+  const _bp = document.getElementById('forgeBeatPanel'); if (_bp) _bp.style.display = 'none';
   _forgeSlideUrls = [];
   _forgeSlideTexts = [];
   _forgeActiveSlide = 0;
@@ -679,8 +683,12 @@ async function generateImage(ctx) {
         </div>`;
     }
 
+    forgeGeneratedVideoUrl = '';
     document.getElementById('btnRegenImage').style.display = '';
     document.getElementById('btnDownloadImage').style.display = '';
+    // ADD A BEAT → composite video (single-still formats only).
+    const _mv = document.getElementById('btnMakeVideo');
+    if (_mv) _mv.style.display = (ctx.content_type === 'social_carousel') ? 'none' : '';
   } catch(e) {
     imgArea.innerHTML = `<div class="forge-image-loading" style="flex-direction:column;gap:8px">
       <span style="font-family:var(--font-mono);color:var(--color-accent);font-weight:600">!</span>
@@ -775,10 +783,62 @@ function setActiveSlide(i) {
   renderSlideStrip();
 }
 
+// ── Beat → composite video (Phase D, master spec §6/§10) ──
+function openBeatPanel() {
+  const p = document.getElementById('forgeBeatPanel');
+  if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+const _BEAT_BLOCKED = new Set(['commercial_release', 'app_sound_or_rip', 'undocumented']);
+
+async function makeBeatVideo(btn) {
+  const errEl = document.getElementById('forgeBeatError');
+  errEl.style.display = 'none';
+  const file = document.getElementById('forgeBeatFile').files[0];
+  const category = document.getElementById('forgeBeatRights').value;
+  const proof = (document.getElementById('forgeBeatProof').value || '').trim();
+  if (!file) { errEl.textContent = 'Pick an audio file first.'; errEl.style.display = 'block'; return; }
+  if (!category) { errEl.textContent = 'Classify the track’s rights first.'; errEl.style.display = 'block'; return; }
+  if (!_BEAT_BLOCKED.has(category) && !proof) {
+    errEl.textContent = 'Add a proof link for this track before forging.'; errEl.style.display = 'block'; return;
+  }
+  if (!forgeGeneratedImageUrl) { errEl.textContent = 'Generate a still first.'; errEl.style.display = 'block'; return; }
+
+  const orig = btn.textContent; btn.textContent = '⏳ Forging video…'; btn.disabled = true;
+  try {
+    const ctx = gatherForgeContext();
+    const fd = new FormData();
+    fd.append('data', JSON.stringify({
+      ...ctx, media_type: 'video_composite',
+      base_image_url: forgeGeneratedImageUrl,
+      duration_seconds: 10,
+      generated_text: forgeGeneratedContent,
+      rights: { category, proof_url: proof || null },
+    }));
+    fd.append('audio_file', file);
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/generate-media`, { method: 'POST', body: fd });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.detail || j.error || `API ${r.status}`);
+    }
+    const j = await r.json();
+    forgeGeneratedVideoUrl = j.media_url;
+    const imgArea = document.getElementById('forgeImageArea');
+    imgArea.innerHTML = `<video src="${j.media_url}" class="forge-image-preview" controls autoplay loop muted playsinline></video>
+      <div class="forge-image-meta">${j.provider}/${j.model} · ${j.dimensions?.width}×${j.dimensions?.height}${_BEAT_BLOCKED.has(category) ? ' · ⚠️ can’t be scheduled (rights)' : ''}</div>`;
+    document.getElementById('forgeBeatPanel').style.display = 'none';
+    document.getElementById('btnDownloadImage').style.display = '';
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  }
+  btn.textContent = orig; btn.disabled = false;
+}
+
 function downloadForgeImage() {
-  if (!forgeGeneratedImageUrl) return;
+  const url = forgeGeneratedVideoUrl || forgeGeneratedImageUrl;
+  if (!url) return;
   const a = document.createElement('a');
-  a.href = forgeGeneratedImageUrl;
+  a.href = url;
   a.download = `soundcave_${Date.now()}.png`;
   a.click();
 }

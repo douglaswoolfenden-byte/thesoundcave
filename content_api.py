@@ -620,7 +620,8 @@ def _parse_media_request():
     return ctx, None, None, None
 
 
-def _dispatch_media(media_type, image_prompt, audio_path, w, h, duration_seconds):
+def _dispatch_media(media_type, image_prompt, audio_path, w, h, duration_seconds,
+                    base_image_bytes=None):
     """Route to the right media_gen function. Returns (bytes, provider, model, ext)."""
     if media_type == 'image':
         b, p, m = generate_image(image_prompt, w, h)
@@ -628,7 +629,10 @@ def _dispatch_media(media_type, image_prompt, audio_path, w, h, duration_seconds
     if media_type == 'video_composite':
         if not audio_path:
             raise ValueError('video_composite requires an audio_file')
-        b, p, m, _ = generate_video_composite(image_prompt, audio_path, w, h, duration_seconds)
+        # Flagship "make THIS still move": animate the already-generated image
+        # when the frontend passes it; else regenerate a cover (legacy).
+        b, p, m, _ = generate_video_composite(image_prompt, audio_path, w, h,
+                                              duration_seconds, base_image_bytes=base_image_bytes)
         return b, p, m, 'mp4'
     if media_type == 'video_standard':
         b, p, m, _ = generate_video_standard(image_prompt, audio_path, w, h, duration_seconds)
@@ -693,13 +697,28 @@ def generate_media_endpoint():
             audio_track = upload_audio_track(audio_bytes, audio_filename, user_id=uid,
                                              rights=audio_rights)
 
-        image_prompt = build_image_prompt(content_type, ctx, generated_text)
-        w, h = IMAGE_DIMENSIONS.get(content_type, (1200, 675))
+        # Flagship flow: animate the still the user just generated. Fetch its
+        # bytes from the URL the frontend passes; fall back to regen on failure.
+        base_image_bytes = None
+        base_url = ctx.get('base_image_url')
+        if media_type == 'video_composite' and base_url:
+            try:
+                import requests as _rq
+                rb = _rq.get(base_url, timeout=30)
+                rb.raise_for_status()
+                base_image_bytes = rb.content
+            except Exception as e:
+                print(f'⚠️  base_image_url fetch failed ({e}); regenerating cover')
+
+        image_prompt = build_image_prompt(content_type, ctx, generated_text) if base_image_bytes is None else ''
+        # Video uses the L7 delivery size like images (default 9:16 for video).
+        w, h = SIZE_DIMENSIONS.get(ctx.get('size'), IMAGE_DIMENSIONS.get(content_type, (1080, 1920)))
 
         media_bytes, provider, model, ext = _dispatch_media(
             media_type, image_prompt,
             audio_path=(audio_track['local_path'] if audio_track else None),
             w=w, h=h, duration_seconds=duration_seconds,
+            base_image_bytes=base_image_bytes,
         )
 
         if ext == 'png':

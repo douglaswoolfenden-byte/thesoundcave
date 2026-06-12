@@ -560,8 +560,31 @@
               <button class="btn-red" type="button" onclick="saveToStash()">SAVE TO STASH</button>
               <button class="btn-outline" type="button" onclick="generateContent()">REGEN</button>
               <button class="btn-outline" type="button" id="btnRegenImage" onclick="regenerateImage()" style="display:none">NEW IMAGE</button>
+              <button class="btn-outline" type="button" id="btnMakeVideo" onclick="openBeatPanel()" style="display:none" title="Add a track — export a video that pulses to the beat">+ ADD A BEAT</button>
               <button class="btn-outline" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">DOWNLOAD</button>
               <button class="btn-outline" type="button" onclick="resetForgeOutput()" title="Clear this output">DISCARD</button>
+            </div>
+            <!-- Phase D: Beat → composite MP4 (still + motion + waveform to the beat) -->
+            <div id="forgeBeatPanel" class="forge-beat-panel" style="display:none">
+              <div class="forge-stack-label" style="margin-top:0">Beat <span style="color:var(--muted);font-weight:normal">— the track this post carries</span></div>
+              <input type="file" class="input" id="forgeBeatFile" accept="audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg">
+              <label class="forge-label" style="margin-top:10px">Rights <span style="color:var(--muted);font-weight:normal">(required — platforms fingerprint audio and enforce later)</span></label>
+              <select class="input" id="forgeBeatRights">
+                <option value="">— Classify this track —</option>
+                <option value="own_master">My own master / track</option>
+                <option value="artist_permission">A lineup artist's track, with written permission</option>
+                <option value="royalty_free">Royalty-free with a commercial licence</option>
+                <option value="cc0_public_domain">CC0 / public domain</option>
+                <option value="commercial_release">Commercially-released / major-label (can't schedule)</option>
+                <option value="app_sound_or_rip">Trending app sound or stream-rip (can't schedule)</option>
+                <option value="undocumented">Third-party, no documented permission (can't schedule)</option>
+              </select>
+              <input class="input" id="forgeBeatProof" style="margin-top:10px" placeholder="Proof link (licence receipt / written permission / CC0 link)">
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="btn-red" type="button" onclick="makeBeatVideo(this)">FORGE THE VIDEO</button>
+                <button class="btn-outline" type="button" onclick="document.getElementById('forgeBeatPanel').style.display='none'">CANCEL</button>
+              </div>
+              <div id="forgeBeatError" class="forge-ref-error" style="display:none"></div>
             </div>
           </div>
         </div>

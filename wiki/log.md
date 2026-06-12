@@ -1,5 +1,12 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-12] Phase D — SOUND + VIDEO shipped (flyer/still → pulses to the track)
+The flagship flow: generate a still → **+ ADD A BEAT** → composite MP4 that moves to the music. Built on the existing `/api/generate-media` + Beat rights gate (no new infra):
+- **Animate the EXISTING still:** `generate_video_composite(..., base_image_bytes=)` + endpoint fetches `base_image_url` (the just-generated image) instead of regenerating a cover — "make THIS flyer move". Falls back to regen if the fetch fails. Video uses the L7 size (default 9:16).
+- **Beat UI** (Forge output): ADD A BEAT reveals on single-still formats → panel: audio upload + **rights classifier** (7 categories) + proof link. Frontend mirrors the server gate — postable categories require proof before forging; blocked categories (major-label / app-sound-rip / undocumented) still generate but the result is flagged "can't be scheduled" (matches the platform-fingerprinting reality). Output swaps to an autoplay-loop `<video>`; DOWNLOAD grabs the MP4.
+- **Verified:** compiles; **live composite** (`scratch/phaseD_beat_video.mp4`) — animated the Phase C still + a tremolo test tone → 8s 1080×1350 h264+aac, `composite+still` (not regenerated), 4s render; browser: button reveals on Flyer/Still (hidden on Carousel), panel toggles, 8 rights options, clean console.
+- **Standard/Premium AI-video tiers** (~$0.10/$2) remain wired in the backend behind the same endpoint — surfaced to the UI in a later pass; composite is the default and the flagship.
+
 ## [2026-06-12] Phase C — WHO CARBON-COPY shipped (people pasted, never drawn)
 The carbon-copy law (glossary, 2026-06-12) is now real pipeline. WHO photos are SPLIT OUT of generation in `content_api` (`who_refs` vs `ctx_refs`), the design renders without them, then each person is composited on top:
 - **`remove_background`** (media_gen) — cutout via fal `birefnet/v2` (~$0.002, ~1s) → transparent PNG.

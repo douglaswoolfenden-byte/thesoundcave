@@ -1017,23 +1017,30 @@ def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, 
             return f.read()
 
 
-def generate_video_composite(prompt, audio_path, width, height, duration_seconds=15):
+def generate_video_composite(prompt, audio_path, width, height, duration_seconds=15,
+                             base_image_bytes=None):
     """Tier 1: FFmpeg composite video. Returns (mp4_bytes, provider, model, duration_seconds).
 
-    Generates a cover image via the existing image router, then muxes the user's
-    audio underneath with Ken Burns motion and a waveform overlay.
+    Muxes the user's audio under a still with Ken Burns motion + a waveform that
+    pulses to the track. The flagship "make THIS flyer move" flow passes the
+    already-generated still as `base_image_bytes`; otherwise a cover is generated
+    from `prompt` (legacy path).
 
-    `audio_path` is a local file path (caller is responsible for fetching the
-    track from Supabase Storage and writing to a temp file before calling).
+    `audio_path` is a local file path (caller fetches the track from Storage and
+    writes a temp file first).
     """
     if duration_seconds <= 0 or duration_seconds > 30:
         raise ValueError('duration_seconds must be 0 < d <= 30 (Phase H lifts the cap)')
     if not _ffmpeg_available():
         raise RuntimeError('ffmpeg not on PATH — install via `brew install ffmpeg`')
 
-    img_bytes, img_provider, img_model = generate_image(prompt, width, height)
+    if base_image_bytes is not None:
+        img_bytes, src = base_image_bytes, 'still'
+    else:
+        img_bytes, img_provider, img_model = generate_image(prompt, width, height)
+        src = f'{img_provider}/{img_model}'
     mp4_bytes = _ffmpeg_composite(img_bytes, audio_path, width, height, duration_seconds)
-    return mp4_bytes, 'ffmpeg', f'composite+{img_provider}/{img_model}', duration_seconds
+    return mp4_bytes, 'ffmpeg', f'composite+{src}', duration_seconds
 
 
 # ── Dry-run fixture ────────────────────────────────────────

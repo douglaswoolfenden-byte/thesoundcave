@@ -439,6 +439,22 @@ function forageAction(username, action) {
   } else if (action === 'watch') {
     const w = getWatching();
     if (!w.includes(username)) { w.push(username); saveWatching(w); }
+    // Register for daily tracking — find the track for its artist_url
+    // (stable identity; bare usernames with spaces/unicode don't resolve).
+    let track = liveSearchResults.find(t => t.artist_username === username);
+    if (!track) {
+      for (const r of allReports) {
+        track = (r.tracks||[]).find(t => t.artist_username === username);
+        if (track) break;
+      }
+    }
+    window.rosterSync?.registerTracking({
+      username,
+      artist_url:   track?.artist_url || track?.user?.permalink_url || '',
+      display_name: track?.artist || username,
+      genre:        track?.genre || '',
+      avatar_url:   track?.avatar_url || track?.user?.avatar_url || '',
+    });
   } else if (action === 'cut') {
     const d = getDismissed();
     if (!d.includes(username)) { d.push(username); saveDismissed(d); }

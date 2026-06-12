@@ -377,16 +377,19 @@
         <p class="subtitle" style="margin-bottom:0">Track how your artists move over time.</p>
       </div>
       <div class="fp-actions">
-        <button class="btn-outline" id="fpReportBtn" type="button" onclick="toggleFpReportMode()">📋 Report Builder</button>
-        <button class="btn-red" id="fpExportReportBtn" type="button" style="display:none" onclick="exportFpReport()"></button>
+        <button class="btn-outline" id="fpExportReportBtn" type="button" onclick="exportFpReport()" style="display:inline-flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
+            <path d="M12 18v-6"/>
+            <path d="m9 15 3 3 3-3"/>
+          </svg>
+          EXPORT REPORT</button>
       </div>
     </div>
-    <div class="report-notice" id="fpReportNotice" style="display:none;margin:16px 0"></div>
     <div id="fpSummary" class="stats-row" style="margin-top:20px"></div>
-    <div class="fp-layout" id="fpLayout">
-      <div class="fp-sidebar" id="fpSidebar"></div>
-      <div class="card" id="fpChart"></div>
-    </div>
+    <div id="fpControls" style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap"></div>
+    <div class="card" id="fpChart" style="margin-top:16px"></div>
     <div class="card" id="fpInsights" style="margin-top:20px"></div>
   </div>
 

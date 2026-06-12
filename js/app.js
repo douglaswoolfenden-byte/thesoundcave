@@ -216,8 +216,6 @@ let allReports  = [];
 let currentData = null;
 let currentTab  = 'cave';
 let activeArtist = null;
-let reportMode  = false;
-let reportSelected = [];
 let filtersOpen = true;
 let searchMode  = 'quick';
 
@@ -302,6 +300,9 @@ function addFavourite(track) {
   // Write through to the account (no-op when signed out).
   window.rosterSync?.pushArtist(favs[username]);
   window.rosterSync?.pushPrefs();
+  // Register for daily tracking — captures the stable SoundCloud identity
+  // at add time (Clan Data Tracking v2).
+  window.rosterSync?.registerTracking(favs[username]);
 }
 
 function addSnapshot(favs, username, track) {
@@ -677,16 +678,27 @@ async function init() {
     syncFavouriteSnapshots();
   }
 
-  // Load daily snapshots
-  if (manifest && manifest.snapshots && manifest.snapshots.length) {
+  // Load daily snapshots — signed in: accurate Supabase series via the
+  // tracking API (Clan Data Tracking v2, wiki/spec/clan_data_tracking_v2.md);
+  // signed out / API down: legacy static files as a transition fallback.
+  try {
+    if (window.scAuth && await scAuth.session()) {
+      const r = await scAuth.authedFetch(`${scApiBase()}/api/tracking/snapshots?days=365`);
+      if (r.ok) {
+        const data = await r.json();
+        (data.snapshots || []).forEach(s => allSnapshots.push(s));
+        if (allSnapshots.length) console.log(`Loaded ${allSnapshots.length} snapshot day(s) from tracking API`);
+      }
+    }
+  } catch (e) { console.warn('tracking API snapshots unavailable, using static fallback', e); }
+
+  if (!allSnapshots.length && manifest && manifest.snapshots && manifest.snapshots.length) {
     for (const file of manifest.snapshots) {
       try { const d = await fetchJSON(`data/snapshots/${file}`); if (d) allSnapshots.push(d); } catch(e) {}
     }
-    if (allSnapshots.length) {
-      syncDailySnapshots();
-      console.log(`Loaded ${allSnapshots.length} daily snapshot(s)`);
-    }
+    if (allSnapshots.length) console.log(`Loaded ${allSnapshots.length} daily snapshot(s) (static fallback)`);
   }
+  if (allSnapshots.length) syncDailySnapshots();
 
   // Populate genre filter
   const genres = new Set();
@@ -727,6 +739,7 @@ function syncDailySnapshots() {
 
     for (const [username, data] of Object.entries(artists)) {
       if (!favs[username]) continue;
+      if (data.fetch_status === 'failed') continue; // gap, not a zero-dip
       const snaps = favs[username].snapshots;
 
       if (snaps.find(s => s.date === date)) continue;

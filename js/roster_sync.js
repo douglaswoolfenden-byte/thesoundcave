@@ -94,6 +94,25 @@
     } catch (e) { console.warn('[roster] delete failed', e); }
   }
 
+  // Register an artist for daily tracking (Clan Data Tracking v2) — the
+  // backend resolves the stable numeric SoundCloud id from artist_url once.
+  async function registerTracking(entry) {
+    if (!entry || !entry.username || !(await _authed())) return;
+    try {
+      await scAuth.authedFetch(`${apiBase()}/api/tracking/artists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username:     entry.username,
+          artist_url:   entry.artist_url || '',
+          display_name: entry.display_name || '',
+          genre:        entry.genre || '',
+          avatar_url:   entry.avatar_url || '',
+        }),
+      });
+    } catch (e) { console.warn('[tracking] register failed', e); }
+  }
+
   // Sync the foraging watching/dismissed arrays from the cache up to the account.
   async function pushPrefs() {
     if (!(await _authed())) return;
@@ -115,5 +134,5 @@
     });
   }
 
-  window.rosterSync = { loadRoster, pushArtist, deleteArtist, pushPrefs, migrateLocalToAccount };
+  window.rosterSync = { loadRoster, pushArtist, deleteArtist, pushPrefs, registerTracking, migrateLocalToAccount };
 })();

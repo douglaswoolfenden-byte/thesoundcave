@@ -28,3 +28,9 @@ Doug's direction after using it: **design for the A&R user** (label scout decidi
 - **Data honesty in the view layer:** chart/gains use daily-source, non-partial points only (scout-time single-track counts and the 2026-05-12 undercount poisoned baselines — 81zaki read +22.5K plays); API series strip-and-rebuild cached daily points so server-side corrections propagate.
 - SKH legacy rows confirmed wrong-user (old name-resolve hit a different "SKH"; roster account mackenziehiggins0000 verified 141 followers on its public page) — marked failed with Doug's approval 2026-06-12.
 - Known timing nuance, accepted: snapshots capture once daily (~07:00 UTC); live SoundCloud counts can drift ±1 during the day (James Ray 64 vs 63). The artist modal "Live" badge covers real-time.
+
+## Build notes (iteration 3 — Doug's second live review, 2026-06-12)
+- Movers panel gets its own FOLLOWERS/PLAYS toggle; rows rank, scale and label by the active metric only.
+- Chart axis text was rendering ~2× (600px SVG stretched to ~1100px card) — now drawn at native 1100×300 so the 9px mono labels match the rest of the type scale.
+- Artist header: engagement + LATEST DROP lines removed (Doug's call); genre stays; name is a quiet hyperlink (`.fp-artist-link`, white→orange + underline on hover, no arrow).
+- EXPORT REPORT is now a **report builder** popover: scope = WHOLE CLAN / any genre / any artist. Clan & genre scopes export the roster summary CSV; artist scope exports that artist's day-by-day series.

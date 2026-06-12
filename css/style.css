@@ -2188,3 +2188,7 @@ h4 { font-size: 12px; }
   padding: 14px 0;
   line-height: 1.5;
 }
+
+/* Footprints — artist name links out to SoundCloud; hover shifts white→orange */
+.fp-artist-link { color: var(--heading); text-decoration: none; transition: color .15s ease; }
+.fp-artist-link:hover { color: var(--red); text-decoration: underline; text-underline-offset: 3px; }

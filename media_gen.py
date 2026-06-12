@@ -322,11 +322,23 @@ def build_restyle_prompt(content_type, ctx, generated_text=''):
                 else 'this exact flyer design')
     # Stack order: L1 format intent → L2 style law → L4 facts → L5 direction → mood.
     intent = _FORMAT_INTENT.get(content_type, 'a piece of underground music artwork')
+    has_direction = bool((ctx.get('direction') or '').strip())
+    # Direction beats style DEFAULTS on application (alignment law): when the
+    # promoter gave layout instructions, the recreate clause must yield on
+    # composition or the model resolves the conflict in the reference's favour
+    # (proven live, scratch/phaseA_direction_test.png).
+    composition_clause = (
+        "Keep the colour palette, print texture, graphic elements, motifs and "
+        "mascots IDENTICAL to the reference, but ADAPT the layout and "
+        "composition wherever the promoter's design instructions below require it"
+        if has_direction else
+        "Keep the layout, colour palette, print texture, graphic elements, "
+        "motifs, mascots and composition IDENTICAL to the reference"
+    )
     base = (
         f"You are producing {intent}.\n"
-        f"Recreate {ref_word}. Keep the layout, colour palette, print texture, "
-        "graphic elements, motifs, mascots and composition IDENTICAL to the "
-        "reference — this is the same designer making the next flyer in the series."
+        f"Recreate {ref_word}. {composition_clause} — this is the same designer "
+        "making the next flyer in the series."
     )
     text_lines = _baked_text_lines(ctx)
     if text_lines:

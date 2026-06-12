@@ -1,6 +1,8 @@
 # Forge Context Pipeline — every generation digests ALL context
 
-> Status: **SIGNED OFF 2026-06-11** (all four calls: auto-guess+tap-to-fix roles · style ref wins over brand · one combined P1 pass incl. 5→3 formats · WHO/WHERE/WHAT/STYLE labels). Supersedes the input-wiring fixes in
+> Status: **SIGNED OFF 2026-06-11** (all four calls: auto-guess+tap-to-fix roles · style ref wins over brand · one combined P1 pass incl. 5→3 formats · WHO/WHERE/WHAT/STYLE labels).
+>
+> **2026-06-12 — Doug's weighting workbook is in Notion:** [Forge Formats — Master Spec (Inputs · Outputs · Weights)](https://app.notion.com/p/37d1a74e117981aa9e8cfce3b0425672) — 4 formats (Still · Carousel · Flyer · Video), audio in/out on every format, artist-as-connector proposal, prefilled weights for Doug to edit. His annotated pass becomes the contract for the next Forge build; fold the outcome back into THIS page when the build is instructed. Supersedes the input-wiring fixes in
 > [forge_input_usage_audit.md](forge_input_usage_audit.md) with a full architecture for how context
 > reaches media generation. Branch: `forge-output-ux`.
 

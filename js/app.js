@@ -499,23 +499,28 @@ function buildLineChart(datasets, labels, width=600, height=220) {
     const lineD = ds.data.map((v,i) => `${i===0?'M':'L'} ${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
     svg += `<path d="${lineD}" fill="none" stroke="${ds.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
     ds.data.forEach((v,i) => {
-      const x = toX(i).toFixed(1), y = toY(v).toFixed(1);
+      const x = parseFloat(toX(i).toFixed(1)), y = parseFloat(toY(v).toFixed(1));
       // Each point is a hover group: visible dot + a tooltip (date · value)
       // revealed on hover via CSS. A wide invisible hit-circle makes it easy
       // to land on. Pure SVG/CSS — no JS listeners.
-      const tipW = 88, tipX = Math.min(Math.max(parseFloat(x) - tipW/2, 2), width - tipW - 2);
-      const tipY = parseFloat(y) - 34, label = labels[i] != null ? `${labels[i]} · ${fmt(v)}` : fmt(v);
+      const tipW = 96, tipH = 26;
+      const tipX = Math.min(Math.max(x - tipW/2, 2), width - tipW - 2);
+      // Flip below the point when there's no room above (top-of-chart points
+      // were rendering off-screen and getting clipped).
+      const above = y - tipH - 10;
+      const tipY = above < 2 ? Math.min(y + 10, height - tipH - 2) : above;
+      const label = labels[i] != null ? `${labels[i]} · ${fmt(v)}` : `${fmt(v)}`;
       svg += `<g class="lc-pt">
-        <circle cx="${x}" cy="${y}" r="10" fill="transparent"/>
-        <circle cx="${x}" cy="${y}" r="3" fill="#545454" stroke="${ds.color}" stroke-width="1.5"/>
+        <circle cx="${x}" cy="${y}" r="11" fill="transparent"/>
+        <circle cx="${x}" cy="${y}" r="3.5" fill="#0d0d0d" stroke="${ds.color}" stroke-width="1.5"/>
         <g class="lc-tip" opacity="0" style="pointer-events:none">
-          <rect x="${tipX.toFixed(1)}" y="${tipY}" width="${tipW}" height="22" rx="4" fill="#0d0d0d" stroke="${ds.color}" stroke-width="1"/>
-          <text x="${(tipX+tipW/2).toFixed(1)}" y="${tipY+15}" fill="#fff" font-size="11" text-anchor="middle" font-family="DM Mono,monospace">${esc(label)}</text>
+          <rect x="${tipX.toFixed(1)}" y="${tipY.toFixed(1)}" width="${tipW}" height="${tipH}" rx="5" fill="#0d0d0d" stroke="${ds.color}" stroke-width="1.3"/>
+          <text x="${(tipX+tipW/2).toFixed(1)}" y="${(tipY+tipH/2+4.5).toFixed(1)}" fill="#fff" font-size="12.5" font-weight="600" text-anchor="middle" font-family="DM Mono,monospace">${esc(label)}</text>
         </g>
       </g>`;
     });
   });
-  svg += `<style>#${uid} .lc-pt:hover .lc-tip{opacity:1}</style></svg>`;
+  svg += `<style>#${uid} .lc-pt:hover .lc-tip{opacity:1}#${uid} .lc-pt:hover circle:nth-child(2){r:5}</style></svg>`;
   return svg.replace('<svg ', `<svg id="${uid}" `);
 }
 

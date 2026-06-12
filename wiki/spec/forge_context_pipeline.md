@@ -2,7 +2,7 @@
 
 > Status: **SIGNED OFF 2026-06-11** (all four calls: auto-guess+tap-to-fix roles · style ref wins over brand · one combined P1 pass incl. 5→3 formats · WHO/WHERE/WHAT/STYLE labels).
 >
-> **2026-06-12 — Doug's weighting workbook is in Notion:** [Forge Formats — Master Spec (Inputs · Outputs · Weights)](https://app.notion.com/p/37d1a74e117981aa9e8cfce3b0425672) — 4 formats (Still · Carousel · Flyer · Video), audio in/out on every format, artist-as-connector proposal, prefilled weights for Doug to edit. His annotated pass becomes the contract for the next Forge build; fold the outcome back into THIS page when the build is instructed. Supersedes the input-wiring fixes in
+> **2026-06-12 — Doug's workbook is in Notion:** [Forge Formats — Master Spec](https://app.notion.com/p/37d1a74e117981aa9e8cfce3b0425672) — **reframed same day from input-weights to the CONTEXT STACK**: one canonical order of context layers (Format → Style → Subject → Facts → Mood → Sound → Delivery) followed across all 4 formats (Still · Carousel · Flyer · Video) in both the UI and prompt assembly, plus alignment laws (facts always render · style governs · WHO carbon-copy pasted-never-drawn · mood fills gaps · sound never alters pixels). Doug's annotated pass becomes the contract for the next Forge build; fold the outcome back into THIS page when instructed. Supersedes the input-wiring fixes in
 > [forge_input_usage_audit.md](forge_input_usage_audit.md) with a full architecture for how context
 > reaches media generation. Branch: `forge-output-ux`.
 

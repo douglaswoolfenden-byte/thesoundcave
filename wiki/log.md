@@ -1,5 +1,15 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-12] 📊 Clan Data Tracking v2 — Phase 2 LIVE (Footprints A&R redesign + accurate data on prod)
+Shipped + deployed (frontend Vercel `bb0e7a2`, backend Railway). Footprints now reads the accurate Supabase tracking series; the old static-JSON path is the signed-out fallback only.
+- **Chart cutover:** `app.js init()` loads `/api/tracking/snapshots` when signed in (5 days incl. 06-12); `syncDailySnapshots` rebuilds daily points from the API so server-side corrections propagate; failed/partial points excluded so they can't fake jumps.
+- **Footprints rebuilt for A&R:** WHOLE CLAN aggregate is the default chart; GENRE + ARTIST dropdowns; UPPERCASE metric toggle (FOLLOWERS/PLAYS/LIKES/REPOSTS); MOVERS leaderboard with its own FOLLOWERS/PLAYS toggle and clickable rows; artist name is a white→orange hover hyperlink to SoundCloud; report builder popover (whole clan / per genre / per artist → CSV, artist scope = day-by-day series). Spec: `spec/footprints_clean_chart.md`.
+- **Live headline:** new `GET /api/tracking/artist/<key>/live` fetches current stats by the STABLE numeric id; headline shows the live value + green ● LIVE so it matches soundcloud.com exactly (verified on prod: 81zaki 831 = SoundCloud). Chart line stays daily history.
+- **Chart hover tooltips** (date · value); fixed a clipping bug where top-of-chart tooltips rendered off the top edge — now flip below.
+- **Data accuracy resolved (not a bug):** verified 81zaki against SoundCloud's API — we match to the play at 07:00 capture; the "wrong numbers" were snapshot-vs-live drift. Authoritative contract written: `spec/tracking_metrics_definitions.md`. SKH legacy rows confirmed wrong-user (different account) and marked failed with Doug's approval.
+- **Process hazard hit again:** the parallel Forge session's servers grabbed :3000/:8000 and served a stale build mid-review; reclaimed ports + bumped mtimes. One session driving the local app at a time.
+- **Still open:** Phase 3 screenshot-ingest lane (playlist adds + other platforms); Phase 4 retire GH-Actions/static pipeline after ≥3-day parity.
+
 ## [2026-06-11] 📈 Clan Data Tracking v2 — Phase 1 LIVE (registry + robust collector + Supabase time-series)
 Spec: `wiki/spec/clan_data_tracking_v2.md` (approved via plan sign-off). Commit `deb67e7`, deployed to Railway. The "data I can't trust" problem diagnosed and fixed — it was our pipeline, not SoundCloud:
 - **Root causes found:** display-name `/resolve` (fails on spaces/unicode — 12/20 scouted artists never tracked; worse, `Lucki`/`BELFORT`/`TREMUR` in old snapshots were a *different user's* numbers); failed fetches stored as zeros; pagination failures silently undercounting; tracker reading stale weekly reports instead of the Clan roster.

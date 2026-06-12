@@ -156,9 +156,16 @@ def build_image_prompt(content_type, ctx, generated_text=''):
     if release:
         parts.append(f"Release: {release}")
 
-    freeform = ctx.get('freeform')
-    if freeform:
-        parts.append(f"Context: {freeform}")
+    # L5 — binding direction first, then mood (parsed from Additional Context;
+    # unparsed legacy boxes pass through whole, unclipped).
+    direction = (ctx.get('direction') or '').strip()
+    if direction:
+        parts.append(f"The promoter's design instructions — obey closely (placement, scale, type size, composition): {direction}")
+    mood = (ctx.get('mood') or '').strip()
+    if mood:
+        parts.append(f"Mood: {mood}")
+    elif not direction and ctx.get('freeform'):
+        parts.append(f"Context: {ctx['freeform']}")
 
     voice_energy = _VOICE_IMAGE_ENERGY.get(ctx.get('voice'))
     if voice_energy:
@@ -192,6 +199,31 @@ def build_image_prompt(content_type, ctx, generated_text=''):
     return message.content[0].text.strip()
 
 
+# L1 FORMAT — what we're producing, stated first in every prompt (Context Stack).
+_FORMAT_INTENT = {
+    'social_post':     'a single striking social-feed image',
+    'social_carousel': 'a social carousel slide',
+    'event_promo':     'an atmospheric event teaser image',
+    'event_poster':    'a flyer for an underground music event',
+    'artist_bio':      'an artist spotlight image',
+}
+
+
+def _direction_block(ctx):
+    """L5 DIRECTION — the promoter's binding design instructions (master spec
+    2026-06-12: 'followed closely as instruction of design'). Beats style
+    DEFAULTS on application (placement, scale, type size, composition); never
+    overrides the quoted facts, the WHO carbon-copy law, or the style ref's
+    aesthetic language."""
+    d = (ctx.get('direction') or '').strip()
+    if not d:
+        return ''
+    return ("The promoter's design instructions — follow them closely; they "
+            "override default placement, scale, type sizing and composition "
+            "(but never the quoted text content or the reference aesthetic): "
+            + d)
+
+
 # Voice profile → image energy. The voice presets shape the COPY's tone; these
 # give the image the matching energy (style words only — never rendered text).
 _VOICE_IMAGE_ENERGY = {
@@ -219,9 +251,16 @@ def _vibe_cues(ctx, generated_text='', include_brand=True):
     event = (ctx.get('event') or '').strip()
     if event:
         cues.append(f'themed around "{event}"')
-    freeform = (ctx.get('freeform') or '').strip()
-    if freeform:
-        cues.append(freeform[:200])
+    # L5 MOOD: the parsed vibe (directives travel separately via _direction_block).
+    # The old 200-char clip is dead (master spec 2026-06-12). Legacy callers
+    # without the parsed split fall back to the raw box, unclipped within reason.
+    mood = (ctx.get('mood') or '').strip()
+    if mood:
+        cues.append(mood)
+    elif not (ctx.get('direction') or '').strip():
+        freeform = (ctx.get('freeform') or '').strip()
+        if freeform:
+            cues.append(freeform[:500])
     voice = _VOICE_IMAGE_ENERGY.get(ctx.get('voice'))
     if voice:
         cues.append(voice)
@@ -281,7 +320,10 @@ def build_restyle_prompt(content_type, ctx, generated_text=''):
     ref_word = ('these reference flyers — they are one designer\'s series; treat '
                 'their shared design language as law' if n_refs > 1
                 else 'this exact flyer design')
+    # Stack order: L1 format intent → L2 style law → L4 facts → L5 direction → mood.
+    intent = _FORMAT_INTENT.get(content_type, 'a piece of underground music artwork')
     base = (
+        f"You are producing {intent}.\n"
         f"Recreate {ref_word}. Keep the layout, colour palette, print texture, "
         "graphic elements, motifs, mascots and composition IDENTICAL to the "
         "reference — this is the same designer making the next flyer in the series."
@@ -303,6 +345,10 @@ def build_restyle_prompt(content_type, ctx, generated_text=''):
             "\nThis piece carries no text: replace the reference's lettering with "
             "clean graphic texture in the same style."
         )
+    # L5 DIRECTION — binding design instructions, after the facts.
+    direction = _direction_block(ctx)
+    if direction:
+        base += '\n' + direction
     # Style law (context-pipeline spec): an uploaded style ref outranks the brand
     # palette, so brand cues stay out of the restyle path.
     cues = _vibe_cues(ctx, generated_text, include_brand=False)
@@ -314,19 +360,13 @@ def build_restyle_prompt(content_type, ctx, generated_text=''):
 def build_compose_prompt(content_type, ctx, roled_refs, generated_text=''):
     """Prompt for JOB_COMPOSE / JOB_COMPOSE_PERSON (multi-reference /edit models).
 
-    Narrative creative-director prose, not a keyword list — Google's Nano Banana
-    guidance (and Doug's P1.5 live verdict: WHO/Spirit output quality was poor on
-    the terse role-list version). Each reference's role is named in the sentence;
-    the STYLE ref governs everything; event facts are BAKED IN via
-    _baked_text_lines. roled_refs order must match the image_refs order.
+    Narrative creative-director prose assembled in CONTEXT STACK order (master
+    spec 2026-06-12): L1 format intent → L2 style law → L3 subjects (each named
+    by role) → L4 quoted facts → L5 binding direction → mood. The STYLE ref
+    governs the aesthetic; direction beats default placement/scale; facts render
+    exactly. roled_refs order must match the image_refs order.
     """
-    intent = {
-        'event_poster':    'a flyer for an underground music event',
-        'event_promo':     'an atmospheric event teaser image',
-        'social_post':     'a single striking social-feed image',
-        'social_carousel': 'a social carousel slide',
-        'artist_bio':      'an artist spotlight image',
-    }.get(content_type, 'a piece of underground music artwork')
+    intent = _FORMAT_INTENT.get(content_type, 'a piece of underground music artwork')
 
     who, where, what, style = [], [], [], []
     for i, ref in enumerate(roled_refs, 1):
@@ -334,31 +374,28 @@ def build_compose_prompt(content_type, ctx, roled_refs, generated_text=''):
         tag = f'image {i}' + (f' ("{note}")' if note else '')
         {'who': who, 'where': where, 'what': what}.get(ref.get('role'), style).append(tag)
 
-    parts = [f'Create {intent}']
-    if who:
-        parts.append(f"featuring the person from {' and '.join(who)} — preserve "
-                     "their exact face, hair and build; never swap them for a "
-                     "different figure")
-    if where:
-        parts.append(f"set in the location from {' and '.join(where)}")
-    if what:
-        parts.append(f"including the object from {' and '.join(what)}, recreated "
-                     "faithfully but rendered to fit the final style")
-    lines = [', '.join(parts) + '.']
-
+    # L1 — format intent
+    lines = [f'Create {intent}.']
+    # L2 — style law
     if style:
         lines.append(f"The entire image is rendered in the visual style of "
                      f"{' and '.join(style)}: its colour palette, print texture, "
                      "graphic language and layout energy govern everything and win "
                      "every visual conflict.")
+    # L3 — subjects, each named by role
+    if who:
+        lines.append(f"Feature the person from {' and '.join(who)} — preserve "
+                     "their exact face, hair and build; never swap them for a "
+                     "different figure.")
+    if where:
+        lines.append(f"Set the scene in the location from {' and '.join(where)}.")
+    if what:
+        lines.append(f"Include the object from {' and '.join(what)}, recreated "
+                     "faithfully but rendered to fit the final style.")
     hint = STYLE_HINTS.get(content_type)
     if hint:
         lines.append(f'Output intent: {hint}')
-    # Style law: a STYLE ref outranks the brand palette (spec sign-off 2026-06-11).
-    cues = _vibe_cues(ctx, generated_text, include_brand=not style)
-    if cues:
-        lines.append('Mood: ' + '; '.join(cues) + '.')
-
+    # L4 — facts, quoted and exact
     text_lines = _baked_text_lines(ctx)
     if text_lines:
         lines.append('Render the following text in the image, in typography that '
@@ -368,6 +405,13 @@ def build_compose_prompt(content_type, ctx, roled_refs, generated_text=''):
                      'crisp and legible. No other text anywhere.')
     else:
         lines.append('Do not render any text, lettering or typography.')
+    # L5 — binding direction, then mood (style law: STYLE ref outranks brand)
+    direction = _direction_block(ctx)
+    if direction:
+        lines.append(direction)
+    cues = _vibe_cues(ctx, generated_text, include_brand=not style)
+    if cues:
+        lines.append('Mood: ' + '; '.join(cues) + '.')
     return '\n'.join(lines)
 
 

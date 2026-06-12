@@ -532,6 +532,13 @@ def enhance():
 
 VALID_MEDIA_TYPES = {'image', 'video_composite', 'video_standard', 'video_premium'}
 
+# Delivery layer (Context Stack L7): platform output sizes.
+SIZE_DIMENSIONS = {
+    '4:5':  (1080, 1350),   # IG/FB feed
+    '9:16': (1080, 1920),   # TikTok / Reels / Stories
+    '1:1':  (1080, 1080),   # square
+}
+
 # ── Audio rights gate (Beat) ───────────────────────────────
 # See wiki/features/firepit_beat.md. A scheduled post embeds its audio into the
 # uploaded MP4, which TikTok/Meta fingerprint and enforce retroactively. POSTABLE
@@ -713,47 +720,66 @@ def generate_media_endpoint():
             except OSError: pass
 
 
-# Structured slots that freeform text may also carry. Extraction fills EMPTY
-# slots only — typed structured input always wins (context-pipeline spec).
+# Structured slots that the Additional Context box may also carry. Extraction
+# fills EMPTY slots only — typed structured input always wins (Context Stack).
 _FREEFORM_FACT_KEYS = ('event', 'venue', 'city', 'date', 'doors', 'curfew', 'tickets', 'artist_list')
 
 
-def _merge_freeform_facts(ctx):
-    """Extract event facts from freeform text and fill missing ctx slots.
+def _parse_additional_context(ctx):
+    """Parse the Additional Context box into Context Stack layers (master spec,
+    2026-06-12): FACTS → fill empty structured slots (L4, typed input wins);
+    DIRECTION → ctx['direction'], binding design instructions (L5 — placement,
+    type size, composition; followed closely per Doug's law); VIBE →
+    ctx['mood'] (L5, fills gaps only). The old 200-char clip is dead.
 
-    Returns the dict of facts actually filled in (for response transparency),
-    or {} when nothing was extracted. Failure-safe: any error → no-op, the
-    generation proceeds on typed inputs alone.
+    Returns {'facts': {...}, 'direction': str, 'mood': str} for response
+    transparency. Failure-safe: on any error the WHOLE box becomes binding
+    direction (never silently dropped — Doug's law says follow it closely).
     """
     freeform = (ctx.get('freeform') or '').strip()
-    empty_keys = [k for k in _FREEFORM_FACT_KEYS if not (ctx.get(k) or '').strip()]
-    if not freeform or not empty_keys or len(freeform) < 20:
+    if not freeform:
         return {}
+    fallback = {'facts': {}, 'direction': freeform, 'mood': ''}
+    if len(freeform) < 20:
+        ctx['direction'] = freeform
+        ctx['mood'] = ''
+        return fallback
     try:
         message = client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=300,
-            system=('Extract event facts from promoter notes. Respond with ONLY a JSON '
-                    'object — keys from: event (night/event name), venue, city, date, '
-                    'doors (opening time), curfew (end time), tickets (price/link), '
-                    'artist_list (newline-separated lineup). Include a key ONLY if the '
-                    'text clearly states it. No prose, no markdown fences.'),
-            messages=[{'role': 'user', 'content': freeform[:2000]}],
+            max_tokens=600,
+            system=('Split a music promoter\'s notes for an image-generation tool into '
+                    'three parts. Respond with ONLY a JSON object: '
+                    '"facts" — object with keys ONLY where the text clearly states them: '
+                    'event (night/event name), venue, city, date, doors (opening time), '
+                    'curfew (end time), tickets (price/link), artist_list (newline-'
+                    'separated lineup); '
+                    '"direction" — string: every explicit design/layout instruction, '
+                    'verbatim where possible (placement of people or objects, font/type '
+                    'size, scale, composition, colour treatment, graphic directives); '
+                    '"mood" — string: the vibe/atmosphere/feel words only. '
+                    'No prose, no markdown fences.'),
+            messages=[{'role': 'user', 'content': freeform[:4000]}],
         )
         raw = message.content[0].text.strip()
         if raw.startswith('```'):
             raw = raw.strip('`').removeprefix('json').strip()
-        facts = json.loads(raw)
+        parsed = json.loads(raw)
+        facts = parsed.get('facts') or {}
         filled = {}
-        for k in empty_keys:
+        for k in _FREEFORM_FACT_KEYS:
             v = facts.get(k)
-            if isinstance(v, str) and v.strip():
+            if isinstance(v, str) and v.strip() and not (ctx.get(k) or '').strip():
                 ctx[k] = v.strip()
                 filled[k] = v.strip()
-        return filled
+        ctx['direction'] = str(parsed.get('direction') or '').strip()
+        ctx['mood'] = str(parsed.get('mood') or '').strip()
+        return {'facts': filled, 'direction': ctx['direction'], 'mood': ctx['mood']}
     except Exception as e:
-        print(f'⚠️  freeform fact-extraction skipped: {e}')
-        return {}
+        print(f'⚠️  additional-context parse failed ({e}) — whole box treated as direction')
+        ctx['direction'] = freeform
+        ctx['mood'] = ''
+        return fallback
 
 
 # /api/classify-ref — auto-guess WHO/WHERE/WHAT/STYLE for uploaded references
@@ -818,12 +844,14 @@ def generate_image_endpoint():
     if err: return err
 
     try:
-        w, h = IMAGE_DIMENSIONS.get(content_type, (1080, 1350))
+        # Delivery layer (L7): per-generation output size; format default as fallback.
+        w, h = SIZE_DIMENSIONS.get(ctx.get('size'), IMAGE_DIMENSIONS.get(content_type, (1080, 1350)))
 
-        # Freeform may carry facts (venue, date, doors…) the promoter didn't
-        # type into the structured fields — extract them to fill EMPTY slots
-        # only (structured input always wins; context-pipeline spec).
-        extracted_facts = _merge_freeform_facts(ctx)
+        # Context Stack L4/L5: parse the Additional Context box into facts
+        # (fill empty structured slots — typed input wins), binding direction,
+        # and vibe. The 200-char clip is dead (master spec, 2026-06-12).
+        parsed_context = _parse_additional_context(ctx)
+        extracted_facts = parsed_context.get('facts', {})
 
         # A selected Spirit (avatar) contributes its reference images for
         # character consistency — in the role-tagged model a Spirit is just a
@@ -887,6 +915,8 @@ def generate_image_endpoint():
             'refs_used': len(roled_refs),
             'ref_roles': ref_roles,
             'extracted_facts': extracted_facts or {},
+            'direction': ctx.get('direction', ''),
+            'mood': ctx.get('mood', ''),
             'dimensions': {'width': w, 'height': h},
             'credits_balance': balance,
         })

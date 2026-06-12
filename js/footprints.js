@@ -13,6 +13,22 @@ const FP_METRICS = [
 ];
 let fpGenre = '';
 let fpMoversMetric = 'followers';
+const fpLiveCache = {};   // username → {followers, plays, likes, reposts} | 'loading' | 'error'
+
+// Fetch live stats for the selected artist (by stable numeric id) so the
+// headline matches soundcloud.com exactly. Re-renders when it lands.
+async function fpLoadLive(username) {
+  if (!username || fpLiveCache[username] || !window.scAuth) return;
+  try {
+    if (!(await scAuth.session())) return;
+    fpLiveCache[username] = 'loading';
+    const r = await scAuth.authedFetch(`${scApiBase()}/api/tracking/artist/${encodeURIComponent(username)}/live`);
+    fpLiveCache[username] = r.ok ? await r.json() : 'error';
+  } catch (e) {
+    fpLiveCache[username] = 'error';
+  }
+  if (fpSelectedArtist === username) renderFootprints();
+}
 
 function fpClan() {
   return Object.values(getFavourites()).filter(a => a.status !== 'cut');
@@ -156,13 +172,25 @@ function renderFootprints() {
         <span class="stat-label" style="font-size:10px;color:var(--secondary)">${esc(artist.genre || '')}</span>
       </div>`;
   }
-  const latestVal = data.length ? data[data.length - 1] : 0;
+  // Headline value: for a single artist, prefer the LIVE figure (matches
+  // soundcloud.com exactly); clan view uses the snapshot aggregate.
+  let headlineVal = data.length ? data[data.length - 1] : 0;
+  let liveTag = '';
+  if (fpSelectedArtist) {
+    const live = fpLiveCache[fpSelectedArtist];
+    if (live === undefined) { fpLoadLive(fpSelectedArtist); liveTag = '<span style="font-size:8px;color:var(--muted)"> …</span>'; }
+    else if (live === 'loading') liveTag = '<span style="font-size:8px;color:var(--muted)"> …</span>';
+    else if (live && typeof live === 'object' && live[fpActiveMetric] != null) {
+      headlineVal = live[fpActiveMetric];
+      liveTag = '<span class="stat-label" style="font-size:8px;color:#4ade80;vertical-align:middle"> ● LIVE</span>';
+    }
+  }
   chartEl.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px">
       ${header}
       <div style="text-align:right">
-        <div class="stat-label" style="font-size:10px;color:var(--secondary)">${activeLabel}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red)">${fmt(latestVal)}</div>
+        <div class="stat-label" style="font-size:10px;color:var(--secondary)">${activeLabel}${liveTag}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red)">${fmt(headlineVal)}</div>
       </div>
     </div>
     <div class="metric-tabs">

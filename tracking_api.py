@@ -187,6 +187,37 @@ def get_artist_series(key):
     })
 
 
+@tracking_bp.route('/artist/<key>/live', methods=['GET'])
+def get_artist_live(key):
+    """Live current stats for one artist, fetched by the STABLE numeric id
+    (never the display-name resolve). Powers the Footprints headline so it
+    matches soundcloud.com exactly; the chart underneath stays daily history."""
+    uid, err = require_user()
+    if err:
+        return err
+    sb = supabase()
+    if key not in _user_artist_keys(sb, uid):
+        return jsonify({'error': 'artist not in your Clan or Watching'}), 404
+    rows = (
+        sb.table('tracked_artists').select('soundcloud_user_id, resolve_status')
+        .eq('artist_key', key).execute()
+    ).data or []
+    if not rows or not rows[0].get('soundcloud_user_id'):
+        return jsonify({'error': 'artist not resolved'}), 404
+    from tracking_collector import fetch_artist_stats
+    metrics, status, ferr = fetch_artist_stats(rows[0]['soundcloud_user_id'])
+    if not metrics:
+        return jsonify({'error': ferr or 'fetch failed', 'fetch_status': status}), 502
+    return jsonify({
+        'followers':   metrics['followers'],
+        'plays':       metrics['total_plays'],
+        'likes':       metrics['total_likes'],
+        'reposts':     metrics['total_reposts'],
+        'track_count': metrics['track_count'],
+        'fetch_status': status,
+    })
+
+
 @tracking_bp.route('/run', methods=['POST'])
 def trigger_run():
     """Manual collection run (background thread; check /runs for the result)."""

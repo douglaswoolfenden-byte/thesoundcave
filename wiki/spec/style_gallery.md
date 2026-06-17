@@ -1,6 +1,6 @@
 # Style Gallery — "pick a look" for scene-native output
 
-> Status: **DRAFT — pending Doug sign-off.** Open decisions flagged at the bottom.
+> Status: **Approved 2026-06-17** (all decisions locked, incl. name = "Etchings"). Build not started — P0 baseline first. UX behaviour: [forge_ux_principles](forge_ux_principles.md).
 > Essence: [decision 0008 — Campaign Studio first](../decisions/0008_campaign_studio_first.md).
 > Builds on the finished input system: [forge_context_pipeline](forge_context_pipeline.md) (role-tagged refs) + [forge_output_refs](../design_references/forge_output_refs.md) (the tech-house reference research already done).
 > Branch: `forge-output-ux`.
@@ -31,12 +31,12 @@ Today the STYLE ref is **uploaded by the user.** This spec adds a way to **pick 
 3. Upload extra refs — WHO / WHERE / WHAT (a person, place, object) — *optional*
 4. **Event details** (night, venue, city, date, doors…) — *required for Flyer*
 5. **Additional context** — director's notes that weave it together — *optional*
-6. **Spirit** — summon a saved character/avatar for face consistency — *optional*
+6. **Spirit** — render a saved cartoon character/persona into the piece — *optional* (a real-person likeness is a WHO ref, not a Spirit — see glossary)
 
 Steps 3, 5, 6 are **optional but always present** (Doug's call — never excluded, progressively disclosed). The promise is "great flyer in two moves" for the no-designer user; power users expand the rest.
 
-## Vernacular name (pending)
-Per the caveman-language law, the gallery needs a vernacular UI label. Proposal: **"Cave Paintings"** (the visual styles on the cave walls — on-theme with Sound Cave). Alts: "Markings", "Wall". **Doug's call.**
+## Vernacular name — **Etchings** (locked 2026-06-17)
+The gallery is **Etchings**; a single tile/look is **an Etching** (images carved into the cave wall). "Markings" was ruled out — collides with the existing "Marks" (Brand Kits). Glossary updated. A picked Etching is a **starting anchor, not a cage** — the user deviates from it via WHO/WHERE/WHAT refs + Additional Context (see [forge_ux_principles](forge_ux_principles.md), principle 2).
 
 ## The tech-house pack — what Doug sources (the homework)
 Taste is Doug's to curate; structure is the machine's. Per look/tile, provide:
@@ -45,15 +45,17 @@ Taste is Doug's to curate; structure is the machine's. Per look/tile, provide:
 3. **Palette** — already set by the palette law: `#0a0a0a` / `#e8e8e8` / single `#ff4500`.
 4. **One line on the look** — what's authentic, what's cringe.
 
-## Decisions needed (sign-off before build)
-1. **IP handling.** Public repo / shippable product. Baking competitors' *actual* flyers in as shipped tiles has IP risk. Options: (a) real flyers as *private* R&D reference only (not committed/shipped); (b) generate/commission "in-the-style-of" tile plates we own; (c) curate only clearly-licensed/own work. **Recommend (b) for shipped tiles, (a) during R&D.**
-2. **Gallery vs upload.** Curated gallery as default, keep upload-your-own STYLE as an option? (Recommend yes.)
-3. **Vernacular name** (above).
-4. **First tile set** — how many tech-house looks at launch? (Recommend 3–5: a poster look, a minimal-post look, a carousel/lineup look.)
+**Volume:** source **3 distinct looks first** to prove the recipe; the launch gallery scales to **20+ tiles**, so budget ~20 distinct authentic tech-house references over time (private R&D refs only; shipped tiles are our own generated plates, per the IP call).
 
-## Build outline (after sign-off)
+## Decisions (locked 2026-06-17)
+1. **IP handling — LOCKED.** Real flyers are *private R&D reference only* (not committed, not shipped). Every **shipped** tile is an "in-the-style-of" plate **we generate and own.** Learn from real flyers privately; ship only our own art.
+2. **Gallery vs upload — LOCKED.** Curated gallery is the default path; **upload-your-own STYLE stays** as an option.
+3. **Vernacular name — LOCKED: "Etchings"** (the gallery) / "an Etching" (one tile). "Markings" ruled out (collides with "Marks").
+4. **Tile volume — LOCKED.** Launch target **20+ tiles**, reached by *proving the recipe on 3 distinct looks first* (poster · minimal-post · lineup-carousel), eye-tested to the "a promoter would post this" bar, **then** batch-producing to 20+. Never manufacture 20 on an unproven recipe.
+
+## Build outline
 - **P0** — baseline: run the current Flyer flow for a tech-house event, eye-test the output gap. (Needs local stack + fal credits — together step.)
-- **P1** — gallery UI: tile grid at the style step; pick → inject as STYLE ref. Upload stays.
-- **P2** — wire the tech-house tiles (Doug's sourced content + locked fonts).
-- **P3** — generate flyers, run the promoter test, tune (FLUX.2 vs Nano Banana bake-off, teed up in P1.5).
+- **P1** — prove the recipe on **3 distinct looks** (poster · minimal-post · lineup-carousel): own generated plates + locked fonts/palette; generated flyers pass the promoter eye-test.
+- **P2** — gallery UI: tile grid at the style step; pick → inject as STYLE ref. Upload stays.
+- **P3** — scale to **20+ tiles** using the proven recipe; promoter-test across them.
 - **Later** — clone the gallery to other genres; generation logging for the future "learn from users" system.

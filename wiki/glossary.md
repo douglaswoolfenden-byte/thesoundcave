@@ -50,8 +50,10 @@
 | **Cut** | Remove an artist from active tracking. Cut artists are preserved but hidden from the Mural & Footprints. | `status: 'cut'` on a Clan/`roster` row |
 | **Beat** | Rights-gated audio attached to posts (clip picker + copyright gate). | `firepit_beat`, `hero_track_url` |
 | **Summon / Gathering** | A single event/campaign. | a row in `events` |
+| **Etchings / an Etching** | The curated style gallery inside Forge — pick a look ("an Etching") as a *starting anchor* for generation (deviate via refs + Additional Context). Each tile is backed by an owned "in-style-of" plate + fonts/palette; picking one injects a STYLE-role ref. | *(to build)* — Forge style picker; see [spec/style_gallery](spec/style_gallery.md) |
 
 ## Rename log (UI label history)
+- **2026-06-17:** new label **Etchings** (Forge style gallery, not yet built); "Markings"/"Cave Paintings"/"Totems" considered, **Etchings** chosen ("Markings" rejected — collides with "Marks").
 - **2026-06-09:** Dashboard → **Mural**; Roster → **Clan** (reverted); Summons → **Gatherings**.
 - **2026-05-28:** Events → Summons.
 - Earlier: Clan → Roster; Brand Kits → Marks.

@@ -71,6 +71,8 @@ Spirits become WHO refs in the same system (one mental model, no parallel machin
   4. **Variants killed**: no 3-angle pick step — straight to copy + image; iterate via REGEN.
   5. **Buttons**: SAVE TO STASH (primary) · REGEN · DOWNLOAD · DISCARD. The shorter/longer/tone refine row dies.
   6. **Bug to fix in same pass**: typed flyer fields (venue/date/doors/tickets…) vanish — suspected re-render after file upload wipes `#forgeDynamicFields`.
+
+  > **⚠️ Reversed 2026-06-17:** calls **4 (variants killed)** and **5 (refine row dies)** above are superseded — Doug chose *full iterative richness*; finer refine controls + A/B options return as first-class. See [forge_ux_principles](forge_ux_principles.md).
 - **P2 — carousel multi-image**: N consistent slides (seed-lock + locked zone skeleton); panorama "walking-man" experiment after.
 - **P3 — post-generation reveal polish**: whatever of the audit-page sketch still applies after P1.5.
 

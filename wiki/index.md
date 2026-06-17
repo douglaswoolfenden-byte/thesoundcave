@@ -12,7 +12,8 @@
 - [App-wide redesign v1](spec/redesign_v1.md) — KVS skin extended across the app. **Chrome shipped 2026-05-08, per-tab content awaits Doug's morning walkthrough.**
 - [Forge output recipes](spec/forge_output_recipes.md) — per-type media generation spec (Post / Carousel / Event Promo / Event Poster / Artist Bio): format, composition, style, model. **Approved 2026-06-09.**
 - [Forge context pipeline](spec/forge_context_pipeline.md) — every generation digests ALL context; WHO/WHERE/WHAT/STYLE role-tagged refs + the Context Stack. **Signed off 2026-06-11.**
-- [Style gallery](spec/style_gallery.md) — "pick a look" curated STYLE tiles (visual genre selection) over the role-tagged pipeline. **DRAFT — pending sign-off (2026-06-17).**
+- [Style gallery — "Etchings"](spec/style_gallery.md) — "pick a look" curated STYLE tiles (visual genre selection) over the role-tagged pipeline. **Approved 2026-06-17.**
+- [Forge UX principles](spec/forge_ux_principles.md) — iterative control · examples as guide-rails · series style-consistency · closing the vision gap. **Captured 2026-06-17 (2 tensions with P1.5 flagged).**
 
 ## Features
 - [The Cave](features/the_cave.md) — the discovery **umbrella** (Mural · Foraging · Clan · Footprints). The **Mural** is its dashboard scene (UI label was "Dashboard"). Built; print stylesheet pending.

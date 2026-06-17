@@ -1,16 +1,19 @@
 # Sound Cave — Spec Overview
 
-> Status: **Approved 2026-04-28** by Doug.
+> Status: **Essence updated 2026-06-17** — see [decision 0008 — Campaign Studio leads (tech-house first)](../decisions/0008_campaign_studio_first.md). That is the current north star; read it first.
 >
-> ⚠️ **Partially superseded 2026-05-13** by [`phase_2_3_pivot.md`](phase_2_3_pivot.md) — the product is pivoting to a promoter-first campaign engine. Read the pivot page first; the sections "What it is", "Who it's for", "Clan" (now Roster), "Firepit" (now Event-aware), and "Roadmap" below are out of date. Business model, architecture, and "what it explicitly is NOT" remain valid.
+> History: approved 2026-04-28 (discovery + bulk content) → repositioned promoter-first 2026-05-13 ([phase_2_3_pivot](phase_2_3_pivot.md)) → **campaign-studio-first 2026-06-17** (0008). The "What it is / Who it's for / Roadmap" below are updated to 0008. "What it explicitly is NOT", business model, and architecture remain valid throughout.
 
 ## What it is
-The Sound Cave is a **SoundCloud scouting tool** combined with a **bulk AI content creation and multi-platform distribution/scheduling tool** for music industry professionals. Find artists, generate content about them at scale, schedule and publish across platforms.
+The Sound Cave is a **campaign studio** for underground music people with **no design team** — promoters, small boutique labels, DIY artists. It turns "I have an event / a release / a tour" into authentic, **scene-correct** campaign assets (flyers, posts, carousels) in minutes — orchestrating best-in-class AI generation behind a layer of curated niche taste. **Tech-house is the first scene.**
+
+It also carries a **discovery + tracking** layer (unsigned-artist scouting + stats via the SoundCloud API), kept but **parked** while the studio leads (see [0008](../decisions/0008_campaign_studio_first.md)). Long term the two join up: find an artist → take them into the studio.
 
 ## Who it's for
-- **Artists** — managing their own content output
-- **Labels** — producing content across their roster at scale
-- **Event promoters** — promoting line-ups and events
+The user with **no marketing team — everything outsourced**:
+- **Event promoters** — flyers and campaigns for their nights (primary)
+- **Small boutique labels** — release + roster campaigns without a designer
+- **DIY artists** — their own tour / release / bio assets
 
 → Detailed personas: `wiki/personas/`
 
@@ -37,10 +40,10 @@ The Sound Cave is a **SoundCloud scouting tool** combined with a **bulk AI conte
 - **Distribution:** Hosted web app
 - **Architecture target:** Multi-tenant SaaS (currently single-user local; SaaS is the destination)
 
-## Roadmap
-- **Phase 2 (next):** Voice profiles — upload past campaigns to train style; Trail Map content calendar
-- **Phase 3:** Social media connections (multi-platform distribution + scheduling); image generation _(image gen partially done)_
-- **Phase 4 (implied by SaaS goal):** Auth, multi-tenant data isolation, billing
+## Roadmap (per [0008](../decisions/0008_campaign_studio_first.md) — studio first, tech-house first)
+- **Now:** nail the **tech-house Flyer** end-to-end — curated [style gallery](style_gallery.md) over the existing role-tagged STYLE pipeline; eye-test to the "a promoter would post this" bar.
+- **Next:** clone the format set (Post, Carousel) for tech-house; then clone the whole pack to a second genre.
+- **Parked:** tracking/scouting (kept, untouched); artist profiles + the "learn from users" data flywheel (instrument logging now, build later); multi-platform scheduling (Trail Map); SaaS billing/multi-tenant.
 
 ## Architecture (one-liner)
 Vanilla HTML/CSS/JS frontend (no build step) → Flask backend (`content_api.py`, port 8000) → Claude Haiku for text + Fal AI FLUX schnell (primary) / Replicate (fallback) for images. SoundCloud API for discovery + tracking.

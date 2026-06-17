@@ -877,3 +877,15 @@ Spec: `wiki/spec/scheduled_searches.md` (signed off, API-backed model). Live-fir
 - P4 (this) — real weekly scheduled searches
 
 Note: an editor open on Doug's side clobbered some uncommitted edits mid-P3 (auto-saved stale buffers over disk); re-applied + committed. Mitigation: commit promptly / keep project files closed in the editor during a session.
+
+## [2026-06-17] Strategy lock — Campaign Studio leads (tech-house first) + branch backed up
+
+**Strategy session (2026-06-16→17), no code.** Worked through "does a music-niche tool have legs in a fast AI space" and locked direction:
+- **Campaign studio leads**; intelligence/tracking stays but **parked**; long-term = both with a discovery→studio round-trip. **One scene first: tech-house.** Full reasoning + decision: [decisions/0008](decisions/0008_campaign_studio_first.md).
+- **Moat = encoded niche taste**, not pixels (we orchestrate Canva/Higgsfield/fal APIs) and not data (won't out-data Chartmetric/Sony). "Ahead of AI" is the losing bet for a solo builder.
+- **Genre selection = visual gallery, not a text dropdown** (a genre is a lossy proxy for a look; crossover is real). New spec: [spec/style_gallery](spec/style_gallery.md) — **DRAFT, pending sign-off**. Surfaces curated STYLE tiles into the *existing* role-tagged STYLE pipeline; the input architecture is already built.
+- **Spirit = avatar = character** (face consistency), never a mood; mood lives in Additional Context. Locked.
+
+**Grounding finding:** ~70% of the studio inputs already exist on `forge-output-ux` (Context Stack, WHO/WHERE/WHAT/STYLE refs, 3 formats, Spirits, video). **None live** (`main` is deployed). The branch was **22 commits local-only** → pushed to GitHub `origin/forge-output-ux` on 2026-06-17 after a clean gitleaks scan. `gh` wired as the git credential helper to unblock the HTTPS push.
+
+**Next:** Doug signs off style_gallery (esp. IP handling of reference flyers + vernacular name) → P0 baseline the current tech-house Flyer output → build the gallery → source the tech-house pack.

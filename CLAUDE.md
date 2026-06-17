@@ -16,7 +16,9 @@ This file describes *what the code currently is*. The wiki describes *what we're
 
 ## What this project is
 
-The Sound Cave is a music discovery platform that finds unsigned/emerging artists in European underground dance music via the SoundCloud API. It has two automated pipelines and a static frontend dashboard, all hosted on GitHub Pages.
+The Sound Cave is a **campaign studio** for underground music people with no design team — promoters, small labels, DIY artists — turning an event/release/tour into scene-correct campaign assets (tech-house first). It *also* includes a **discovery + tracking** layer (unsigned-artist scouting via the SoundCloud API), currently **parked** while the studio leads. Product essence + reasoning: `wiki/decisions/0008_campaign_studio_first.md`.
+
+Architecturally today: two automated discovery pipelines (`scout.py`, `clan_tracker.py`) + a Flask AI-generation backend (`content_api.py` — the Forge studio) + a multi-file static frontend (no build step). The current studio build lives on branch `forge-output-ux` (not yet merged to `main`/live).
 
 ## Architecture
 

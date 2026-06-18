@@ -62,6 +62,25 @@ Spirits become WHO refs in the same system (one mental model, no parallel machin
 
 (Format consolidation 5→3 ships with this: `event_poster`→Flyer label; promo + bio retire from the picker, legacy Stash items keep readable labels. Artist-bio behaviour returns later as a Spotlight mode inside Post.)
 
+### 5. Reference as information-template (Doug, 2026-06-18)
+A STYLE reference isn't just a *texture* to copy — it's a **template of information roles**. Every text element in the reference does a job at a position + treatment, and the studio should **map our event's data into those same roles**, reproducing the structure + effect, not scattering generic text somewhere.
+
+Worked example (Dean Blunt Boiler Room ref → SMELLY PANTS event):
+
+| Reference element (role) | → our event data |
+|---|---|
+| "HACKNEY'S VERY OWN" (origin tagline, top, 3-across) | "LONDON'S VERY OWN" |
+| "DEAN BLUNT" (huge headline) | "SMELLY PANTS" |
+| "@BOILER ROOM … LIVE IN HOUSTON" (presents / venue line) | "@CHATSWORTH PRESENTS" · SAMSON HOUSE — LONDON |
+| "4/11" (date) | "FRI 12 DEC" |
+| "ADVANCE GA $27 / DAY OF $35" (entry, bottom small) | "FREE" · DOORS 11PM–6AM |
+| "DEAN BLUNT" echoed / scattered behind & at the edges | "SMELLY PANTS" echoed / scattered |
+| dragon motif | keep decorative, or map to a brand mark |
+
+Implication for the compose prompt: don't say "render these lines somewhere." Read the reference's text **roles + placement + treatment**, then instruct the model to substitute our event's equivalent into each — same hierarchy, same scattering, same letterforms.
+
+**Guardrail (ties to the [style_gallery](style_gallery.md) IP decision):** learn the reference's *grammar* (what info goes where, at what weight), don't clone the specific artifact 1:1. Reproducing a real flyer's exact layout + motifs edges into derivative/IP territory and toward "template-filler" rather than "generative studio." Extract the structure; keep enough generative freedom that the output is *our* plate, not a photocopy of theirs.
+
 ## Build phases
 - **P1 — context core**: role chips on uploads (auto-guess + tap-to-correct), compose route + role-aware prompt builders, freeform fact-extraction, merge rules. Formats consolidated to 3 in the same pass (picker + field visibility). **SHIPPED 2026-06-11 (`b0a507a`).**
 - **P1.5 — output rework (Doug's live verdict, 2026-06-11 PM)**: P1's plumbing works but the *output* fails the eye test. Doug's calls, all signed off:

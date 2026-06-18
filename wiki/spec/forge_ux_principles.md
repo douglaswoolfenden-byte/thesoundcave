@@ -37,12 +37,12 @@ P1.5 (2026-06-11) had deliberately **stripped** two things:
 Market leaders (Firefly / Midjourney v7 / ChatGPT image) win on the feedback loop. Target capabilities, **tiered by how achievable they are on our API-orchestration stack** (we orchestrate Fal/Replicate/Nano Banana/FLUX — we don't own the model):
 
 1. **Variation branching (A/B from a point)** — *easy.* Same context, different seeds, N outputs. Re-adds what P1.5 cut; cheap. **Build first.**
-2. **Selective editing of TEXT** (change the date/venue/headliner, nothing else moves) — *already enabled by our compositor* **if** text is a separate overlay layer → forces the fork below.
+2. **Editing text after generation** — text is **baked into the image** (Doug's firm call, see below), so edits happen by **regenerating / iterating**, not by moving a separate text layer.
 3. **Natural-language / selective IMAGE editing** (nudge the backdrop, swap one element) — *hard, model-dependent.* Needs inpainting / instruction-edit (Nano Banana / Flux-Kontext-class). Scope carefully; don't over-invest.
 4. **Real-time / conversational feel** — *we don't control latency* (third-party API round-trips). Recalibrate to **"fast async"** (progress, streaming, queue), not literal real-time.
 
-### The fork this forces: baked-text vs compositor layer
-P1.5 chose to **bake text into the image** (better typographic fidelity; compositor gated off). But selective text editing (#2) needs text as a **separate compositor layer.** So the iterative strategy argues for *reversing* P1.5's bake-text-in — at the cost of some style fidelity. **Decision (let P0 inform it):** baked-text-for-fidelity · separate-layer-for-editability · or hybrid (bake for the hero look, re-derive an editable layer on demand).
+### Baked-in text is firm (Doug, 2026-06-17 — fork closed)
+Text is **baked into the generation as one process**, not overlaid. Doug's reasoning from real use: the relayed/overlay text never matched the image's format, visibility or colour — it sat separate and disjointed — and couldn't be edited post-input anyway. Baked-in is more effective and integrated. **Not re-open territory.** Consequence for the refine loop: text changes go through **regen / iteration**, not a separate editable layer. (Claude wrongly re-opened this earlier from a creative judgement it isn't qualified to make — corrected.)
 
 ### Anchor — don't lose the moat
 The refine loop is **table-stakes, not the differentiator.** We can't out-engineer Adobe's inpainting, and chasing it is the model-lab-racing trap [0008](../decisions/0008_campaign_studio_first.md) already rejected. Sound Cave wins on **niche-correct starting points (Etchings)** + a *good-enough* conversational loop. Scope the loop to "feels like iterating with a designer," not "beats Midjourney."

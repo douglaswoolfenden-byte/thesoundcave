@@ -54,8 +54,4 @@ Taste is Doug's to curate; structure is the machine's. Per look/tile, provide:
 4. **Tile volume — LOCKED.** Launch target **20+ tiles**, reached by *proving the recipe on 3 distinct looks first* (poster · minimal-post · lineup-carousel), eye-tested to the "a promoter would post this" bar, **then** batch-producing to 20+. Never manufacture 20 on an unproven recipe.
 
 ## Build outline
-- **P0** — baseline: run the current Flyer flow for a tech-house event, eye-test the output gap. (Needs local stack + fal credits — together step.)
-- **P1** — prove the recipe on **3 distinct looks** (poster · minimal-post · lineup-carousel): own generated plates + locked fonts/palette; generated flyers pass the promoter eye-test.
-- **P2** — gallery UI: tile grid at the style step; pick → inject as STYLE ref. Upload stays.
-- **P3** — scale to **20+ tiles** using the proven recipe; promoter-test across them.
-- **Later** — clone the gallery to other genres; generation logging for the future "learn from users" system.
+The staged build plan (P0 baseline → prove 3 looks → build Etchings → refine loop → scale to 20+) is the **canonical roadmap** at [build_plan](../build_plan.md). This spec holds the *what*; build_plan holds the *sequence + where we are*.

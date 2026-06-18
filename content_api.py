@@ -916,14 +916,13 @@ def generate_image_endpoint():
         if not avatar_refs and ctx.get('avatar_image_url'):
             avatar_refs = [ctx['avatar_image_url']]
         all_refs = _normalize_reference_images(ctx.get('reference_images'))
-        # WHO carbon-copy law (Phase C, master spec 2026-06-12): real-person
-        # photos are SPLIT OUT of generation — they get composited onto the
-        # finished design afterwards (cutout → paste → grade), never redrawn.
-        who_refs = [r for r in all_refs if r.get('role') == 'who']
-        ctx_refs = [r for r in all_refs if r.get('role') != 'who']
-        # Spirits (drawn characters) DO enter generation, tagged 'spirit'.
+        # WHO now flows INTO generation (carbon-copy law reversed 2026-06-18):
+        # the edit model (Nano Banana Pro) integrates the real person into the
+        # STYLE ref with accurate likeness — proven raw in scratch/raw_model_test.py.
+        # No more cutout-and-paste (which invented a random subject and pasted a
+        # corner photo). Spirits (drawn characters) also enter, tagged 'spirit'.
         roled_refs = ([{'data': u, 'role': 'spirit', 'note': 'the summoned spirit'}
-                       for u in avatar_refs] + ctx_refs)[:10]
+                       for u in avatar_refs] + all_refs)[:10]
         image_refs = [r['data'] for r in roled_refs] or None
         ref_roles = [r['role'] for r in roled_refs]
         role_set = set(ref_roles)
@@ -946,7 +945,7 @@ def generate_image_endpoint():
         # Trust mechanism (Doug's reassurance ask): make prompt + ref usage visible.
         print(f"🎨 Forge image — type={content_type} job={job_type} "
               f"refs={len(roled_refs)} roles={ref_roles} "
-              f"(spirit:{len(avatar_refs)} + ctx:{len(ctx_refs)}) seed={seed}")
+              f"(spirit:{len(avatar_refs)} + uploads:{len(all_refs)}) seed={seed}")
         if extracted_facts:
             print(f"   freeform facts filled: {extracted_facts}")
         print(f"   prompt: {image_prompt[:240]}")
@@ -960,20 +959,10 @@ def generate_image_endpoint():
             print(f"⚠️  v2 router failed ({v2_err}); falling back to legacy generate_image")
             image_bytes, provider, model = generate_image(image_prompt, w, h)
 
-        # WHO carbon-copy composite (Phase C): paste each real person's cutout
-        # onto the finished design — pixel-true, placement/scale/grade from the
-        # binding Direction. Best-effort: a cutout failure leaves the design
-        # intact rather than 500-ing the whole generation.
+        # WHO carbon-copy composite RETIRED 2026-06-18: the person is now
+        # integrated by the edit model during generation (see roled_refs above),
+        # not pasted afterwards. Response key kept for frontend compatibility.
         who_composited = 0
-        for wref in who_refs:
-            try:
-                cutout = remove_background(wref['data'])
-                image_bytes = composite_who(image_bytes, cutout, ctx.get('direction', ''))
-                who_composited += 1
-            except Exception as who_err:
-                print(f"⚠️  WHO composite skipped ({who_err})")
-        if who_composited:
-            model = f"{model}+who×{who_composited}"
 
         image_url = save_image(image_bytes, content_type, user_id=uid)
 

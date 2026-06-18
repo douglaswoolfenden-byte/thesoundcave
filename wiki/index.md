@@ -1,5 +1,8 @@
 # Sound Cave Wiki — Index
 
+## 🧭 Current focus
+- [Build plan](build_plan.md) — the staged "next few builds" (P0 → prove 3 looks → Etchings → refine loop → 20+). **Keep top of mind. We are at Stage 0 (P0).**
+
 ## Terminology
 - [Glossary](glossary.md) — **source of truth** for UI labels ↔ what they mean ↔ internal code names ↔ old aliases. Read this when a term on the website doesn't match the code. Keep current on every rename.
 

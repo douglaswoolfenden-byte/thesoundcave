@@ -1,0 +1,318 @@
+{
+  "date": "2026-06-18",
+  "artist_count": 21,
+  "artists": {
+    "Lucki": {
+      "display_name": "val",
+      "genre": "Techno",
+      "followers": 24,
+      "following": 2,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "81zaki": {
+      "display_name": "81zaki",
+      "genre": "UK Garage",
+      "followers": 834,
+      "following": 1134,
+      "track_count": 25,
+      "total_plays": 26585,
+      "total_likes": 1971,
+      "total_reposts": 51,
+      "avatar_url": "https://i1.sndcdn.com/avatars-3EqU6MMZ38QfzKfX-VLuDmg-large.jpg",
+      "latest_track": {
+        "title": "Alicia Keys - Feeling U, Feeling Me (81zaki Remix)",
+        "plays": 340,
+        "likes": 53,
+        "created_at": "2026-04-27"
+      }
+    },
+    "BELFORT": {
+      "display_name": "belfort",
+      "genre": "Tech house",
+      "followers": 1,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "SKH": {
+      "display_name": "skh",
+      "genre": "Bassline",
+      "followers": 8,
+      "following": 14,
+      "track_count": 3,
+      "total_plays": 233,
+      "total_likes": 2,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-5dxz4xUc7JrK9tk4-xMUnzg-large.jpg",
+      "latest_track": {
+        "title": "First draft 16",
+        "plays": 18,
+        "likes": 0,
+        "created_at": "2013-03-10"
+      }
+    },
+    "Dom3x": {
+      "display_name": "Country Club \u26f3\ufe0f",
+      "genre": "House",
+      "followers": 14,
+      "following": 0,
+      "track_count": 2,
+      "total_plays": 489,
+      "total_likes": 26,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-L92VpaPmmULy90YD-stAPkQ-large.jpg",
+      "latest_track": {
+        "title": "ORION + DOMEX // BENEVENTO FREESTYLE",
+        "plays": 144,
+        "likes": 12,
+        "created_at": "2021-11-22"
+      }
+    },
+    "TREMUR": {
+      "display_name": "tremur",
+      "genre": "House",
+      "followers": 19,
+      "following": 286,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-BLyyKbfF6OeImt08-RBxHxg-large.jpg",
+      "latest_track": null
+    },
+    "dazegxd": {
+      "display_name": "dazegxd",
+      "genre": "Jungle",
+      "followers": 16052,
+      "following": 319,
+      "track_count": 297,
+      "total_plays": 6736302,
+      "total_likes": 146954,
+      "total_reposts": 7572,
+      "avatar_url": "https://i1.sndcdn.com/avatars-MJyzcFo8JOiSnaKz-iPVfIw-large.jpg",
+      "latest_track": {
+        "title": "touch & kiss",
+        "plays": 0,
+        "likes": 0,
+        "created_at": "2026-03-19"
+      }
+    },
+    "annias": {
+      "display_name": "annias",
+      "genre": "UK Garage",
+      "followers": 3700,
+      "following": 2000,
+      "track_count": 19,
+      "total_plays": 9173,
+      "total_likes": 221,
+      "total_reposts": 32,
+      "avatar_url": "https://i1.sndcdn.com/avatars-IytSMjQynMCGfR9Y-WLOu8A-large.jpg",
+      "latest_track": {
+        "title": "annias - lil dubby (deep dubstep instrumental)",
+        "plays": 179,
+        "likes": 6,
+        "created_at": "2026-04-28"
+      }
+    },
+    "LACKY": {
+      "display_name": "Lacky",
+      "genre": "Tech House",
+      "followers": 436,
+      "following": 44,
+      "track_count": 27,
+      "total_plays": 7268,
+      "total_likes": 329,
+      "total_reposts": 50,
+      "avatar_url": "https://i1.sndcdn.com/avatars-000382190429-b1fb4c-large.jpg",
+      "latest_track": {
+        "title": "Waiotapu Trance Festival",
+        "plays": 70,
+        "likes": 3,
+        "created_at": "2021-10-17"
+      }
+    },
+    "konzo": {
+      "display_name": "konzo",
+      "genre": "jungle",
+      "followers": 28,
+      "following": 30,
+      "track_count": 2,
+      "total_plays": 306,
+      "total_likes": 3,
+      "total_reposts": 1,
+      "avatar_url": "https://i1.sndcdn.com/avatars-000126458101-y28cxx-large.jpg",
+      "latest_track": {
+        "title": "KONZO JAMAIS SEUL Master",
+        "plays": 99,
+        "likes": 1,
+        "created_at": "2015-01-21"
+      }
+    },
+    "p": {
+      "display_name": "p",
+      "genre": "UK Garage",
+      "followers": 660,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-wOF8ok5gKYykkpyp-a5t9nA-large.jpg",
+      "latest_track": null
+    },
+    "VALTI": {
+      "display_name": "valti",
+      "genre": "Afro House",
+      "followers": 0,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "Bass.T": {
+      "display_name": "Bass",
+      "genre": "Deep House",
+      "followers": 111,
+      "following": 291,
+      "track_count": 3,
+      "total_plays": 1371,
+      "total_likes": 7,
+      "total_reposts": 2,
+      "avatar_url": "https://i1.sndcdn.com/avatars-000420974488-eryb8h-large.jpg",
+      "latest_track": {
+        "title": "Chill Out - Devic Vs RageSage",
+        "plays": 686,
+        "likes": 6,
+        "created_at": "2012-12-04"
+      }
+    },
+    "WESTON": {
+      "display_name": "$CAR!",
+      "genre": "UK Garage",
+      "followers": 1,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "Morgz": {
+      "display_name": "Morgz",
+      "genre": "Tech House",
+      "followers": 77,
+      "following": 48,
+      "track_count": 2,
+      "total_plays": 712,
+      "total_likes": 9,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-000032916384-39dwel-large.jpg",
+      "latest_track": {
+        "title": "Morgz,Seek the Northener and Jon Herer..Murder of crows theme...",
+        "plays": 336,
+        "likes": 6,
+        "created_at": "2010-05-20"
+      }
+    },
+    "FGDLL": {
+      "display_name": "FGDLL",
+      "genre": "lo-fi",
+      "followers": 10,
+      "following": 4,
+      "track_count": 99,
+      "total_plays": 2852,
+      "total_likes": 46,
+      "total_reposts": 3,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": {
+        "title": "8. Ansiedad a las 3_02",
+        "plays": 4,
+        "likes": 0,
+        "created_at": "2026-05-17"
+      }
+    },
+    "BASSBONG": {
+      "display_name": "BASSBONG",
+      "genre": "Bassline",
+      "followers": 112,
+      "following": 64,
+      "track_count": 21,
+      "total_plays": 19059,
+      "total_likes": 684,
+      "total_reposts": 35,
+      "avatar_url": "https://i1.sndcdn.com/avatars-wUlwhj2zr99V4HT4-FIogow-large.jpg",
+      "latest_track": {
+        "title": "Caught Me (BassBong Remix)",
+        "plays": 1581,
+        "likes": 83,
+        "created_at": "2026-05-28"
+      }
+    },
+    "C00kie": {
+      "display_name": "c00kiE",
+      "genre": "UK Garage",
+      "followers": 2,
+      "following": 8,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://i1.sndcdn.com/avatars-000002904859-5v89or-large.jpg",
+      "latest_track": null
+    },
+    "IDUR": {
+      "display_name": "idur",
+      "genre": "BREAKBEAT",
+      "followers": 0,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "MichaelAnthony": {
+      "display_name": "MichaelAnthony",
+      "genre": "140",
+      "followers": 0,
+      "following": 0,
+      "track_count": 0,
+      "total_plays": 0,
+      "total_likes": 0,
+      "total_reposts": 0,
+      "avatar_url": "https://a1.sndcdn.com/images/default_avatar_large.png",
+      "latest_track": null
+    },
+    "AEYVO": {
+      "display_name": "AEYVO",
+      "genre": "140",
+      "followers": 405,
+      "following": 1454,
+      "track_count": 7,
+      "total_plays": 8635,
+      "total_likes": 578,
+      "total_reposts": 100,
+      "avatar_url": "https://i1.sndcdn.com/avatars-VmxSYyQuz29Sb6X3-faeqjA-large.jpg",
+      "latest_track": {
+        "title": "Baby Keem x Wait A Minute - Distinct Motive (AEYVO Edit) (FREE DOWNLOAD)",
+        "plays": 1951,
+        "likes": 142,
+        "created_at": "2026-06-07"
+      }
+    }
+  }
+}

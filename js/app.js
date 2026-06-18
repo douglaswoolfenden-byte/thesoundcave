@@ -259,6 +259,31 @@ function saveDismissed(d) { localStorage.setItem('sc_dismissed', JSON.stringify(
 function getWatching()    { return JSON.parse(localStorage.getItem('sc_watching') || '[]'); }
 function saveWatching(d)  { localStorage.setItem('sc_watching', JSON.stringify(d)); }
 
+// Stars live in their OWN key (sc_starred) so they survive roster_sync.loadRoster,
+// which overwrites sc_favs from the account (the account roster doesn't store
+// `starred`). One-time seed from any legacy in-fav flags. Spec: clan_grid_polish.md.
+function getStarred() {
+  const raw = localStorage.getItem('sc_starred');
+  if (raw === null) {
+    const favs = JSON.parse(localStorage.getItem('sc_favs') || '{}');
+    const seed = Object.values(favs).filter(a => a.starred).map(a => a.username);
+    localStorage.setItem('sc_starred', JSON.stringify(seed));
+    return seed;
+  }
+  try { return JSON.parse(raw) || []; } catch (_) { return []; }
+}
+function saveStarred(arr) { localStorage.setItem('sc_starred', JSON.stringify(arr)); }
+function isStarred(username) { return getStarred().includes(username); }
+function toggleStarred(username) {
+  const cur = getStarred();
+  const next = cur.includes(username) ? cur.filter(u => u !== username) : [...cur, username];
+  saveStarred(next);
+  // Keep the artist synced to the account so loadRoster's overwrite never drops it.
+  const favs = getFavourites();
+  if (favs[username]) window.rosterSync?.pushArtist(favs[username]);
+  return next.includes(username);
+}
+
 function isFavourited(username) { return !!getFavourites()[username]; }
 function isCut(username) {
   const favs = getFavourites();
@@ -905,7 +930,9 @@ function renderPanel(username) {
   if (!a) return;
 
   // Editable / clan-only sections are hidden for read-only (non-clan) views.
-  ['platformGrid','panelNotesSection','panelActionRow'].forEach(id => {
+  // platformGrid stays visible for all (it carries the always-on SoundCloud
+  // mark); only the editable platform chips inside it are clan-gated below.
+  ['panelNotesSection','panelActionRow'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isClan ? '' : 'none';
   });
@@ -921,17 +948,14 @@ function renderPanel(username) {
   // async via refreshArtistLive). Spec: artist_modal_v4_header_reflow.md.
   const loc = (a.live && a.live.location) || a.location || '';
   document.getElementById('panelGenre').textContent = [a.genre, loc].filter(Boolean).join(' · ');
-  // SoundCloud identity link → logo (replaces the old "SoundCloud ↗" text).
-  const scLink = document.getElementById('panelSCLink');
-  scLink.href = a.artist_url || '#';
-  scLink.innerHTML = (typeof scIcon === 'function' ? scIcon('soundcloud') : 'SoundCloud');
 
   // Star toggle — inline SVG so it takes the brand orange (emoji stars render
   // gold and can't be CSS-coloured). Wired via listener, no inline JS.
   const starEl = document.getElementById('panelStar');
   if (starEl) {
-    const starSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="${a.starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.95 6.1 6.55.83-4.82 4.52 1.25 6.55L12 17.3l-5.93 3.2 1.25-6.55L2.5 9.43l6.55-.83z"/></svg>`;
-    starEl.innerHTML = `<span class="panel-star ${a.starred?'starred':''}" role="button" tabindex="0" title="Star this artist" aria-pressed="${!!a.starred}">${starSvg}</span>`;
+    const starred = isStarred(username);
+    const starSvg = `<svg viewBox="0 0 24 24" width="20" height="20" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.95 6.1 6.55.83-4.82 4.52 1.25 6.55L12 17.3l-5.93 3.2 1.25-6.55L2.5 9.43l6.55-.83z"/></svg>`;
+    starEl.innerHTML = `<span class="panel-star ${starred?'starred':''}" role="button" tabindex="0" title="Star this artist" aria-pressed="${starred}">${starSvg}</span>`;
     const star = starEl.firstElementChild;
     star.addEventListener('click', () => togglePanelStar(username));
     star.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePanelStar(username); } });
@@ -993,11 +1017,15 @@ function renderPanel(username) {
     });
   }
 
-  // Platform links — compact horizontal marks (icon-only, name on hover).
-  // Click a dim mark to add a URL inline; click a bright (linked) mark to open
-  // it; hover a linked mark for a ✎ pencil to edit. Handlers are wired via JS
-  // (not inline onclick) so usernames never sit inside attribute-embedded JS.
-  const platformChips = PLATFORMS.map(p => {
+  // Platform marks — a grid. SoundCloud leads, always orange (the source link,
+  // opens a.artist_url, not editable). The editable platforms follow for clan
+  // members only; click a dim mark to add a URL inline, a bright one to open it,
+  // hover a linked one for a ✎ to edit. Spec: clan_grid_polish.md. Handlers wired
+  // via JS (no inline onclick with user data).
+  const scChip = `<a class="plat-chip linked soundcloud" href="${esc(a.artist_url || '#')}" target="_blank" rel="noopener" title="SoundCloud">
+      <span class="plat-chip-ico">${typeof scIcon === 'function' ? scIcon('soundcloud') : 'SC'}</span>
+    </a>`;
+  const platformChips = isClan ? PLATFORMS.map(p => {
     const url = (a.platforms||{})[p] || '';
     const linked = !!url;
     const shown = linked ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : 'add link';
@@ -1005,10 +1033,10 @@ function renderPanel(username) {
       <span class="plat-chip-ico" data-act="primary" role="button" tabindex="0" aria-label="${esc(PLAT_LABELS[p])}">${PLAT_ICONS[p]}</span>
       ${linked ? `<span class="plat-chip-edit" data-act="edit" role="button" tabindex="0" aria-label="Edit ${esc(PLAT_LABELS[p])} link">✎</span>` : ''}
     </span>`;
-  }).join('');
+  }).join('') : '';
   const grid = document.getElementById('platformGrid');
-  grid.innerHTML = `<div class="platform-row">${platformChips}</div><div class="plat-edit" id="platEdit" hidden></div>`;
-  grid.querySelectorAll('.plat-chip').forEach(chip => {
+  grid.innerHTML = `<div class="platform-row">${scChip}${platformChips}</div><div class="plat-edit" id="platEdit" hidden></div>`;
+  grid.querySelectorAll('.plat-chip[data-platform]').forEach(chip => {
     const p = chip.dataset.platform;
     const primary = chip.querySelector('[data-act="primary"]');
     primary.addEventListener('click', () => platformPrimary(username, p));
@@ -1117,10 +1145,7 @@ function saveTrackOrder(container, username) {
 }
 
 function togglePanelStar(username) {
-  const favs = getFavourites();
-  if (!favs[username]) return;
-  favs[username].starred = !favs[username].starred;
-  saveFavourites(favs);
+  toggleStarred(username);
   renderPanel(username);
 }
 

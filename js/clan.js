@@ -22,8 +22,10 @@ function getClanFiltered() {
     return true;
   });
 
-  // Sort
+  // Sort — starred artists always float to the top, then the chosen key.
   clan.sort((a, b) => {
+    const aStar = isStarred(a.username), bStar = isStarred(b.username);
+    if (aStar !== bStar) return aStar ? -1 : 1;
     const aSnaps = a.snapshots||[], bSnaps = b.snapshots||[];
     const aLatest = aSnaps[aSnaps.length-1]||{}, bLatest = bSnaps[bSnaps.length-1]||{};
     switch (clanSortBy) {
@@ -67,15 +69,24 @@ function renderClan() {
     const first = snaps[0]||{};
     const trend = getTrend(first.followers||0, latest.followers||0);
     const followers = latest.followers||0;
-    const isStarred = a.starred;
-    const daysTracked = a.added_date ? daysBetween(a.added_date, today()) : 0;
+    const starred = isStarred(a.username);
 
     const avatarHTML = a.avatar_url
       ? `<img src="${a.avatar_url}" alt="" onerror="this.parentElement.textContent='·'">`
       : '·';
 
+    // SoundCloud leads, always orange (the source); then ALL platforms,
+    // orange when linked. Spec: clan_grid_polish.md.
+    const platGrid = `<div class="plat-icon-grid">
+        <div class="plat-icon linked soundcloud" title="SoundCloud">${typeof scIcon === 'function' ? scIcon('soundcloud') : ''}</div>
+        ${PLATFORMS.map(p => {
+          const linked = (a.platforms||{})[p];
+          return `<div class="plat-icon ${linked?'linked':''}" title="${PLAT_LABELS[p]}${linked ? ': '+linked : ''}">${PLAT_ICONS[p]}</div>`;
+        }).join('')}
+      </div>`;
+
     return `<div class="clan-card" onclick="openPanel('${esc(a.username)}')">
-      <span class="clan-card-star ${isStarred ? 'starred' : ''}" onclick="event.stopPropagation();toggleStar('${esc(a.username)}')">${isStarred ? '⭐' : '☆'}</span>
+      <span class="clan-card-star ${starred ? 'starred' : ''}" onclick="event.stopPropagation();toggleStar('${esc(a.username)}')">${starred ? '★' : '☆'}</span>
       <span class="clan-card-trend" style="color:${trend.cls==='up'?'var(--red)':'var(--muted)'}">${trend.label}</span>
       <div class="clan-card-avatar">${avatarHTML}</div>
       <div class="clan-card-name">${esc(a.display_name)}</div>
@@ -85,22 +96,13 @@ function renderClan() {
         <div><span>${fmt(latest.plays||0)}</span> plays</div>
         <div><span>${fmt(latest.likes||0)}</span> likes</div>
       </div>
-      <div class="plat-icon-row">
-        ${PLATFORMS.slice(0,5).map(p => {
-          const linked = (a.platforms||{})[p];
-          return `<div class="plat-icon ${linked?'linked':''}" title="${PLAT_LABELS[p]}${linked ? ': '+linked : ''}">${PLAT_ICONS[p]}</div>`;
-        }).join('')}
-      </div>
-      ${daysTracked > 0 ? `<div style="font-size:10px;color:var(--muted);margin-top:8px">Tracked ${daysTracked}d</div>` : ''}
+      ${platGrid}
     </div>`;
   }).join('')}</div>`;
 }
 
 function toggleStar(username) {
-  const favs = getFavourites();
-  if (!favs[username]) return;
-  favs[username].starred = !favs[username].starred;
-  saveFavourites(favs);
+  toggleStarred(username);   // sc_starred key (survives loadRoster) + syncs the artist
   renderClan();
 }
 

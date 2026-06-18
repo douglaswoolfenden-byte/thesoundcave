@@ -1,5 +1,13 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-18] Clan grid polish + star-vanish bug fix
+From Doug's Clan + modal screenshots. Spec: `wiki/spec/clan_grid_polish.md`.
+- **Star-vanish bug FIXED (root-caused):** `toggleStar` wrote `starred` only to local `sc_favs`, but `roster_sync.loadRoster()` overwrites `sc_favs` from the account on refresh, and the backend roster never stored `starred` → stars (and unsynced artists) wiped. Fix = stars now live in a **separate `sc_starred` key** that loadRoster never touches (+ `pushArtist` on star so the artist stays synced). Migration-free, backend-free. Reproduced the bug in Playwright and confirmed the fix. **Trade-off:** stars are device-local until a `roster.starred` column is added.
+- **Starred artists float to the top** of the Clan grid; star is now brand-**orange** (`★`, was gold `⭐` emoji) and persists.
+- **Platform icons → 4×2 grid** on clan cards + modal: **SoundCloud always first + orange** (the source link), all other platforms shown (was sliced to 5), **linked recoloured green→orange**. Modal SC moved into the grid (separate `#panelSCLink` logo removed; SC visible on read-only views too).
+- **Removed** the "Tracked Xd" line from clan cards; **uppercased** the sort buttons (Name/Followers/…) + the top-right trend label.
+- **Files:** `js/app.js` (star helpers + modal grid), `js/clan.js` (star, grid, starred-top, drop tracked), `css/style.css` (grid, orange linked, uppercase, orange star), `index.html` (removed panelSCLink). Playwright-verified, 0 console errors.
+
 ## [2026-06-18] Artist modal v4 — header reflow + drag-reorder tracks + cut/remove clarified
 From Doug's BLAM! modal screenshot. The shared `#artistPanel` (Mural + Clan + Foraging + Footprints — one component) got a five-part redesign. Spec + build notes: `wiki/spec/artist_modal_v4_header_reflow.md`. **3-way picker sign-off.**
 - **Two-column header:** identity (avatar, name, `genre · location`, SoundCloud **logo** replacing the old "SoundCloud ↗" text, platform marks) left; **Notes moved up** beside it, right.

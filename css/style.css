@@ -1815,13 +1815,15 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .clan-card-stats span { font-family: 'DM Mono', monospace; color: var(--body); }
 .clan-card-trend {
   position: absolute; top: 10px; right: 12px;
-  font-size: 12px; font-family: 'DM Mono', monospace;
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  text-transform: uppercase; letter-spacing: var(--tracking-mono);
 }
 .clan-card-star {
   position: absolute; top: 10px; left: 12px;
-  font-size: 16px; cursor: pointer; opacity: 0.4; transition: opacity 0.15s;
+  font-size: 17px; cursor: pointer; opacity: 0.4; transition: opacity 0.15s, color 0.15s;
 }
-.clan-card-star:hover, .clan-card-star.starred { opacity: 1; }
+.clan-card-star:hover { opacity: 1; }
+.clan-card-star.starred { opacity: 1; color: var(--red); }
 .clan-filters {
   display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
 }
@@ -1830,22 +1832,28 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600;
   cursor: pointer; border: 1px solid var(--border); background: var(--elevated);
   color: var(--secondary); transition: all 0.15s;
+  text-transform: uppercase; letter-spacing: var(--tracking-mono);
 }
 .clan-sort-btn.active { background: var(--red); color: #fff; border-color: var(--red); }
 
-/* ── Platform Icons (Clan profile) ─────────────────────── */
-.plat-icon-row {
-  display: flex; gap: 8px; justify-content: center; margin-top: 8px;
+/* ── Platform Icons (Clan card) — grid, all platforms, SoundCloud always orange */
+.plat-icon-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin-top: 12px; justify-items: stretch;
 }
 .plat-icon {
-  width: 28px; height: 28px; border-radius: 6px; display: flex;
+  height: 30px; border-radius: 6px; display: flex;
   align-items: center; justify-content: center; font-size: 14px;
   background: var(--elevated); border: 1px solid var(--border);
   cursor: pointer; transition: all 0.15s; position: relative;
 }
-.plat-icon.linked { border-color: var(--green); opacity: 1; }
+.plat-icon .sc-icon { width: 16px; height: 16px; }
+/* Linked = orange (was green). SoundCloud is always linked → always orange. */
+.plat-icon.linked { border-color: var(--red); color: var(--red); opacity: 1; }
+.plat-icon.linked.soundcloud { background: rgba(255,69,0,0.10); }
 .plat-icon:not(.linked) { opacity: 0.4; }
 .plat-icon:hover { opacity: 1; border-color: var(--border-lt); }
+.plat-icon.linked:hover { border-color: var(--red); }
 .plat-icon-input {
   display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
   margin-top: 6px; z-index: 10; width: 200px;
@@ -1940,12 +1948,15 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
    Spec: wiki/spec/artist_detail_modal.md. Icon-only, name on hover (title);
    click dim mark = add inline, click bright = open, hover ✎ = edit. */
 .platform-grid { display: block; }
+/* Grid: SoundCloud leads (always orange), then the editable platforms. */
 .platform-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(4, 40px);
   gap: 8px;
+  justify-content: start;
 }
+.plat-chip.soundcloud { text-decoration: none; }
+.plat-chip.soundcloud .sc-icon { width: 20px; height: 20px; }
 .plat-chip {
   position: relative;
   display: inline-flex;

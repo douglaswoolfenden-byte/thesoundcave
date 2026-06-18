@@ -607,6 +607,8 @@ function resetForgeOutput() {
   const imgArea = document.getElementById('forgeImageArea');
   imgArea.style.display = 'none';
   imgArea.innerHTML = '';
+  _seedForgeVersions('');
+  const _ri = document.getElementById('btnRefineImage'); if (_ri) _ri.style.display = 'none';
   document.getElementById('forgeActions').style.display = 'none';
   updateCharCount();
 }
@@ -673,6 +675,7 @@ async function generateImage(ctx) {
         supporting: forgeGeneratedContent || '',
         event: ctx.event || '',
       });
+      const _ri = document.getElementById('btnRefineImage'); if (_ri) _ri.style.display = 'none';
     } else {
       _compositorActive = false;
       const _cmp = document.getElementById('forgeCompositor');
@@ -681,6 +684,9 @@ async function generateImage(ctx) {
         <div class="forge-image-meta">
           ${data.dimensions.width}x${data.dimensions.height} | ${data.provider}/${data.model}
         </div>`;
+      // Iteration loop: seed the version chain + offer refine (single images only).
+      _seedForgeVersions(forgeGeneratedImageUrl);
+      document.getElementById('btnRefineImage').style.display = '';
     }
 
     forgeGeneratedVideoUrl = '';
@@ -758,6 +764,8 @@ async function generateCarouselImages(ctx) {
   forgeGeneratedImageUrl = _forgeSlideUrls.find(Boolean) || '';
   document.getElementById('btnRegenImage').style.display = '';
   document.getElementById('btnDownloadImage').style.display = '';
+  _seedForgeVersions('');   // refine is single-image only
+  document.getElementById('btnRefineImage').style.display = 'none';
 }
 
 function _slideStripHTML() {
@@ -781,6 +789,105 @@ function renderSlideStrip() {
 function setActiveSlide(i) {
   _forgeActiveSlide = i;
   renderSlideStrip();
+}
+
+// ── Iteration loop (wiki/spec/forge_iteration_loop.md) — refine, never reroll ──
+// Feed the active output back into /api/refine-image with ONE instruction; the
+// result is a new version off it. The chain lives client-side (MVP, no DB).
+let _forgeVersions = [];      // [{ url, instruction }] — the version chain
+let _forgeActiveVersion = 0;  // index = the base for the next refine
+
+function _seedForgeVersions(url) {
+  _forgeVersions = url ? [{ url, instruction: 'original' }] : [];
+  _forgeActiveVersion = 0;
+  const panel = document.getElementById('forgeRefinePanel');
+  if (panel) panel.style.display = 'none';
+  const inp = document.getElementById('forgeRefineInput');
+  if (inp) inp.value = '';
+}
+
+function toggleRefinePanel() {
+  const panel = document.getElementById('forgeRefinePanel');
+  if (!panel) return;
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if (show) { renderVersionStrip(); document.getElementById('forgeRefineInput').focus(); }
+}
+
+function renderVersionStrip() {
+  const strip = document.getElementById('forgeVersionStrip');
+  if (!strip) return;
+  strip.innerHTML = _forgeVersions.map((v, i) =>
+    `<img src="${esc(v.url)}" class="${i === _forgeActiveVersion ? 'active' : ''}" ` +
+    `onclick="setActiveVersion(${i})" alt="v${i + 1}" ` +
+    `title="v${i + 1}${v.instruction ? ': ' + esc(v.instruction) : ''}">`
+  ).join('');
+}
+
+function setActiveVersion(i) {
+  if (i < 0 || i >= _forgeVersions.length) return;
+  _forgeActiveVersion = i;
+  forgeGeneratedImageUrl = _forgeVersions[i].url;
+  _showForgeImage(forgeGeneratedImageUrl, `version ${i + 1} / ${_forgeVersions.length}`);
+  renderVersionStrip();
+}
+
+function _showForgeImage(url, meta) {
+  const imgArea = document.getElementById('forgeImageArea');
+  if (!imgArea) return;
+  imgArea.style.display = 'block';
+  imgArea.innerHTML =
+    `<img src="${esc(url)}" class="forge-image-preview" alt="Generated image" title="Click to zoom" onclick="openForgeLightbox(this.src)">` +
+    (meta ? `<div class="forge-image-meta">${esc(meta)}</div>` : '');
+}
+
+async function refineImage() {
+  const inp = document.getElementById('forgeRefineInput');
+  const instruction = (inp.value || '').trim();
+  if (!instruction) { inp.focus(); return; }
+  if (!_forgeVersions.length) return;
+
+  const hint = document.getElementById('forgeRefineHint');
+  if (hint) { hint.textContent = 'One change at a time lands best — the model keeps everything else.'; hint.style.color = ''; }
+
+  const base = _forgeVersions[_forgeActiveVersion].url;
+  const ctx = gatherForgeContext();
+  const btn = document.getElementById('btnRefineGo');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Refining…'; btn.disabled = true;
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/refine-image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_image_url: base,
+        instruction,
+        content_type: ctx.content_type,
+        size: ctx.size,
+      }),
+    });
+    if (r.status === 402) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(`Insufficient credits — refine costs ${j.cost || 5}.`);
+    }
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || `Refine API error: ${r.status}`);
+    }
+    const data = await r.json();
+    if (typeof data.credits_balance === 'number') updateCreditsDisplay(data.credits_balance);
+    // New version off the active one → becomes active + the next base.
+    _forgeVersions.push({ url: data.image_url, instruction });
+    _forgeActiveVersion = _forgeVersions.length - 1;
+    forgeGeneratedImageUrl = data.image_url;
+    forgeGeneratedVideoUrl = '';
+    _showForgeImage(forgeGeneratedImageUrl,
+      `version ${_forgeActiveVersion + 1} / ${_forgeVersions.length} · ${instruction}`);
+    renderVersionStrip();
+    inp.value = '';
+  } catch (e) {
+    if (hint) { hint.textContent = '⚠ ' + e.message; hint.style.color = 'var(--red)'; }
+  }
+  btn.textContent = orig; btn.disabled = false;
 }
 
 // ── Beat → composite video (Phase D, master spec §6/§10) ──
@@ -934,14 +1041,20 @@ function editStashItem(id) {
     renderSlideStrip();
     document.getElementById('btnRegenImage').style.display = '';
     document.getElementById('btnDownloadImage').style.display = '';
+    _seedForgeVersions('');
+    document.getElementById('btnRefineImage').style.display = 'none';
   } else if (forgeGeneratedImageUrl) {
     imgArea.style.display = 'block';
     imgArea.innerHTML = `<img src="${forgeGeneratedImageUrl}" class="forge-image-preview" alt="Generated image" title="Click to zoom" onclick="openForgeLightbox(this.src)">`;
     document.getElementById('btnRegenImage').style.display = '';
     document.getElementById('btnDownloadImage').style.display = '';
+    _seedForgeVersions(forgeGeneratedImageUrl);   // refine a saved flyer too
+    document.getElementById('btnRefineImage').style.display = '';
   } else {
     imgArea.style.display = 'none';
     imgArea.innerHTML = '';
+    _seedForgeVersions('');
+    document.getElementById('btnRefineImage').style.display = 'none';
   }
   updateCharCount();
 }

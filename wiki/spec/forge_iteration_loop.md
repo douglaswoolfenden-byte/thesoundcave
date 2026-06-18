@@ -42,10 +42,18 @@ Refine prompt shape:
 
 Version chain = **client-side** for MVP (frontend state / localStorage): each version `{ id, image_url, instruction, parent_id }`. No DB migration. Save-to-Stash persists a chosen version through the existing path.
 
+## UI framing (signed off 2026-06-18, via `ui-change-protocol`)
+- **References:** the existing Forge output card + the carousel slide-strip (internal precedent) — mirror, don't reinvent.
+- **Feel:** identical to Forge today — dark, brutalist, one-accent, functional.
+- **Hero moment:** type one change → a new version slides into the strip while everything else holds.
+- **Anti-examples:** not a Photoshop panel, not a maze. Pre-generation path untouched; richness lives post-output.
+- **Constraints:** reuse existing CSS vars + slide-strip pattern; palette law (#0a0a0a / off-white / single #ff4500); no new fonts; **single-image formats only** (not carousel); desktop-first.
+- **Layout decision (Doug):** refine controls live **behind a `✎ REFINE` button** in the action row (column stays minimal; reveal on click) — not always-visible.
+
 ## Build phases
-1. **Backend** — `/api/refine-image` (this is non-UI; build + smoke-test first).
-2. **Frontend** — refine box + version strip in `js/firepit.js` (+ CSS). Runs `ui-change-protocol`, browse `wiki/design_references/` first.
-3. **Wire + live-fire** — real Forge generation → refine → confirm the named thing changes and the rest holds; first real test = roughen the font / push the grain on the cowgirl flyer.
+1. **Backend** — `/api/refine-image`. ✅ DONE (`87ddc55`) + SSRF-hardened (`a05d133`); smoke-tested at the model level.
+2. **Frontend** — `✎ REFINE` toggles a version strip + "describe one change" box in `js/firepit.js` (+ `index.html`, `css/style.css`). ✅ DONE — layout screenshot-confirmed (`scratch/_verify/refine_panel_check.png`). Single-image formats only; XSS-escaped; client-side version chain.
+3. **Wire + live-fire** — ⬜ REMAINING: browser end-to-end (restart server + login) → real generate → `✎ REFINE` → confirm the named thing changes, the rest holds. First real test = roughen the font / push the grain on the cowgirl flyer.
 
 ## Verification (the test that proves it)
 Generate the cowgirl-DJ flyer → refine "roughen the lettering and push the photocopy grain, remove the duplicate date" → the type degrades + grain intensifies + duplicate date gone, **courtyard/pose/hierarchy unchanged**. That single pass closes today's two gaps and proves the loop.

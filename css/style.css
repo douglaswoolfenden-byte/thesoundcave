@@ -1403,6 +1403,31 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px;
 }
 
+/* Iteration loop — refine panel + version strip (forge_iteration_loop.md) */
+.forge-refine-panel {
+  margin-top: 10px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--elevated);
+}
+.forge-refine-label {
+  font-size: 12px; font-weight: 700; margin-bottom: 8px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.forge-version-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.forge-version-strip:empty { display: none; }
+.forge-version-strip img {
+  width: 56px; height: 70px; object-fit: cover; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 4px; opacity: 0.6;
+  transition: opacity 0.12s, border-color 0.12s;
+}
+.forge-version-strip img:hover { opacity: 0.85; }
+.forge-version-strip img.active { border-color: var(--accent, #ff4500); opacity: 1; }
+.forge-refine-row { display: flex; gap: 8px; align-items: stretch; }
+.forge-refine-row .input { flex: 1; }
+.forge-refine-hint {
+  font-size: 11px; color: var(--muted); margin-top: 6px;
+  font-family: 'DM Mono', monospace;
+}
+
 /* Image lightbox — click a generated image to zoom (P1.5) */
 .forge-lightbox {
   position: fixed; inset: 0; z-index: 900;

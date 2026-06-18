@@ -560,9 +560,20 @@
               <button class="btn-red" type="button" onclick="saveToStash()">SAVE TO STASH</button>
               <button class="btn-outline" type="button" onclick="generateContent()">REGEN</button>
               <button class="btn-outline" type="button" id="btnRegenImage" onclick="regenerateImage()" style="display:none">NEW IMAGE</button>
+              <button class="btn-outline" type="button" id="btnRefineImage" onclick="toggleRefinePanel()" style="display:none" title="Make one small change — keep everything else">✎ REFINE</button>
               <button class="btn-outline" type="button" id="btnMakeVideo" onclick="openBeatPanel()" style="display:none" title="Add a track — export a video that pulses to the beat">+ ADD A BEAT</button>
               <button class="btn-outline" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">DOWNLOAD</button>
               <button class="btn-outline" type="button" onclick="resetForgeOutput()" title="Clear this output">DISCARD</button>
+            </div>
+            <!-- Iteration loop (wiki/spec/forge_iteration_loop.md) — refine the last output, never reroll -->
+            <div id="forgeRefinePanel" class="forge-refine-panel" style="display:none">
+              <div class="forge-refine-label">Versions <span style="color:var(--muted);font-weight:normal">— click one to step back / branch</span></div>
+              <div id="forgeVersionStrip" class="forge-version-strip"></div>
+              <div class="forge-refine-row">
+                <input type="text" class="input" id="forgeRefineInput" placeholder="Describe ONE change (e.g. roughen the type)" onkeydown="if(event.key==='Enter')refineImage()">
+                <button class="btn-red" type="button" id="btnRefineGo" onclick="refineImage()">REFINE</button>
+              </div>
+              <div class="forge-refine-hint" id="forgeRefineHint">One change at a time lands best — the model keeps everything else.</div>
             </div>
             <!-- Phase D: Beat → composite MP4 (still + motion + waveform to the beat) -->
             <div id="forgeBeatPanel" class="forge-beat-panel" style="display:none">

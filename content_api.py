@@ -7,6 +7,7 @@ import os
 import re
 import json
 import time
+import base64
 from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -15,7 +16,7 @@ import anthropic
 import requests as http_requests
 from media_gen import (
     build_image_prompt, build_restyle_prompt, build_compose_prompt,
-    generate_image, generate_for_job, job_type_for,
+    generate_image, generate_for_job, job_type_for, JOB_EDIT,
     remove_background, composite_who,
     save_image, save_video,
     IMAGE_DIMENSIONS, provider_status,
@@ -983,6 +984,80 @@ def generate_image_endpoint():
         })
     except Exception as e:
         _refund(uid, 'image', f'refund:image:{content_type}')
+        return jsonify({'error': str(e)}), 500
+
+
+def _fetch_image_as_data_url(url, timeout=30):
+    """Fetch an image URL → a data:image/...;base64,... string for handing back
+    to an edit model. Used by the refine loop to feed the last output in."""
+    r = http_requests.get(url, timeout=timeout)
+    r.raise_for_status()
+    media_type = (r.headers.get('Content-Type') or 'image/jpeg').split(';')[0].strip()
+    if not media_type.startswith('image/'):
+        media_type = 'image/jpeg'
+    b64 = base64.b64encode(r.content).decode()
+    return f'data:{media_type};base64,{b64}'
+
+
+@app.route('/api/refine-image', methods=['POST'])
+def refine_image_endpoint():
+    """Iteration loop (spec: wiki/spec/forge_iteration_loop.md). Feed the LAST
+    output back into nano-banana-pro/edit with ONE instruction and keep
+    everything else — never a reroll. The version chain lives client-side; this
+    route just turns (base image + instruction) into the next version."""
+    uid, err = _require_user()
+    if err: return err
+    ctx = request.get_json()
+    if not ctx:
+        return jsonify({'error': 'No JSON body provided'}), 400
+
+    base_url = (ctx.get('base_image_url') or '').strip()
+    instruction = (ctx.get('instruction') or '').strip()
+    if not base_url:
+        return jsonify({'error': 'base_image_url is required'}), 400
+    if not instruction:
+        return jsonify({'error': 'instruction is required'}), 400
+
+    content_type = ctx.get('content_type', 'event_poster')
+
+    balance, err = _debit(uid, 'image', f'refine:{content_type}')
+    if err: return err
+
+    try:
+        w, h = SIZE_DIMENSIONS.get(ctx.get('size'),
+                                   IMAGE_DIMENSIONS.get(content_type, (1080, 1350)))
+
+        # Hand the current output back to the edit model as the single reference.
+        base_data = _fetch_image_as_data_url(base_url)
+        prompt = (
+            "Image 1 is the current event flyer. Apply ONLY this change and keep "
+            "everything else identical — same composition, subject, framing, text, "
+            "colour palette, grain and typography unless the change itself requires "
+            f"altering them: {instruction}. Re-render as one integrated image, "
+            "never a paste or overlay."
+        )
+        seed = ctx.get('seed')
+
+        print(f"🪄 Forge refine — type={content_type} seed={seed}")
+        print(f"   instruction: {instruction[:200]}")
+
+        image_bytes, provider, model = generate_for_job(
+            JOB_EDIT, prompt, image_refs=[base_data],
+            width=w, height=h, seed=seed,
+        )
+        image_url = save_image(image_bytes, content_type, user_id=uid)
+
+        return jsonify({
+            'image_url': image_url,
+            'instruction': instruction,
+            'provider': provider,
+            'model': model,
+            'job_type': JOB_EDIT,
+            'dimensions': {'width': w, 'height': h},
+            'credits_balance': balance,
+        })
+    except Exception as e:
+        _refund(uid, 'image', f'refund:refine:{content_type}')
         return jsonify({'error': str(e)}), 500
 
 

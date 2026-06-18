@@ -844,4 +844,14 @@ Spec: `wiki/spec/scheduled_searches.md` (signed off, API-backed model). Live-fir
 - P3 `45faff1` — accurate own-track play tracking + plays chart
 - P4 (this) — real weekly scheduled searches
 
+## [2026-06-18] Tracking outage diagnosed + fixed · Phase 3 (screenshots) PARKED
+
+**Assessment first (Doug's ask): what's actually collecting data?** Two parallel SoundCloud-API collectors — *no screenshot system has ever run* (0 rows `source='screenshot'`; all 103 snapshots are `source='api'`):
+1. **Old static** — `clan_tracker.py` via GitHub Actions → `data/snapshots/*.json` → Vercel. Running daily (6/6 success). The *buggy* one (display-name resolve → wrong-user bug; zeros-on-failure). Still live as the signed-out fallback.
+2. **New Supabase** — `tracking_collector.py` on Railway → Supabase. The *robust* one (stable user-id, NULL-not-zero). What the Footprints charts read when signed in.
+
+**The frozen-charts cause:** the Supabase pipeline 401'd every run **2026-06-13 → 06-17** (5 days `failed`/NULL — the chart hole). Root cause = `get_token()` cached the OAuth token forever; the long-running Railway process used an expired token. Fixed: expiry tracking + 60s safety margin + force-refresh on 401 (`soundcloud_helpers.py`). Deployed to Railway 12:10 UTC (`railway up`); manual run after = **21/21 ok**. Token fix cherry-picked onto `main` (`2a256d6`) — it was live on Railway but missing from git, a drift risk now closed. **First autonomous proof = the 00:04/07:00 UTC scheduled run (today's 07:00 predated the deploy).**
+
+**Decision — Phase 3 screenshot-ingest lane PARKED (not built).** Rationale: the inaccuracy that motivated screenshots was *our bug* (token expiry + display-name resolve), now fixed at source; the API lane gives guaranteed-live followers/plays/likes/reposts for clan+watching. Vision extraction tested *framing-sensitive/unreliable* (misread 765/171 vs real 834/1144) → would re-introduce inaccuracy. Screenshots only uniquely add playlist-adds + cross-platform (Spotify/IG/TikTok) — a future A&R enhancement, not today's need. Phase 3 backend stays on branch `tracking-v2-phase3` (also inert-live on Railway); no frontend built. Static pipeline kept as fallback for now (retire later, after several clean Supabase days — Doug declined immediate retirement + gap-backfill).
+
 Note: an editor open on Doug's side clobbered some uncommitted edits mid-P3 (auto-saved stale buffers over disk); re-applied + committed. Mitigation: commit promptly / keep project files closed in the editor during a session.

@@ -20,6 +20,15 @@ The Sound Cave is a **campaign studio** for underground music people with no des
 
 Architecturally today: two automated discovery pipelines (`scout.py`, `clan_tracker.py`) + a Flask AI-generation backend (`content_api.py` — the Forge studio) + a multi-file static frontend (no build step). The current studio build lives on branch `forge-output-ux` (not yet merged to `main`/live).
 
+## Branching (read before committing)
+
+`forge-output-ux` is the **integration trunk** (the staged studio build, until it merges to `main`/live). **Do not commit feature work directly to it.**
+
+- **One feature branch per task**, cut off the integration trunk, named for the area it touches — `cave-*` for dashboard/discovery work (Cave, Clan, Footprints, artist modal), `firepit-*`/`forge-*` for the Forge studio. Merge back to the trunk when the unit is done, then delete the branch (ship-check gate).
+- **Cave and Firepit are separate streams — never share a working branch.** Mixing them on one branch is what tangled the history (and made two concurrent sessions clobber each other). Keep them apart even though they edit shared files (`app.js`, `index.html`, `css/style.css`) — resolve those overlaps at merge-back, not by co-mingling commits.
+- **Two sessions at once → separate `git worktree`s** (one folder per branch) so they're not fighting the same checkout.
+- Don't rewrite the trunk's history to un-mix past commits — it's shared and may be live under another session.
+
 ## Architecture
 
 Four Python scripts + a multi-file static frontend (no build step):

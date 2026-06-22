@@ -307,23 +307,34 @@ def _vibe_cues(ctx, generated_text='', include_brand=True):
 
 def _baked_text_lines(ctx):
     """Event facts as render-in-image text instructions — each string quoted and
-    given a per-line typographic job, per Google's Nano Banana prompting guide.
+    given a typographic ROLE. Roles describe INTENT (the model matches the
+    reference's hierarchy), not absolute pixel size.
     Returns [] when no facts exist; callers then forbid text instead.
 
-    P1.5 (2026-06-11): text is BAKED INTO the generated image. This supersedes
-    the compositor-overlay split for flyers — the model renders the real
-    venue/date/lineup in the reference's typographic style.
+    P1.5 (2026-06-11): text is BAKED INTO the generated image (no compositor for
+    flyers). P0 fix (2026-06-22): the night/theme name is the HERO display line;
+    the lineup is its OWN secondary block in billing order. The old code made the
+    whole lineup the "biggest element", so the model rendered a 12-name run as
+    headline type, fought the reference's hierarchy, and stranded leftover title
+    text. The lineup now renders ONCE, distributed across the reference's lineup
+    zones — never duplicated into every block.
     """
     v = lambda k: (ctx.get(k) or '').strip()
-    lineup = v('artist_list')
     night = v('event')
-    headline = lineup.replace('\n', ' · ') if lineup else night
+    acts = [a.strip() for a in v('artist_list').split('\n') if a.strip()]
     lines = []
-    if headline:
-        lines.append(f'- Headline: "{headline}" — the dominant display type, '
-                     'biggest element in the hierarchy')
-    if night and night != headline:
-        lines.append(f'- Night name: "{night}" — secondary display line')
+    # Hero display = the night/theme name. With no night name, the top billing
+    # act headlines and the rest stay the supporting lineup.
+    hero = night or (acts.pop(0) if acts else '')
+    if hero:
+        lines.append(f'- Title (the hero display type — the largest text, in the '
+                     f'reference\'s main-title treatment): "{hero}"')
+    if acts:
+        billing = ' · '.join(acts)
+        lines.append(f'- Lineup (secondary to the title, in the reference\'s '
+                     f'lineup-block style — render this list ONCE, split across the '
+                     f'reference\'s lineup zones in this billing order, and NEVER '
+                     f'repeat a name): "{billing}"')
     place = ' — '.join(x for x in (v('venue'), v('city')) if x)
     if place:
         lines.append(f'- Venue line: "{place}"')
@@ -378,7 +389,11 @@ def build_restyle_prompt(content_type, ctx, generated_text=''):
             "\nReplace ALL existing text with the new event text below, matching "
             "the reference's typographic style (same font feel, weight, case and "
             "placement hierarchy):\n" + '\n'.join(text_lines) +
-            "\nRender every quoted string EXACTLY as written, correctly spelled, "
+            "\nReplace the reference's main title ENTIRELY with the new Title above "
+            "— no word, fragment or letter of the reference's original title may "
+            "survive (if the reference reads 'TECHNO HOUSE', neither 'TECHNO' nor "
+            "'HOUSE' remains anywhere). "
+            "Render every quoted string EXACTLY as written, correctly spelled, "
             "crisp and legible. Every other piece of text in the reference — "
             "small print, address blocks, badges, dates, slogans — must NOT "
             "appear: where it has no replacement above, fill the zone with "

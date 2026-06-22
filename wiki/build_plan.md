@@ -4,8 +4,9 @@
 > Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
 
 ## 📍 WHERE WE ARE
-**Stage 0 (P0) — not started.** Everything below is gated on looking at real output first.
-> Note (2026-06-22): the studio *went live* (Railway + Vercel) at current quality — but P0 baseline is still **un-fired** (acceptance gate open). Deploy ≠ proven. Next step unchanged: baseline a real flyer first.
+**Stage 0 (P0) — ✅ DONE (2026-06-22).** Fired a real fal generation (TECHNO HOUSE ref + forced 12-act lineup). Verdict: **dense text bakes clean** (content trigger dropped, decision [0009](decisions/0009_baked_vs_overlay.md)); **model capable, recipe is the bottleneck** (3 fixable flaws: stranded leftover text · duplicate lineup blocks · inverted headline hierarchy). Doug's taste: **close — recipe fixes get it there.** Full verdict in [log 2026-06-22](log.md).
+**Stage 1 — Phase 1 (recipe fix) ✅ PROVEN (2026-06-22):** rewrote `_baked_text_lines` (night-name hero + lineup-block, no duplication) + full-title-replacement clause → all 3 P0 flaws closed on a re-fire, Doug's verdict "clears the bar." **NOW: decide Phase 2 (vision prep step) — needed now or deferred?** (P0/Phase-1 used a clean ref; the palette-inversion / distress bug classes Phase 2 targets aren't exercised yet.)
+> Note: the studio went live (Railway + Vercel) at current quality; P0 is now fired and its acceptance verdict is the one above.
 
 ## The 3 anchors (don't lose these)
 1. **Moat = niche-correct starting points (Etchings)** — *not* the refine loop. The loop is table-stakes; don't race Midjourney.

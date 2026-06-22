@@ -44,6 +44,9 @@ The "diffusion can't spell a dense lineup" premise is an **empirical claim about
 - **If it bakes clean** → the content trigger is unnecessary. No escape hatch, no overlay machinery, fork stays shut.
 - **If it garbles** → only then do we implement the escape hatch, under the Canva-line constraints above (locked font into a model-reserved flat zone). If those constraints can't hold for the case, we accept **regen-on-garble** (OCR-back-check rejects → reroll) rather than build the tool.
 
+### ✅ RESOLVED 2026-06-22 — it bakes clean. Content trigger dropped.
+P0 ran (`scratch/p0_baseline/`): a forced 12-act lineup through `build_restyle_prompt` → `nano-banana-pro/edit`. **All 12 names baked correctly spelled and legible at 2K** — the model even corrected the reference's own garbles. Per the gate above: **the content trigger is unnecessary; no overlay escape hatch for text density.** The only escape hatch that survives (dormant, unbuilt) is the narrow *aesthetic* one. The real Build B work is the **recipe** (P0's 3 flaws were contradictory/underspecified instructions — stranded leftover text, no multi-block lineup, inverted headline hierarchy) — i.e. the prep/verify spine, exactly as predicted.
+
 ## The verification spine (what replaces overlay's job — on the instruction, not the output)
 
 Overlay was meant to guarantee correct text. We get the same guarantee earlier and cheaper via a prep/verify step (parked, spec to be written — see [log 2026-06-22](../log.md)):

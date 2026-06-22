@@ -8,4 +8,5 @@ supabase
 psycopg[binary]
 apscheduler
 Pillow
+numpy
 stripe

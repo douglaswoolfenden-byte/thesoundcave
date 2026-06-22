@@ -1,10 +1,12 @@
 # Build Plan — tech-house campaign studio (keep top of mind)
 
 > The staged plan from here. **Canonical sequence** — the specs hold detail, this holds the map + where we are.
-> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md).
+> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
 
 ## 📍 WHERE WE ARE
-**Stage 0 (P0) — not started.** Everything below is gated on looking at real output first.
+**Stage 0 (P0) — ✅ DONE (2026-06-22).** Fired a real fal generation (TECHNO HOUSE ref + forced 12-act lineup). Verdict: **dense text bakes clean** (content trigger dropped, decision [0009](decisions/0009_baked_vs_overlay.md)); **model capable, recipe is the bottleneck** (3 fixable flaws: stranded leftover text · duplicate lineup blocks · inverted headline hierarchy). Doug's taste: **close — recipe fixes get it there.** Full verdict in [log 2026-06-22](log.md).
+**Stage 1 — Phase 1 (recipe fix) ✅ PROVEN (2026-06-22):** rewrote `_baked_text_lines` (night-name hero + lineup-block, no duplication) + full-title-replacement clause → all 3 P0 flaws closed on a re-fire, Doug's verdict "clears the bar." **NOW: decide Phase 2 (vision prep step) — needed now or deferred?** (P0/Phase-1 used a clean ref; the palette-inversion / distress bug classes Phase 2 targets aren't exercised yet.)
+> Note: the studio went live (Railway + Vercel) at current quality; P0 is now fired and its acceptance verdict is the one above.
 
 ## The 3 anchors (don't lose these)
 1. **Moat = niche-correct starting points (Etchings)** — *not* the refine loop. The loop is table-stakes; don't race Midjourney.
@@ -24,7 +26,7 @@
 - **The bar:** *"a tech-house promoter would post this without embarrassment."*
 - **Done when:** all 3 looks produce undeniable output (eye-tested vs references).
 - **Depends on:** P0 verdict · your sourced reference flyers · locked fonts (1 mono + 1 grotesk).
-- **Resolves:** baked-text-vs-layer (implement P0's call) · refine richness sits *post*-generation.
+- **Resolves:** baked-text-vs-layer — settled in [decision 0009](decisions/0009_baked_vs_overlay.md) (baked default; overlay = gated escape hatch). P0 adds the dense-text stress test that decides whether the content trigger is even needed. Refine richness sits *post*-generation.
 
 ### Stage 2 — Build Etchings (the gallery)
 - **Goal:** the "pick a look" gallery UI — pick a tile → injects the STYLE ref into the proven pipeline; upload-your-own stays.

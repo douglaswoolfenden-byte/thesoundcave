@@ -40,7 +40,7 @@
 | **POST** | Single social image + caption. | `social_post` | — |
 | **CAROUSEL** | Multi-slide social set. | `social_carousel` | — |
 | *(retired)* | Artist Spotlight / Bio — folds into Post later as a Spotlight mode. | `artist_bio` (dormant) | retired from picker 2026-06-11 |
-| **WHO / WHERE / WHAT / STYLE** | Role chips on uploaded reference images. **WHO = a real person, carbon-copy law (2026-06-12): composited from the photo (cutout + grade), NEVER AI-redrawn** / place / object / style-to-copy. | `ref role` in forge ctx | — |
+| **WHO / WHERE / WHAT / STYLE** | Role chips on uploaded reference images. **WHO = a real person; as of 2026-06-18 WHO flows INTO generation** — the edit model (Nano Banana Pro) integrates the real person into the STYLE ref with accurate likeness ([content_api.py:935](../../content_api.py#L935)). WHERE = place / WHAT = object / STYLE = look-to-copy. | `ref role` in forge ctx | **Carbon-copy law (2026-06-12):** WHO was cutout-composited from the photo, never AI-redrawn — governed the FLUX-era pipeline; **reversed 2026-06-18** once the edit model proved accurate likeness. |
 | **SPIRIT** | An **animated cartoon-like character** (created persona/mascot) the engine may freely render in generated media; saved, reusable, attachable to an artist. NOT a real-person likeness — that's a WHO ref. (Redefined 2026-06-12; previously "avatar = face reference set".) | `avatars` table, `js/spirits.js` | Avatar |
 
 ## Other terms

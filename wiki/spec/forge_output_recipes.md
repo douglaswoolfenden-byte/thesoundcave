@@ -19,12 +19,13 @@ type + logo.** Every recipe below (no uploaded references) assumes backdrop-from
 **When a promoter uploads reference flyers to match**, the picture changes. A bake-off across four
 distinct flyer styles (riso, grunge, neon-glitch, chrome Y2K) showed **FLUX.2 `/edit`
 (`JOB_RESTYLE`) recreates the uploaded flyer's full style — including legible display type — far
-better than backdrop-only.** So with uploaded references we route to `fal-ai/flux-2-pro/edit` and use
-`build_restyle_prompt` (which *does* ask the model to render the event text). Caveat: the model nails
-the **style** but **garbles longer text** ("CATURDAY", "PRESRETS"); short headlines stay clean. Best
-practice: AI for style + rough type, then the compositor lays the must-be-correct lines (date, venue,
-ticket link) on top. The old "never ask the model to render text" rule still holds for the no-reference
-backdrop recipes below; it does NOT hold for the restyle route. See `wiki/features/firepit_forge.md`.
+better than backdrop-only.** So with uploaded references we use `build_restyle_prompt` (which *does* ask
+the model to render the event text). **Updated 2026-06-11:** `JOB_RESTYLE` moved `flux-2-pro/edit` →
+`nano-banana-pro/edit` (bake-off 2 — best style fidelity AND clean baked typography). **Updated
+2026-06-22 (P0-proven):** the old "garbles longer text (CATURDAY, PRESRETS)" caveat was FLUX-era —
+**nano-banana-pro bakes a dense 12-act lineup correctly spelled and legible** (it even corrected the
+reference's own misspellings). So the "compositor lays the must-be-correct lines on top" best-practice
+no longer applies to flyers: text is baked in, no overlay (decision 0009). See `wiki/features/firepit_forge.md`.
 
 ## House style (when no client brand kit overrides)
 Palette is **non-negotiable dark** (see memory `feedback_soundcave_palette`): near-black `#0a0a0a`,
@@ -73,9 +74,15 @@ prompt + which refs were attached, so it's visible, not promised.
 - **Ref anchors:** Julia Lutska "Techno", DARK FACES (real promoter teaser cadence).
 
 ### 4 — Event Poster
-- **Composition:** model generates the **backdrop only** (dark / smoke / grain / brutalist texture).
-  Compositor overlays the type hierarchy: headliner large → supporting acts descending → date/venue in a
-  small fixed footer band. One locked monospace + grotesk. `#ff4500` on headliner or date only.
+> **Reconciled 2026-06-22 (P0/Phase-1).** This recipe predates P1.5 — the "backdrop-only + compositor
+> overlay" model below is **superseded for flyers.** Flyers now **bake the full type IN** (no compositor;
+> decision [0009](../decisions/0009_baked_vs_overlay.md)). With an uploaded/Etching STYLE ref the route is
+> `build_restyle_prompt` → `JOB_RESTYLE` → `nano-banana-pro/edit`; the recipe sets the **night/theme name
+> as the hero Title** and the **lineup as a secondary block** rendered ONCE across the reference's lineup
+> zones (P0-proven: `_baked_text_lines`, media_gen.py). The lines below describe the *no-reference*
+> fallback only.
+- **Composition (no-reference fallback):** model generates the **backdrop** (dark / smoke / grain /
+  brutalist texture) with type baked in: title hero → lineup block(s) → date/venue footer.
 - **Style language:** type-as-hero, fixed-frame, industrial. Skip playful display faces; stay brutalist.
 - **Context + refs:** event + full lineup (billing order) + brand refs as `image_refs`; seedable for regen.
 - **Ref anchor:** ★ Joe Prytherch / Boiler Room poster series.

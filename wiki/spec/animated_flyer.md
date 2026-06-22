@@ -1,3 +1,15 @@
+# Spec: Conjure — generative Forge format (was "Motion"/"Embers")
+
+> ## ⭐⭐ DIRECTION PIVOT 2026-06-22 (Doug, locked): GENERATIVE ORCHESTRATION — image AND video
+> The code-effects palette (fall/spin/holo…) is **shelved**: it required hand-building every effect (a never-ending task) and couldn't do free-form requests. Doug's call + SoundCave's essence = **don't build models, orchestrate the best ones behind our taste.** Engine = **frontier generative models via fal** (no per-effect code — any instruction works):
+> - **Image edit** → `fal-ai/nano-banana-pro/edit` (text swaps, object/material changes). PROVEN on the lips/ice image: "change AUGUST→SEPTEMBER on the ice" pixel-matched the engraving in 31s.
+> - **Video** → `fal-ai/kling-video/v2.6/pro/image-to-video` (melt, drift, anything). PROVEN: ice-melt in 56s.
+> - **UI name (Doug):** **Conjure** — a new **format in the Forge** (alongside Flyer/Post). Upload finished artwork → instruction → Edit image / Animate video → save to Stash.
+> - **Build status:** prototype `scratch/embers_local/gen_studio.py`+`gen_app.py`(:8078) ✓ · backend `conjure_gen.py` + `POST /api/conjure` (credits+storage) ✓ committed on `firepit-embers` · **Forge Conjure UI = NEXT (Doug's UX-review gate before merge→deploy).**
+> - Tradeoffs: ~$0.5–2/render (edit=5 credits, animate=100), quality variance (far better on photographic art + frontier models than the earlier halftone/LTX failure). Leverage > build.
+> - The **code engine** (`animation_gen.py`) stays as a cheap bounded fallback, not the main path. Higgsfield MCP = a later option (not connected; setup step).
+
+## (historical) Motion / Embers — code-effects R&D below
 # Spec: Motion — animate a finished artwork (a distinct Firepit format) — working name "Embers"
 
 > **Reframe 2026-06-22 (Doug):** this is its OWN Firepit **format**, NOT a "Flyer" variant. Input = any finished static artwork (a Forge Flyer, cover art, poster, or an upload); output = an animated version. It's a **transform** format (takes a finished asset → animates it), distinct from the generate-from-brief formats (Post/Carousel/Short/Flyer/Bio/Press). Sits as a new entry in the Forge format list.

@@ -126,7 +126,7 @@ function setFirepitMode(mode, btn) {
   window._firepitMode = mode; // exposed for global firepitSubnav active-state sync
   document.querySelectorAll('.firepit-mode').forEach(el => el.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  ['forge','stash','trailmap'].forEach(m => {
+  ['forge','conjure','stash','trailmap'].forEach(m => {
     const el = document.getElementById(`firepit-${m}`);
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
@@ -1015,6 +1015,71 @@ function downloadForgeImage() {
   a.href = url;
   a.download = `soundcave_${Date.now()}.png`;
   a.click();
+}
+
+// ── CONJURE (generative format): upload art + instruction → edit/animate via /api/conjure ──
+let _conjureResult = null;
+
+function conjurePreview() {
+  const f = document.getElementById('conjureFile').files[0];
+  if (f) document.getElementById('conjureStage').innerHTML =
+    `<img src="${URL.createObjectURL(f)}" style="max-width:100%;max-height:70vh;">`;
+}
+
+async function conjureRun(action) {
+  const f = document.getElementById('conjureFile').files[0];
+  const prompt = document.getElementById('conjurePrompt').value.trim();
+  const meta = document.getElementById('conjureMeta');
+  if (!f) { meta.textContent = 'Upload artwork first.'; return; }
+  if (!prompt) { meta.textContent = 'Type an instruction first.'; return; }
+  const fd = new FormData();
+  fd.append('image', f);
+  fd.append('prompt', prompt);
+  fd.append('action', action);
+  fd.append('duration', document.getElementById('conjureDuration').value);
+  document.querySelectorAll('#firepit-conjure button').forEach(b => b.disabled = true);
+  meta.textContent = (action === 'edit' ? 'Editing image' : 'Animating video') + '… frontier models take ~30s–2min';
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/conjure`, { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || `conjure ${r.status}`);
+    _conjureResult = { url: j.url, kind: j.kind, prompt };
+    document.getElementById('conjureStage').innerHTML = j.kind === 'video'
+      ? `<video src="${j.url}" autoplay loop muted playsinline controls style="max-width:100%;max-height:70vh;"></video>`
+      : `<img src="${j.url}" style="max-width:100%;max-height:70vh;">`;
+    document.getElementById('conjureSave').style.display = 'block';
+    meta.textContent = `Done · ${j.kind}` + (j.credits_balance != null ? ` · ${j.credits_balance} credits left` : '');
+  } catch (e) {
+    meta.textContent = 'Error: ' + e.message;
+  } finally {
+    document.querySelectorAll('#firepit-conjure button').forEach(b => b.disabled = false);
+  }
+}
+
+async function saveConjureToStash(btn) {
+  if (!_conjureResult) return;
+  const orig = btn.textContent; btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/stash`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'conjure', label: 'Conjure', icon: '✨',
+        content: _conjureResult.prompt, imageUrl: _conjureResult.url,
+        context: { kind: _conjureResult.kind, instruction: _conjureResult.prompt,
+                   ...(_conjureResult.kind === 'video' ? { videoUrl: _conjureResult.url } : {}) },
+        status: 'draft',
+      }),
+    });
+    if (!r.ok) throw new Error(`stash ${r.status}`);
+    const j = await r.json();
+    if (j.item) _stashCache.unshift(_stashRowToItem(j.item));
+    if (typeof updateStashCount === 'function') updateStashCount();
+    btn.textContent = '✅ Saved';
+  } catch (e) {
+    btn.textContent = 'Save failed'; console.error('saveConjureToStash', e);
+  } finally {
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1600);
+  }
 }
 
 async function saveToStash() {

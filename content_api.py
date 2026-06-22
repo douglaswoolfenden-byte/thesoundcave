@@ -25,6 +25,7 @@ from media_gen import (
     upload_audio_track,
     MediaType, COST_USD, MAX_AUDIO_FILE_BYTES, MAX_VIDEO_DURATION_SECONDS,
 )
+import conjure_gen   # Forge "Conjure" format — generative image edit + video (fal orchestration)
 
 # Load .env from workspace root (one level up from project)
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -841,6 +842,46 @@ def _parse_additional_context(ctx):
         ctx['direction'] = freeform
         ctx['mood'] = ''
         return fallback
+
+
+# /api/conjure — Forge "Conjure" format: upload a finished artwork + a plain-text
+# instruction → AI edits the image (nano-banana) or animates it (Kling i2v). Free-form,
+# no fixed effects — the model does whatever is described. Reuses credits + storage.
+@app.route('/api/conjure', methods=['POST'])
+def conjure_endpoint():
+    uid, err = _require_user()
+    if err:
+        return err
+    f = request.files.get('image')
+    if not f:
+        return jsonify({'error': 'image file required (multipart)'}), 400
+    prompt = (request.form.get('prompt') or '').strip()
+    if not prompt:
+        return jsonify({'error': 'instruction (prompt) required'}), 400
+    action = request.form.get('action', 'edit')
+    if action not in ('edit', 'animate'):
+        return jsonify({'error': "action must be 'edit' or 'animate'"}), 400
+    image_bytes = f.read()
+
+    cost_kind = 'image' if action == 'edit' else 'video_premium'
+    balance, err = _debit(uid, cost_kind, f'conjure:{action}')
+    if err:
+        return err
+    try:
+        if action == 'edit':
+            out = conjure_gen.edit_image(image_bytes, prompt)
+            url = save_image(out, 'conjure', user_id=uid)
+            kind = 'image'
+        else:
+            duration = str(request.form.get('duration', '5'))
+            out = conjure_gen.animate_video(image_bytes, prompt, duration=duration)
+            url = save_video(out, 'conjure', user_id=uid)
+            kind = 'video'
+        return jsonify({'url': url, 'kind': kind, 'credits_balance': balance})
+    except Exception as e:
+        _refund(uid, cost_kind, f'refund:conjure:{action}')
+        print(f'conjure {action} failed: {e}')
+        return jsonify({'error': f'conjure failed: {e}'}), 500
 
 
 # /api/classify-ref — auto-guess WHO/WHERE/WHAT/STYLE for uploaded references

@@ -619,7 +619,7 @@ const CAVE_TABS = ['cave','foraging','clan','footprints'];
 // the FIREPIT top-pill active and the firepit subnav visible.
 const FIREPIT_TABS = ['firepit','events','brands'];
 
-document.querySelectorAll('.htab[data-tab], .cave-subtab, .corner-link').forEach(btn => {
+document.querySelectorAll('.htab[data-tab], .cave-subtab, .corner-link, .mobile-tab').forEach(btn => {
   // Firepit subnav buttons use data-subtab instead of data-tab — handled below.
   if (btn.dataset.subtab) return;
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -661,7 +661,7 @@ function switchTab(name) {
   const topGroup = CAVE_TABS.includes(name) ? 'cave'
                   : FIREPIT_TABS.includes(name) ? 'firepit'
                   : (TOP_TABS.includes(name) ? name : null);
-  document.querySelectorAll('.htab[data-tab]').forEach(el => {
+  document.querySelectorAll('.htab[data-tab], .mobile-tab').forEach(el => {
     el.classList.toggle('active', el.dataset.tab === topGroup);
   });
   // Corner-nav active state

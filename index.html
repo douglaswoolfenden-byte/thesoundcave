@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/foraging.css">
   <link rel="stylesheet" href="css/trail_map.css">
   <link rel="stylesheet" href="css/brands.css">
+  <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 
@@ -914,6 +915,19 @@
 <nav class="corner-nav" id="cornerNav" hidden>
   <button class="corner-link" type="button" data-tab="home">OVERVIEW</button>
   <button class="corner-link" type="button" data-tab="index">INDEX</button>
+</nav>
+
+<!-- ─── MOBILE BOTTOM TAB BAR (phones ≤720px) ────────────
+     Primary nav for mobile. Lives OUTSIDE .app-wrap for the
+     same reason as corner-nav / artist-panel: .app-wrap gets
+     transform:scale(), which would re-anchor position:fixed to
+     it instead of the viewport. Buttons carry data-tab +
+     .mobile-tab so the existing switchTab() delegation (app.js
+     ~L622) wires them automatically — no new nav logic. -->
+<nav class="mobile-tabbar" id="mobileTabbar" aria-label="Primary">
+  <button class="mobile-tab active" type="button" data-tab="cave">CAVE</button>
+  <button class="mobile-tab" type="button" data-tab="firepit">FIREPIT</button>
+  <button class="mobile-tab" type="button" data-tab="reflection">REFLECTION</button>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════

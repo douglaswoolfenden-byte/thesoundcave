@@ -1,0 +1,90 @@
+/* ============================================================
+   mobile.css — Sound Cave responsive layer
+   Loaded LAST (after brands.css) so it overrides desktop rules.
+
+   Convention: ONE primary breakpoint — 720px (phones + phablets).
+   A 560px secondary tier handles the tightest reflows.
+   This file supersedes the scattered ad-hoc @media queries; new
+   mobile rules go HERE, not inline in component CSS.
+
+   Spec: wiki/spec/mobile_responsive.md
+   Build order:
+     (1) app shell + bottom tab bar   ← this commit
+     (2) Forge/Firepit  (3) Cave  (4) Clan  (5) Foraging
+     (6) Footprints     (7) artist panel + modals
+   ============================================================ */
+
+/* Bottom tab bar is desktop-hidden; the media query turns it on. */
+.mobile-tabbar { display: none; }
+
+/* ─────────────────────────────────────────────────────────
+   PHONE / PHABLET  (≤ 720px)
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+
+  /* ---- App shell -------------------------------------- */
+  /* The desktop header tab-strip is replaced by the bottom bar.
+     Keep the brand logo (left) + sound toggle (right) on one row. */
+  .header-tabs { display: none; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+
+  /* Content gutter shrinks; bottom pad clears the fixed bar. */
+  .container { padding: var(--space-4) var(--space-4) 88px; }
+
+  /* ---- Bottom tab bar --------------------------------- */
+  .mobile-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 250;            /* above content (≤200); below panel(300)/modals(900)/splash(9999) */
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    /* iPhone home-indicator safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-tab {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;        /* ≥ 44px touch target */
+    background: none;
+    border: none;
+    border-top: 2px solid transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: var(--tracking-mono);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color var(--motion-fast) var(--ease-soft);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-tab.active {
+    color: var(--red);
+    border-top-color: var(--red);
+  }
+
+  /* ---- Sub-navs → horizontal scrollable pill row ------ */
+  /* JS controls display (none/flex); we only add scroll behaviour. */
+  .cave-subnav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;        /* Firefox */
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .cave-subnav::-webkit-scrollbar { display: none; }   /* WebKit */
+  .cave-subtab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}

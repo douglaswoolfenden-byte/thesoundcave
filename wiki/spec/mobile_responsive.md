@@ -33,4 +33,4 @@
 
 **Sequence (build screen-by-screen, screenshot-confirm each):** (1) bottom tab bar + shell, (2) Forge/Firepit [the hero], (3) Cave, (4) Clan, (5) Foraging, (6) Footprints, (7) artist panel + modals. Each ships and gets a mobile screenshot before moving on.
 
-**Security note (separate, flagged 2026-06-22):** `bypass.html` commits a hardcoded Supabase JWT + refresh token (expired). Needs handling per `secret-handling` before this repo is public — tracked outside this spec.
+**Security note (corrected 2026-06-22):** `bypass.html` is gitignored (`.gitignore:15`) and never entered git history — not exposed via the repo or a git-based deploy. Residual: confirm a local `vercel` CLI deploy doesn't upload the ignored file. (An earlier "committed JWT" flag here was wrong.)

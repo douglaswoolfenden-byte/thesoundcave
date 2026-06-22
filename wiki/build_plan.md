@@ -1,10 +1,11 @@
 # Build Plan — tech-house campaign studio (keep top of mind)
 
 > The staged plan from here. **Canonical sequence** — the specs hold detail, this holds the map + where we are.
-> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md).
+> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
 
 ## 📍 WHERE WE ARE
 **Stage 0 (P0) — not started.** Everything below is gated on looking at real output first.
+> Note (2026-06-22): the studio *went live* (Railway + Vercel) at current quality — but P0 baseline is still **un-fired** (acceptance gate open). Deploy ≠ proven. Next step unchanged: baseline a real flyer first.
 
 ## The 3 anchors (don't lose these)
 1. **Moat = niche-correct starting points (Etchings)** — *not* the refine loop. The loop is table-stakes; don't race Midjourney.
@@ -24,7 +25,7 @@
 - **The bar:** *"a tech-house promoter would post this without embarrassment."*
 - **Done when:** all 3 looks produce undeniable output (eye-tested vs references).
 - **Depends on:** P0 verdict · your sourced reference flyers · locked fonts (1 mono + 1 grotesk).
-- **Resolves:** baked-text-vs-layer (implement P0's call) · refine richness sits *post*-generation.
+- **Resolves:** baked-text-vs-layer — settled in [decision 0009](decisions/0009_baked_vs_overlay.md) (baked default; overlay = gated escape hatch). P0 adds the dense-text stress test that decides whether the content trigger is even needed. Refine richness sits *post*-generation.
 
 ### Stage 2 — Build Etchings (the gallery)
 - **Goal:** the "pick a look" gallery UI — pick a tile → injects the STYLE ref into the proven pipeline; upload-your-own stays.

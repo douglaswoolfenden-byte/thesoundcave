@@ -173,8 +173,11 @@ function _campaignTileHTML(campaignId, group) {
 // edit / copy / delete (Cave-style icons).
 function _postTileHTML(item) {
   const preview = (item.content || '').slice(0, 90).replace(/\n/g, ' ');
+  const _vid = item.type === 'animation' || (item.context && item.context.kind === 'video');
   const coverInner = item.imageUrl
-    ? `<img src="${esc(item.imageUrl)}" alt="">`
+    ? (_vid
+        ? `<video src="${esc((item.context && item.context.videoUrl) || item.imageUrl)}" muted loop playsinline autoplay></video>`
+        : `<img src="${esc(item.imageUrl)}" alt="">`)
     : `<span class="stash-block-noimg">${esc(item.icon || '📝')}</span>`;
   const title = esc(item.label
     || (item.postType ? postTypeLabel(item.postType) : contentTypeLabel(item.type)));

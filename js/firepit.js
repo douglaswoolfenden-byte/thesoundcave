@@ -27,9 +27,13 @@ const OUTPUT_MEDIA = {
 // (Spotlight mode). Internal keys unchanged so backend templates, image routing,
 // compositor templates and stashed items all keep resolving.
 const CONTENT_TYPES = {
-  social_post:     { label:'Still',    icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
-  social_carousel: { label:'Carousel', icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
-  event_poster:    { label:'Flyer',    icon:'', iconKey:'lineup',   fields:['event_details','artist_list','freeform'] },
+  social_post:     { label:'Still',     icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
+  social_carousel: { label:'Carousel',  icon:'', iconKey:'carousel', fields:['artist','freeform'], maxLength:2200 },
+  event_poster:    { label:'Flyer',     icon:'', iconKey:'lineup',   fields:['event_details','artist_list','freeform'] },
+  // Animation — generative i2v (upload finished artwork → motion → looping video).
+  // No standard fields: it runs its own sub-form (#forgeAnimationStack) + the
+  // /api/conjure backend, dispatched in generateContent / generateAnimation.
+  animation:       { label:'Animation', icon:'', iconKey:'carousel', fields:[] },
 };
 // Retired picker formats: legacy Stash items keep readable labels and reopen in
 // the nearest current format.
@@ -126,7 +130,7 @@ function setFirepitMode(mode, btn) {
   window._firepitMode = mode; // exposed for global firepitSubnav active-state sync
   document.querySelectorAll('.firepit-mode').forEach(el => el.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  ['forge','conjure','stash','trailmap'].forEach(m => {
+  ['forge','stash','trailmap'].forEach(m => {
     const el = document.getElementById(`firepit-${m}`);
     if (el) el.style.display = m === mode ? 'block' : 'none';
   });
@@ -357,6 +361,17 @@ function updateForgeFields() {
   const type = document.getElementById('forgeContentType').value;
   const ct = CONTENT_TYPES[type];
   if (!ct) return;
+  // Animation swaps the whole standard input stack for its generative sub-form
+  // (#forgeAnimationStack). Output size is driven by the source artwork, so the
+  // Size picker hides too.
+  const isAnim = type === 'animation';
+  const stdStack  = document.getElementById('forgeStandardStack');
+  const animStack = document.getElementById('forgeAnimationStack');
+  const sizeWrap  = document.getElementById('forgeSizeWrap');
+  if (stdStack)  stdStack.style.display  = isAnim ? 'none'  : '';
+  if (animStack) animStack.style.display = isAnim ? 'block' : 'none';
+  if (sizeWrap)  sizeWrap.style.display  = isAnim ? 'none'  : '';
+  if (isAnim) { updateCharCount(); return; }
   // Context Stack containers (master spec §4): SUBJECT (L3) and FACTS (L4)
   // render separately so the form walks the stack top-to-bottom.
   const subjectEl = document.getElementById('forgeSubjectFields');
@@ -574,6 +589,9 @@ async function enhanceCaption() {
 }
 
 async function generateContent(variation) {
+  // Animation is its own generative path (i2v via /api/conjure) — it doesn't use
+  // the text/brief context the standard formats build.
+  if (document.getElementById('forgeContentType').value === 'animation') return generateAnimation();
   const ctx = gatherForgeContext();
   if (variation) ctx.variation = variation;
 
@@ -1017,56 +1035,80 @@ function downloadForgeImage() {
   a.click();
 }
 
-// ── CONJURE (generative format): upload art + instruction → edit/animate via /api/conjure ──
-let _conjureResult = null;
+// ── ANIMATION format (generative i2v): upload artwork + motion → looping video ──
+// Lives inside FORGE as a format (#forgeAnimationStack); orchestrates fal Kling
+// i2v via /api/conjure (action=animate). Text & logos travel untouched.
+let _animResult = null;
 
-function conjurePreview() {
-  const f = document.getElementById('conjureFile').files[0];
-  if (f) document.getElementById('conjureStage').innerHTML =
-    `<img src="${URL.createObjectURL(f)}" style="max-width:100%;max-height:70vh;">`;
+function forgeAnimPreview() {
+  const f = document.getElementById('forgeAnimSource').files[0];
+  const box = document.getElementById('forgeAnimPreview');
+  if (!box) return;
+  box.innerHTML = f
+    ? `<img src="${URL.createObjectURL(f)}" alt="Artwork" style="max-width:180px;max-height:180px;border-radius:6px;margin-top:8px;border:1px solid var(--border)">`
+    : '';
 }
 
-async function conjureRun(action) {
-  const f = document.getElementById('conjureFile').files[0];
-  const prompt = document.getElementById('conjurePrompt').value.trim();
-  const meta = document.getElementById('conjureMeta');
-  if (!f) { meta.textContent = 'Upload artwork first.'; return; }
-  if (!prompt) { meta.textContent = 'Type an instruction first.'; return; }
+async function generateAnimation() {
+  const f = document.getElementById('forgeAnimSource').files[0];
+  const motion = document.getElementById('forgeAnimMotion').value.trim();
+  const imgArea = document.getElementById('forgeImageArea');
+  const outArea = document.getElementById('forgeOutputArea');
+  document.getElementById('forgeActions').style.display = 'none';
+  _hideCaptionBox();
+  const _err = (msg, offline) => `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
+      <span style="font-family:var(--font-mono);color:var(--color-accent);font-weight:600">!</span>
+      <span style="color:var(--red)">${esc(msg)}</span>
+      ${offline ? `<span style="color:var(--muted);font-size:11px">Make sure content_api.py is running: <code>python content_api.py</code></span>` : ''}
+    </div>`;
+  if (!f)      { imgArea.style.display = 'block'; imgArea.innerHTML = _err('Upload an artwork first.'); return; }
+  if (!motion) { imgArea.style.display = 'block'; imgArea.innerHTML = _err('Describe the motion first.'); return; }
+
+  outArea.innerHTML = '';
+  imgArea.style.display = 'block';
+  imgArea.innerHTML = `<div class="forge-loading" style="border:1px dashed var(--border);border-radius:8px;flex-direction:column;gap:8px">
+    <span>Animating<span class="dot">.</span><span class="dot" style="animation-delay:0.2s">.</span><span class="dot" style="animation-delay:0.4s">.</span></span>
+    <span style="color:var(--muted);font-size:11px">Frontier i2v model — ~30s–2min</span>
+  </div>`;
+
   const fd = new FormData();
   fd.append('image', f);
-  fd.append('prompt', prompt);
-  fd.append('action', action);
-  fd.append('duration', document.getElementById('conjureDuration').value);
-  document.querySelectorAll('#firepit-conjure button').forEach(b => b.disabled = true);
-  meta.textContent = (action === 'edit' ? 'Editing image' : 'Animating video') + '… frontier models take ~30s–2min';
+  fd.append('prompt', motion);
+  fd.append('action', 'animate');
+  fd.append('duration', document.getElementById('forgeAnimDuration').value);
   try {
     const r = await scAuth.authedFetch(`${forgeApiUrl}/api/conjure`, { method: 'POST', body: fd });
+    if (r.status === 402) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(`Insufficient credits — an animation costs ${j.cost || 100}.`);
+    }
     const j = await r.json();
-    if (!r.ok) throw new Error(j.error || `conjure ${r.status}`);
-    _conjureResult = { url: j.url, kind: j.kind, prompt };
-    document.getElementById('conjureStage').innerHTML = j.kind === 'video'
-      ? `<video src="${j.url}" autoplay loop muted playsinline controls style="max-width:100%;max-height:70vh;"></video>`
-      : `<img src="${j.url}" style="max-width:100%;max-height:70vh;">`;
-    document.getElementById('conjureSave').style.display = 'block';
-    meta.textContent = `Done · ${j.kind}` + (j.credits_balance != null ? ` · ${j.credits_balance} credits left` : '');
+    if (!r.ok) throw new Error(j.error || `animate error: ${r.status}`);
+    if (typeof j.credits_balance === 'number') updateCreditsDisplay(j.credits_balance);
+    _animResult = { url: j.url, kind: 'video', prompt: motion };
+    forgeGeneratedVideoUrl = j.url;
+    imgArea.innerHTML = `<video src="${j.url}" class="forge-image-preview" controls autoplay loop muted playsinline></video>
+      <div class="forge-actions" style="margin-top:12px">
+        <button class="btn-red" type="button" onclick="saveAnimationToStash(this)">SAVE TO STASH</button>
+        <button class="btn-outline" type="button" onclick="generateAnimation()">REGEN</button>
+        <button class="btn-outline" type="button" onclick="resetForgeOutput()">DISCARD</button>
+      </div>`;
   } catch (e) {
-    meta.textContent = 'Error: ' + e.message;
-  } finally {
-    document.querySelectorAll('#firepit-conjure button').forEach(b => b.disabled = false);
+    const offline = (e instanceof TypeError) || /failed to fetch|networkerror|load failed/i.test(e.message || '');
+    imgArea.innerHTML = _err(e.message, offline);
   }
 }
 
-async function saveConjureToStash(btn) {
-  if (!_conjureResult) return;
+async function saveAnimationToStash(btn) {
+  if (!_animResult) return;
   const orig = btn.textContent; btn.textContent = 'Saving…'; btn.disabled = true;
   try {
     const r = await scAuth.authedFetch(`${forgeApiUrl}/api/stash`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'conjure', label: 'Conjure', icon: '✨',
-        content: _conjureResult.prompt, imageUrl: _conjureResult.url,
-        context: { kind: _conjureResult.kind, instruction: _conjureResult.prompt,
-                   ...(_conjureResult.kind === 'video' ? { videoUrl: _conjureResult.url } : {}) },
+        type: 'animation', label: 'Animation', icon: '🎞',
+        content: _animResult.prompt, imageUrl: _animResult.url,
+        context: { kind: 'video', instruction: _animResult.prompt, videoUrl: _animResult.url },
         status: 'draft',
       }),
     });
@@ -1076,7 +1118,7 @@ async function saveConjureToStash(btn) {
     if (typeof updateStashCount === 'function') updateStashCount();
     btn.textContent = '✅ Saved';
   } catch (e) {
-    btn.textContent = 'Save failed'; console.error('saveConjureToStash', e);
+    btn.textContent = 'Save failed'; console.error('saveAnimationToStash', e);
   } finally {
     setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1600);
   }
@@ -1146,6 +1188,26 @@ function editStashItem(id) {
   document.getElementById('forgeContentType').value = formatKey;
   updateForgeFields();
   const ctx = item.context || {};
+  // Animation items reopen as a playable video (no text/image fields to restore).
+  if (item.type === 'animation') {
+    const vurl = ctx.videoUrl || item.imageUrl || '';
+    const imgArea = document.getElementById('forgeImageArea');
+    document.getElementById('forgeOutputArea').innerHTML = '';
+    document.getElementById('forgeActions').style.display = 'none';
+    const motionEl = document.getElementById('forgeAnimMotion'); if (motionEl) motionEl.value = item.content || '';
+    if (vurl) {
+      _animResult = { url: vurl, kind: 'video', prompt: item.content || '' };
+      forgeGeneratedVideoUrl = vurl;
+      imgArea.style.display = 'block';
+      imgArea.innerHTML = `<video src="${vurl}" class="forge-image-preview" controls autoplay loop muted playsinline></video>
+        <div class="forge-actions" style="margin-top:12px">
+          <button class="btn-red" type="button" onclick="saveAnimationToStash(this)">SAVE TO STASH</button>
+          <button class="btn-outline" type="button" onclick="resetForgeOutput()">DISCARD</button>
+        </div>`;
+    } else { imgArea.style.display = 'none'; imgArea.innerHTML = ''; }
+    updateCharCount();
+    return;
+  }
   if (ctx.artist_username) { const el = document.getElementById('forgeArtist'); if (el) el.value = ctx.artist_username; }
   if (ctx.event) { const el = document.getElementById('forgeEvent'); if (el) el.value = ctx.event; }
   if (ctx.release) { const el = document.getElementById('forgeRelease'); if (el) el.value = ctx.release; }

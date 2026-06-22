@@ -100,7 +100,6 @@
   <!-- ─── FIREPIT SUB-NAV (visible when in Firepit group) ── -->
   <nav class="cave-subnav" id="firepitSubnav" style="display:none">
     <button class="cave-subtab active" type="button" data-subtab="forge">FORGE</button>
-    <button class="cave-subtab" type="button" data-subtab="conjure">CONJURE</button>
     <button class="cave-subtab" type="button" data-subtab="summons">GATHERINGS</button>
     <button class="cave-subtab" type="button" data-subtab="stash">STASH</button>
     <button class="cave-subtab" type="button" data-subtab="trailmap">TRAIL MAP</button>
@@ -429,9 +428,10 @@
                   <option value="social_post">Still</option>
                   <option value="social_carousel">Carousel</option>
                   <option value="event_poster">Flyer</option>
+                  <option value="animation">Animation</option>
                 </select>
               </div>
-              <div>
+              <div id="forgeSizeWrap">
                 <label class="forge-label">Size</label>
                 <select class="input" id="forgeSize">
                   <option value="4:5">4:5 — IG feed (1080×1350)</option>
@@ -457,6 +457,9 @@
             </div>
           </div>
 
+          <!-- Standard stack: Still / Carousel / Flyer. Hidden when Animation
+               is the format (Animation runs the generative i2v sub-form below). -->
+          <div id="forgeStandardStack">
           <div class="forge-stack-label">2 · Style</div>
           <div class="forge-input-group">
             <label class="forge-label">References <span style="color:var(--muted);font-weight:normal">(up to 5 — STYLE rules the look; WHO/WHERE/WHAT add subjects; click a chip to correct it)</span></label>
@@ -517,6 +520,36 @@
           </div>
 
           <button class="btn-red" type="button" style="width:100%" onclick="generateContent()">GENERATE CONTENT</button>
+          </div><!-- /#forgeStandardStack -->
+
+          <!-- ANIMATION format (generative i2v): upload a finished artwork →
+               describe the motion in plain words → looping video. Text & logos
+               travel untouched (no per-effect code). Orchestrates fal Kling i2v
+               via /api/conjure. See wiki/spec/animated_flyer.md. -->
+          <div id="forgeAnimationStack" style="display:none">
+            <div class="forge-stack-label">2 · Artwork</div>
+            <div class="forge-input-group">
+              <label class="forge-label">Artwork <span style="color:var(--muted);font-weight:normal">(the finished flyer or image to bring to life)</span></label>
+              <input type="file" class="input" id="forgeAnimSource" accept="image/jpeg,image/png,image/webp" onchange="forgeAnimPreview()">
+              <div id="forgeAnimPreview" class="forge-ref-thumbs"></div>
+            </div>
+
+            <div class="forge-stack-label">3 · Motion</div>
+            <div class="forge-input-group">
+              <label class="forge-label">Motion <span style="color:var(--muted);font-weight:normal">(describe the movement in plain words — text &amp; logos stay still)</span></label>
+              <textarea class="input" id="forgeAnimMotion" rows="4" placeholder="e.g. the ice slowly melts and drips · smoke drifts behind the type · the record spins on the deck"></textarea>
+            </div>
+
+            <div class="forge-stack-label">4 · Length</div>
+            <div class="forge-input-group">
+              <select class="input" id="forgeAnimDuration">
+                <option value="5">5 seconds</option>
+                <option value="10">10 seconds</option>
+              </select>
+            </div>
+
+            <button class="btn-red" type="button" style="width:100%" onclick="generateContent()">ANIMATE</button>
+          </div><!-- /#forgeAnimationStack -->
         </div>
 
         <div class="card">
@@ -621,30 +654,8 @@
       </div>
     </div>
 
-    <!-- ── CONJURE (generative: upload art → instruction → edit/animate) ── -->
-    <div id="firepit-conjure" style="display:none">
-      <p style="color:#8a8a96;font-size:13px;margin:0 0 16px;max-width:880px;">
-        Upload a finished artwork and describe any edit or motion in plain words — the AI does it. No fixed effects.</p>
-      <div style="display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start;max-width:980px;">
-        <div>
-          <input type="file" id="conjureFile" accept="image/*" onchange="conjurePreview()"
-                 style="width:100%;font-size:13px;color:#8a8a96;">
-          <textarea id="conjurePrompt" rows="3" placeholder="e.g. change AUGUST to SEPTEMBER on the ice · the ice melts and drips · smoke drifts behind the text"
-                 style="width:100%;margin-top:12px;padding:10px;border-radius:8px;border:1px solid #2a2a33;background:#0f0f14;color:#ECECF0;font:14px inherit;resize:vertical;"></textarea>
-          <select id="conjureDuration" style="width:100%;margin-top:10px;padding:9px;border-radius:8px;border:1px solid #2a2a33;background:#0f0f14;color:#ECECF0;">
-            <option value="5">Video: 5 seconds</option><option value="10">Video: 10 seconds</option></select>
-          <div style="display:flex;gap:10px;margin-top:14px;">
-            <button onclick="conjureRun('edit')" style="flex:1;padding:12px;border-radius:8px;border:1px solid #2a2a33;background:#23232b;color:#ECECF0;font-weight:700;letter-spacing:.05em;cursor:pointer;">EDIT IMAGE</button>
-            <button onclick="conjureRun('animate')" style="flex:1;padding:12px;border-radius:8px;border:none;background:#ff6a1a;color:#111;font-weight:700;letter-spacing:.05em;cursor:pointer;">ANIMATE VIDEO</button>
-          </div>
-          <button id="conjureSave" onclick="saveConjureToStash(this)" style="display:none;width:100%;margin-top:10px;padding:11px;border-radius:8px;border:1px solid #2a2a33;background:#0f0f14;color:#ECECF0;cursor:pointer;">SAVE TO STASH</button>
-          <div id="conjureMeta" style="color:#8a8a96;font-size:12px;margin-top:10px;min-height:16px;"></div>
-        </div>
-        <div id="conjureStage" style="background:#16161c;border:1px solid #2a2a33;border-radius:12px;min-height:380px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-          <span style="color:#6a6a76;font-size:13px;">Result appears here</span>
-        </div>
-      </div>
-    </div>
+    <!-- CONJURE panel removed 2026-06-22 — folded into FORGE as the "Animation"
+         format (#forgeAnimationStack above). Same /api/conjure backend. -->
 
     <!-- ── STASH ──────────────────────────────────────── -->
     <div id="firepit-stash" style="display:none">

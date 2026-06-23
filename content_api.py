@@ -322,13 +322,19 @@ def health():
 # credit rate — Agency £0.0332/credit — so every other plan/pack lands higher).
 # COGS are list-price estimates (see COST_USD in media_gen.py); DRAFT — revisit
 # against a real fal invoice, esp. the nano-banana image cost.
+# Pricing on a SMALL credit scale (2026-06-23) — friendly numbers; the ~80%
+# margin floor (at the Agency rate £0.332/cr) holds because plan GRANTS were
+# rescaled in lockstep (see billing_plans + the Stripe-metadata sync to run
+# before launch). COGS VERIFIED from fal live pricing + Doug's usage dashboard
+# (decision 0010): Kling v2.6 pro i2v 5s (audio off)=£0.28, 10s=£0.55,
+# nano-banana=£0.12. Animations priced LOW as an adoption hook (Doug's call).
 CREDIT_COST = {
     'text': 1,                  # Claude Haiku            ~£0.004
-    'image': 18,                # nano-banana-pro/edit    ~£0.12   (was 5)
-    'video_composite': 10,      # FFmpeg Ken Burns        ~£0.002  (already >80%)
-    'video_standard': 20,       # Fal LTX (unused)        ~£0.08   (already >80%)
-    'video_premium': 240,       # Kling v2.6 pro 5s       ~£1.58   (was 100)
-    'video_premium_10s': 480,   # Kling v2.6 pro 10s      ~£3.16   (new length tier)
+    'image': 2,                 # nano-banana-pro/edit    ~£0.12   (~82%)
+    'video_composite': 1,       # FFmpeg Ken Burns        ~£0.002
+    'video_standard': 2,        # Fal LTX (unused)        ~£0.08
+    'video_premium': 4,         # Kling v2.6 pro 5s       ~£0.28   (~80%)
+    'video_premium_10s': 8,     # Kling v2.6 pro 10s      ~£0.55   (~80%)
 }
 
 def _debit(uid, kind, reason):
@@ -1471,14 +1477,18 @@ def _ensure_stripe_customer(uid, email):
 
 @app.route('/api/billing/plans', methods=['GET'])
 def billing_plans():
-    """Static plan list — used by the pricing modal. Public (no auth required)."""
+    """Static plan list — used by the pricing modal. Public (no auth required).
+    Credit grants are on the SMALL scale (÷10, 2026-06-23) to match CREDIT_COST;
+    £/credit (and thus ~81% margin) is preserved. NOTE: these are the DISPLAY
+    values — the actual grant comes from Stripe Price metadata, so re-run
+    scripts/stripe_bootstrap.py with the new amounts before taking real payments."""
     return jsonify({
         'plans': [
-            {'lookup_key': 'tier_solo_monthly',   'tier': 'solo',   'name': 'Solo',   'price_pence': 2900,  'credits': 500,  'highlighted': False},
-            {'lookup_key': 'tier_label_monthly',  'tier': 'label',  'name': 'Label',  'price_pence': 7900,  'credits': 2000, 'highlighted': True},
-            {'lookup_key': 'tier_agency_monthly', 'tier': 'agency', 'name': 'Agency', 'price_pence': 19900, 'credits': 6000, 'highlighted': False},
+            {'lookup_key': 'tier_solo_monthly',   'tier': 'solo',   'name': 'Solo',   'price_pence': 2900,  'credits': 50,  'highlighted': False},
+            {'lookup_key': 'tier_label_monthly',  'tier': 'label',  'name': 'Label',  'price_pence': 7900,  'credits': 200, 'highlighted': True},
+            {'lookup_key': 'tier_agency_monthly', 'tier': 'agency', 'name': 'Agency', 'price_pence': 19900, 'credits': 600, 'highlighted': False},
         ],
-        'pack': {'lookup_key': 'credit_pack_200', 'name': '200 Credit Pack', 'price_pence': 1000, 'credits': 200},
+        'pack': {'lookup_key': 'credit_pack_200', 'name': '20 Credit Pack', 'price_pence': 1000, 'credits': 20},
         'currency': 'gbp',
         'configured': bool(STRIPE_KEY),
     })

@@ -1581,8 +1581,16 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   position: relative; aspect-ratio: 16 / 10; background: var(--card); cursor: pointer;
   display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border);
 }
-.stash-block-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stash-block-cover img,
+.stash-block-cover video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .stash-block-noimg { font-size: 32px; opacity: 0.5; }
+/* Video stash tiles (Animation): play badge over the poster frame. */
+.stash-play-badge {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, 0.55);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; pointer-events: none;
+}
 
 .stash-block-count {
   position: absolute; top: 8px; right: 8px; background: var(--red); color: #fff;

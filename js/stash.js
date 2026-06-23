@@ -174,9 +174,12 @@ function _campaignTileHTML(campaignId, group) {
 function _postTileHTML(item) {
   const preview = (item.content || '').slice(0, 90).replace(/\n/g, ' ');
   const _vid = item.type === 'animation' || (item.context && item.context.kind === 'video');
+  const _vurl = (item.context && item.context.videoUrl) || item.imageUrl;
+  // Video tiles: show the first frame as a poster (#t=0.1 + preload=metadata —
+  // no 36MB autoplay) with a play badge; the full clip plays on open.
   const coverInner = item.imageUrl
     ? (_vid
-        ? `<video src="${esc((item.context && item.context.videoUrl) || item.imageUrl)}" muted loop playsinline autoplay></video>`
+        ? `<video src="${esc(_vurl)}#t=0.1" preload="metadata" muted playsinline></video><span class="stash-play-badge">▶</span>`
         : `<img src="${esc(item.imageUrl)}" alt="">`)
     : `<span class="stash-block-noimg">${esc(item.icon || '📝')}</span>`;
   const title = esc(item.label

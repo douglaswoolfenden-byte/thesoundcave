@@ -318,12 +318,17 @@ def health():
 
 # ── Credits pricing (placeholder; tune later) ─────────────
 # Video costs scale with provider price — see COST_USD in media_gen.py.
+# Repriced 2026-06-23 to an ~80% gross-margin FLOOR (computed at the cheapest
+# credit rate — Agency £0.0332/credit — so every other plan/pack lands higher).
+# COGS are list-price estimates (see COST_USD in media_gen.py); DRAFT — revisit
+# against a real fal invoice, esp. the nano-banana image cost.
 CREDIT_COST = {
-    'text': 1,
-    'image': 5,
-    'video_composite': 10,
-    'video_standard': 20,
-    'video_premium': 100,
+    'text': 1,                  # Claude Haiku            ~£0.004
+    'image': 18,                # nano-banana-pro/edit    ~£0.12   (was 5)
+    'video_composite': 10,      # FFmpeg Ken Burns        ~£0.002  (already >80%)
+    'video_standard': 20,       # Fal LTX (unused)        ~£0.08   (already >80%)
+    'video_premium': 240,       # Kling v2.6 pro 5s       ~£1.58   (was 100)
+    'video_premium_10s': 480,   # Kling v2.6 pro 10s      ~£3.16   (new length tier)
 }
 
 def _debit(uid, kind, reason):
@@ -862,8 +867,19 @@ def conjure_endpoint():
     if action not in ('edit', 'animate'):
         return jsonify({'error': "action must be 'edit' or 'animate'"}), 400
     image_bytes = f.read()
+    duration = str(request.form.get('duration', '5'))
 
-    cost_kind = 'image' if action == 'edit' else 'video_premium'
+    # Animation cost scales with clip length — Kling ~2x COGS for 10s, so the
+    # longer clip bills the higher tier. Edits bill the image tier. (Parsed
+    # before the debit so the right amount is charged AND refunded.)
+    if action == 'edit':
+        cost_kind = 'image'
+    else:
+        try:
+            _long = int(duration) > 5
+        except ValueError:
+            _long = False
+        cost_kind = 'video_premium_10s' if _long else 'video_premium'
     balance, err = _debit(uid, cost_kind, f'conjure:{action}')
     if err:
         return err
@@ -873,7 +889,6 @@ def conjure_endpoint():
             url = save_image(out, 'conjure', user_id=uid)
             kind = 'image'
         else:
-            duration = str(request.form.get('duration', '5'))
             out = conjure_gen.animate_video(image_bytes, prompt, duration=duration)
             url = save_video(out, 'conjure', user_id=uid)
             kind = 'video'

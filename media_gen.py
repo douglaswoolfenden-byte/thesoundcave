@@ -59,9 +59,11 @@ DRY_RUN = os.getenv('MEDIA_GEN_DRY_RUN') == '1'
 # Estimated USD per call — surfaced in API responses for cost transparency.
 # Tune from real invoices; these are upper-bound public list prices as of 2026-04.
 COST_USD = {
-    'video_composite': 0.003,   # only the cover image (Flux schnell)
-    'video_standard':  0.10,    # Fal LTX 5s @ 720p
-    'video_premium':   2.00,    # Fal Kling 5s
+    'image':             0.15,  # nano-banana-pro/edit (est. — verify vs real invoice)
+    'video_composite':   0.003, # only the cover image (Flux schnell)
+    'video_standard':    0.10,  # Fal LTX 5s @ 720p
+    'video_premium':     2.00,  # Fal Kling 5s
+    'video_premium_10s': 4.00,  # Fal Kling 10s (~2x the 5s clip)
 }
 
 # Supabase Storage client (service role — server-side only, bypasses RLS)

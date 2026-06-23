@@ -733,7 +733,7 @@ async function generateImage(ctx) {
     });
     if (r.status === 402) {
       const j = await r.json().catch(() => ({}));
-      throw new Error(`Insufficient credits — this image costs ${j.cost || 5}.`);
+      throw new Error(`Insufficient credits — this image costs ${j.cost || 18}.`);
     }
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
@@ -952,7 +952,7 @@ async function refineImage() {
     });
     if (r.status === 402) {
       const j = await r.json().catch(() => ({}));
-      throw new Error(`Insufficient credits — refine costs ${j.cost || 5}.`);
+      throw new Error(`Insufficient credits — refine costs ${j.cost || 18}.`);
     }
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -1080,7 +1080,7 @@ async function generateAnimation() {
     const r = await scAuth.authedFetch(`${forgeApiUrl}/api/conjure`, { method: 'POST', body: fd });
     if (r.status === 402) {
       const j = await r.json().catch(() => ({}));
-      throw new Error(`Insufficient credits — an animation costs ${j.cost || 100}.`);
+      throw new Error(`Insufficient credits — an animation costs ${j.cost || 240}.`);
     }
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || `animate error: ${r.status}`);

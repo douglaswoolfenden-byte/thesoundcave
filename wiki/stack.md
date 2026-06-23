@@ -2,7 +2,7 @@
 
 Source-of-truth inventory of every tool, API, and service Sound Cave depends on. Pulled from the codebase, not memory — re-verify against the files cited when reviewing.
 
-**Last reviewed:** 2026-06-09
+**Last reviewed:** 2026-06-09 · **COGS verified vs live fal pricing + real usage:** 2026-06-23 (see [§ Verified unit COGS](#-verified-unit-cogs-2026-06-23) + [decision 0010](decisions/0010_media_gen_cogs_verified.md))
 
 > Scope note: only services actually called by Sound Cave code are listed. The workspace `.env` also holds Apollo, EchoTik, Perplexity, Notion and Meta keys — **none are used by this product** and must not be treated as Sound Cave dependencies.
 
@@ -52,6 +52,26 @@ Defined in `media_gen.py` (`MediaType` enum + tier generators). Per-model poll t
 | 3 — premium | Fal **Kling 1.6** (primary) → Replicate **Veo 3 fast** (fallback) | `fal-ai/kling-video/v1.6/standard/text-to-video`, `google/veo-3-fast` |
 
 Guardrails: `MAX_VIDEO_DURATION_SECONDS = 10`; Veo 3 fast caps at 8s. `DRY_RUN` short-circuits all paid video providers.
+
+**Animation format (the shipped one, separate from the 3 tiers above):** `conjure_gen.py` → **Kling v2.6 Pro i2v** (`fal-ai/kling-video/v2.6/pro/image-to-video`), upload artwork → looping video, audio off, 5s default. This is what Forge's "Animation" option uses; the Kling 1.6 text-to-video tier above is the legacy Firepit video feature.
+
+---
+
+## 💰 Verified unit COGS (2026-06-23)
+
+Pulled from **live fal model pages + Doug's real fal usage dashboard** (not list-price guesses). ≈ £0.79/$. Re-verify on any model/provider change. Reasoning + pricing implications: [decision 0010](decisions/0010_media_gen_cogs_verified.md).
+
+| Model | fal price | ≈ £ |
+|---|---|---|
+| Kling v2.6 Pro i2v (5s, audio off) | $0.07/s → **$0.35** | £0.28 |
+| Kling v2.6 Pro i2v (10s) | **$0.70** | £0.55 |
+| nano-banana-pro/edit | **$0.15**/img (1K–2K; 4K = $0.30) | £0.12 |
+| flux-2-pro/edit | ~**$0.075** (2K; $0.03 first MP + $0.015/extra) | £0.06 |
+| flux/schnell | ~$0.003 | <£0.01 |
+
+**⚠️ The `COST_ESTIMATES` constant in [media_gen.py:65-66](../media_gen.py#L65-L66) is stale** — `video_premium: 2.00` / `..._10s: 4.00` are ~5.7× the real Kling COGS ($0.35 / $0.70). It feeds the in-app `estimated_cost_usd` display and fed the 2026-06-23 credit repricing → the source of the "£1.55–£3 per video" myth. Fix pending (decision 0010).
+
+**Real spend to date** (fal dashboard, Feb–Jun 2026): ~$15.50 total, **image-dominated** — `nano-banana-pro/edit` $8.40 (54%); all-time *video* spend just **$1.75**.
 
 ---
 

@@ -39,6 +39,8 @@
 - [0006 — Vercel static-only deploy](decisions/0006_vercel_static_only.md)
 - [0007 — Backend live on Railway](decisions/0007_backend_live_on_railway.md)
 - [0008 — Campaign Studio leads (tech-house first)](decisions/0008_campaign_studio_first.md) — **current north star (2026-06-17).**
+- [0009 — Baked-in text default; overlay = constrained escape hatch](decisions/0009_baked_vs_overlay.md)
+- [0010 — Media-gen COGS verified; stay on fal (no Higgsfield sub)](decisions/0010_media_gen_cogs_verified.md) — **flags animation credits priced ~5.7× over true COGS (2026-06-23).**
 
 ## Personas
 - [Artist](personas/artist.md) — stub
@@ -53,7 +55,8 @@
 
 ## Known gaps (for next session)
 - Real persona interviews to replace the stubs
-- Decision: image gen provider strategy (why Fal primary, Replicate fallback?) — currently lives in decision 0002 as a sentence; promote if it grows
+- Decision: image gen provider strategy (why Fal primary, Replicate fallback?) — currently lives in decision 0002 as a sentence; promote if it grows. (fal-vs-subscription now settled in [0010](decisions/0010_media_gen_cogs_verified.md).)
 - Decision: which social platforms first for Trail Map (IG + TikTok likely)
 - Decision: SaaS migration plan (auth, DB, deploy target, billing)
-- Pricing tier breakdown (what does "paid only" actually cost?)
+- **Re-price animation credits** — COGS now verified ([0010](decisions/0010_media_gen_cogs_verified.md)); 240cr/480cr sit at ~96% margin vs the intended 80% floor. Doug's call: keep vs drop to ~42cr/83cr.
+- Fix stale `COST_ESTIMATES` video constants in `media_gen.py` (drives the in-app cost display)

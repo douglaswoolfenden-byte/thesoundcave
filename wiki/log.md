@@ -1090,3 +1090,11 @@ Built from Doug's brief; spec signed off. Four changes:
 - **Shipped scope:** Animation = animate→video only (Kling i2v). Generative image-edit (nano-banana text/material swaps) remains in the backend (`action=edit`) but is NOT surfaced in the UI yet — so a "change AUGUST→SEPTEMBER" instruction is ignored by the animate path. **PARKED DECISION:** how to surface text/artwork edits (recommended: optional cheap EDIT-still step (5cr) before ANIMATE (100cr)).
 - **Also live (from main's 7 commits):** mobile bottom-tab shell (step 1/7), Phase-2 prep-interpreter spec, daily/weekly data snapshots.
 - **Margin note to action:** a 10-sec animation costs ~2× COGS but charges the same 100 credits — consider 200cr for 10s.
+
+## [2026-06-23] Credit pricing locked at ~80% gross-margin floor (Doug's call)
+
+- Repriced `CREDIT_COST` against real model COGS, margin computed at the cheapest credit rate (Agency £0.0332/cr) so 80% is the floor on every plan/pack. £/credit unchanged → no Stripe re-bootstrap.
+- **image 5→18** (nano-banana-pro/edit ~£0.12), **video_premium 100→240** (Kling 5s ~£1.58), **+ video_premium_10s 480** (Kling 10s ~£3.16). `/api/conjure` now picks the tier by duration BEFORE the debit (10s was wrongly charging the 5s price). text/composite/standard already >80%, kept.
+- **Verified LIVE** (authed 402, no spend): animate 5s → cost 240, animate 10s → cost 480. Deploy `e3f67d12` ● Online; frontend fallbacks synced + pushed (commit a6f3d98).
+- ⚠️ DRAFT — COGS are list-price estimates; the nano-banana image cost ($0.15) is the biggest uncertainty (drives the 18cr). Verify vs a real fal invoice. Provider may change (Higgsfield) → re-derive animation credits if so.
+- Side-effect: at 240cr/animation, Doug's own dev account (18 credits) can't run one in-app — test via a credit top-up or Higgsfield (off-credits).

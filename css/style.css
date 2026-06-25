@@ -1367,6 +1367,30 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
 
+/* Native date/time pickers themed dark (light calendar/clock glyphs on dark). */
+.input[type="date"], .input[type="time"] { color-scheme: dark; }
+
+/* Duration slider — snaps to supported lengths (5s / 10s today; gains stops if
+   the model adds more). */
+.forge-range { display: flex; align-items: center; gap: var(--space-3); }
+.forge-range input[type="range"] {
+  flex: 1; -webkit-appearance: none; appearance: none; height: 4px;
+  background: var(--border-lt); border-radius: 2px; outline: none; cursor: pointer;
+}
+.forge-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--color-accent); cursor: pointer;
+  border: 2px solid var(--color-bg);
+}
+.forge-range input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: var(--color-accent);
+  cursor: pointer; border: 2px solid var(--color-bg);
+}
+.forge-range-val {
+  font-family: var(--font-mono); font-size: 12px; color: var(--color-accent);
+  min-width: 28px; text-align: right;
+}
+
 /* Higgsfield-style left→right reflow (wiki/spec/forge_layout_higgsfield.md):
    a compact control rail (left) feeds a hero output canvas (right). The reading
    order IS the workflow — set up on the left, watch the result in the centre. */

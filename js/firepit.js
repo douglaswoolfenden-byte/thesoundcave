@@ -357,30 +357,8 @@ async function openManageTemplates() {
   }
 }
 
-// Iconised Format/Size pills drive the hidden native <select>s, so every reader
-// (updateForgeFields, generateContent, editStashItem) is unchanged. forgePick
-// sets the value + fires the select's change handler; syncForgePills mirrors the
-// active pill to the current value (covers init + programmatic sets like reopening
-// a Stash item).
-function forgePick(btn, selectId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  sel.value = btn.dataset.value;
-  sel.dispatchEvent(new Event('change'));   // Format → updateForgeFields()
-  syncForgePills();
-}
-function syncForgePills() {
-  document.querySelectorAll('.forge-picker-group[data-for]').forEach(group => {
-    const sel = document.getElementById(group.dataset.for);
-    if (!sel) return;
-    group.querySelectorAll('.forge-picker-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.value === sel.value));
-  });
-}
-
 function updateForgeFields() {
   const type = document.getElementById('forgeContentType').value;
-  syncForgePills();   // keep Format/Size pills in step (init + editStashItem set the value)
   const ct = CONTENT_TYPES[type];
   if (!ct) return;
   // Animation swaps the whole standard input stack for its generative sub-form
@@ -392,7 +370,7 @@ function updateForgeFields() {
   const sizeWrap  = document.getElementById('forgeSizeWrap');
   if (stdStack)  stdStack.style.display  = isAnim ? 'none'  : '';
   if (animStack) animStack.style.display = isAnim ? 'block' : 'none';
-  if (sizeWrap)  sizeWrap.style.display  = isAnim ? 'none'  : '';
+  if (sizeWrap)  sizeWrap.style.display  = '';   // Size shows for all formats (animation output still follows the source artwork's ratio)
   if (isAnim) { updateCharCount(); return; }
   // Context Stack containers (master spec §4): SUBJECT (L3) and FACTS (L4)
   // render separately so the form walks the stack top-to-bottom.
@@ -431,14 +409,18 @@ function updateForgeFields() {
     // lines (media_gen._baked_text_lines) since P1.5 (2026-06-11).
     factsHtml += `<div class="forge-input-group">
       <label class="forge-label">Event details</label>
-      <input class="input" id="forgeEvent" placeholder="Night / event name (e.g. WAREHOUSE TECHNO)">
+      <input class="input" id="forgeEvent" placeholder="Night / event name">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-        <input class="input" id="forgeVenue"   placeholder="Venue (e.g. THE DOME)">
-        <input class="input" id="forgeCity"    placeholder="City / location (e.g. LONDON)">
-        <input class="input" id="forgeDate"    placeholder="Date (e.g. FRI 12 DEC)">
-        <input class="input" id="forgeDoors"   placeholder="Doors open (e.g. 10PM)">
-        <input class="input" id="forgeCurfew"  placeholder="End / curfew (e.g. 6AM)">
-        <input class="input" id="forgeTickets" placeholder="Tickets (e.g. £12/£14)">
+        <input class="input" id="forgeVenue" placeholder="Venue">
+        <input class="input" id="forgeCity"  placeholder="City">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div><label class="forge-label">Date</label><input class="input" type="date" id="forgeDate"></div>
+        <div><label class="forge-label">Ticket price</label><input class="input" id="forgeTickets" placeholder="£12 / £14"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div><label class="forge-label">Doors open</label><input class="input" type="time" id="forgeDoors"></div>
+        <div><label class="forge-label">Close</label><input class="input" type="time" id="forgeCurfew"></div>
       </div>
     </div>`;
   }
@@ -492,6 +474,24 @@ async function checkApiStatus() {
   }
 }
 
+// Native date/time pickers return ISO ("2026-12-12") / 24h ("22:00"); flyers want
+// human strings, so format on the way into the generation context.
+function formatFlyerDate(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return iso;
+  const wd = d.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase();
+  const mo = d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase();
+  return `${wd} ${d.getDate()} ${mo}`;            // FRI 12 DEC
+}
+function formatClock(hhmm) {
+  if (!/^\d{2}:\d{2}$/.test(hhmm || '')) return hhmm || '';
+  let [h, m] = hhmm.split(':').map(Number);
+  const ap = h < 12 ? 'AM' : 'PM';
+  h = h % 12 || 12;
+  return m ? `${h}:${String(m).padStart(2, '0')}${ap}` : `${h}${ap}`;   // 22:00 → 10PM
+}
+
 function gatherForgeContext() {
   const type = document.getElementById('forgeContentType').value;
   const ct = CONTENT_TYPES[type];
@@ -526,9 +526,9 @@ function gatherForgeContext() {
     ctx.event   = document.getElementById('forgeEvent')?.value   || '';  // night / event name
     ctx.venue   = document.getElementById('forgeVenue')?.value   || '';
     ctx.city    = document.getElementById('forgeCity')?.value    || '';
-    ctx.date    = document.getElementById('forgeDate')?.value    || '';
-    ctx.doors   = document.getElementById('forgeDoors')?.value   || '';
-    ctx.curfew  = document.getElementById('forgeCurfew')?.value  || '';
+    ctx.date    = formatFlyerDate(document.getElementById('forgeDate')?.value || '');  // ISO → FRI 12 DEC
+    ctx.doors   = formatClock(document.getElementById('forgeDoors')?.value   || '');   // 22:00 → 10PM
+    ctx.curfew  = formatClock(document.getElementById('forgeCurfew')?.value  || '');
     ctx.tickets = document.getElementById('forgeTickets')?.value || '';
   }
   if (ct.fields.includes('release')) {

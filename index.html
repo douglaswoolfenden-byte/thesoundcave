@@ -422,33 +422,24 @@
 
           <div class="forge-stack-label">1 · Format</div>
           <div class="forge-input-group">
-            <!-- Iconised Format + Size pickers (Higgsfield-style). The native
-                 <select>s stay as the hidden source-of-truth, so every existing
-                 reader (updateForgeFields, generateContent, editStashItem) is
-                 unchanged; the pills drive them via forgePick()/syncForgePills(). -->
-            <div class="forge-picker">
-              <div class="forge-picker-group" data-label="Format" data-for="forgeContentType">
-                <button type="button" class="forge-picker-btn" data-value="social_post" title="Single still image" onclick="forgePick(this,'forgeContentType')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="5.5" cy="6.5" r="1"/><path d="M3 12l3-3 2 2 2.5-2.5L13 11"/></svg>Still</button>
-                <button type="button" class="forge-picker-btn" data-value="social_carousel" title="Multi-slide set, one locked style" onclick="forgePick(this,'forgeContentType')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="3.5" width="8" height="9" rx="1"/><path d="M3 5.5v6a1 1 0 0 0 1 1h6"/></svg>Carousel</button>
-                <button type="button" class="forge-picker-btn" data-value="event_poster" title="Event flyer (baked text)" onclick="forgePick(this,'forgeContentType')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>Flyer</button>
-                <button type="button" class="forge-picker-btn" data-value="animation" title="Animate artwork into a looping video" onclick="forgePick(this,'forgeContentType')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M7 6.3l3 1.7-3 1.7z" fill="currentColor" stroke="none"/></svg>Animation</button>
+            <!-- Format + Size on one row (compact dropdowns). Size shows for ALL
+                 formats incl. Animation (output follows the source artwork). -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label class="forge-label">Format</label>
+                <select class="input" id="forgeContentType" onchange="updateForgeFields()">
+                  <option value="social_post">Still</option>
+                  <option value="social_carousel">Carousel</option>
+                  <option value="event_poster">Flyer</option>
+                  <option value="animation">Animation</option>
+                </select>
               </div>
-              <select class="input" id="forgeContentType" onchange="updateForgeFields()" hidden>
-                <option value="social_post">Still</option>
-                <option value="social_carousel">Carousel</option>
-                <option value="event_poster">Flyer</option>
-                <option value="animation">Animation</option>
-              </select>
               <div id="forgeSizeWrap">
-                <div class="forge-picker-group" data-label="Size" data-for="forgeSize">
-                  <button type="button" class="forge-picker-btn" data-value="4:5" title="4:5 — IG feed (1080×1350)" onclick="forgePick(this,'forgeSize')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4.5" y="2.5" width="7" height="11" rx="0.5"/></svg>4:5</button>
-                  <button type="button" class="forge-picker-btn" data-value="9:16" title="9:16 — TikTok / Reels (1080×1920)" onclick="forgePick(this,'forgeSize')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5.5" y="1.5" width="5" height="13" rx="0.5"/></svg>9:16</button>
-                  <button type="button" class="forge-picker-btn" data-value="1:1" title="1:1 — square (1080×1080)" onclick="forgePick(this,'forgeSize')"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3.5" y="3.5" width="9" height="9" rx="0.5"/></svg>1:1</button>
-                </div>
-                <select class="input" id="forgeSize" hidden>
-                  <option value="4:5">4:5 — IG feed (1080×1350)</option>
-                  <option value="9:16">9:16 — TikTok / Reels (1080×1920)</option>
-                  <option value="1:1">1:1 — square (1080×1080)</option>
+                <label class="forge-label">Size</label>
+                <select class="input" id="forgeSize">
+                  <option value="4:5">4:5 — feed</option>
+                  <option value="9:16">9:16 — Reels</option>
+                  <option value="1:1">1:1 — square</option>
                 </select>
               </div>
             </div>
@@ -474,7 +465,7 @@
           <div id="forgeStandardStack">
           <div class="forge-stack-label">2 · Style</div>
           <div class="forge-input-group">
-            <label class="forge-label">References <span style="color:var(--muted);font-weight:normal">(up to 5 — STYLE rules the look; WHO/WHERE/WHAT add subjects; click a chip to correct it)</span></label>
+            <label class="forge-label">References <span style="color:var(--muted);font-weight:normal">(up to 5 — first sets the style)</span></label>
             <div class="forge-dropzone" role="button" tabindex="0" aria-label="Add reference image"
                  onclick="document.getElementById('forgeRefImages').click()"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('forgeRefImages').click()}">
@@ -485,26 +476,6 @@
             <div id="forgeRefImagesPreview" class="forge-ref-thumbs"></div>
             <div id="forgeRefImagesError" class="forge-ref-error" style="display:none"></div>
           </div>
-          <div class="forge-input-group">
-            <label class="forge-label">Brand <span style="color:var(--muted);font-weight:normal">(steps back when a STYLE ref is present)</span></label>
-            <div class="forge-brand-selector">
-              <select class="input" id="forgeBrandSelect">
-                <option value="">— No brand kit —</option>
-              </select>
-              <button type="button" class="btn-outline" onclick="switchTab('brands')" title="Manage brand kits">⚙</button>
-            </div>
-          </div>
-          <!-- Brand-bound caption templates (Phase B of Forge text rework) -->
-          <div class="forge-input-group" id="forgeTemplateRow" style="display:none">
-            <label class="forge-label">Template</label>
-            <div class="forge-brand-selector">
-              <select class="input" id="forgeTemplateSelect">
-                <option value="">— No template —</option>
-              </select>
-              <button type="button" class="btn-outline" id="forgeManageTemplates" title="Manage templates for this brand">⋯</button>
-            </div>
-          </div>
-
           <div class="forge-stack-label">3 · Subject</div>
           <!-- Spirit — an animated cartoon-like character asset (glossary, 2026-06-12).
                The engine draws Spirits; real people travel as WHO refs (carbon copy). -->
@@ -524,17 +495,8 @@
 
           <div class="forge-stack-label">5 · Direction</div>
           <div class="forge-input-group">
-            <label class="forge-label">Direction <span style="color:var(--muted);font-weight:normal">(followed closely — what to do with the references: placement, type size, graphic instructions + the vibe)</span></label>
-            <textarea class="input" id="forgeFreeform" rows="4" placeholder="Design instructions + mood — e.g. headliner name huge across the top, artist photo bottom-left, black &amp; white, acid warehouse energy..."></textarea>
-          </div>
-          <div class="forge-input-group">
-            <label class="forge-label">Voice Profile</label>
-            <select class="input" id="forgeVoice">
-              <option value="underground">Underground — authentic, scene-literate</option>
-              <option value="industry">Industry — measured, professional</option>
-              <option value="hype">Hype — high-energy promo voice</option>
-              <option value="personal">Personal — first-person, conversational</option>
-            </select>
+            <label class="forge-label">Direction <span style="color:var(--muted);font-weight:normal">(what to make — layout, type, mood)</span></label>
+            <textarea class="input" id="forgeFreeform" rows="4" placeholder="e.g. headliner huge up top, photo bottom-left, black &amp; white, acid warehouse energy"></textarea>
           </div>
 
           <button class="btn-red forge-go" type="button" style="width:100%" onclick="generateContent()">FORGE</button>
@@ -547,23 +509,24 @@
           <div id="forgeAnimationStack" style="display:none">
             <div class="forge-stack-label">2 · Artwork</div>
             <div class="forge-input-group">
-              <label class="forge-label">Artwork <span style="color:var(--muted);font-weight:normal">(the finished flyer or image to bring to life)</span></label>
+              <label class="forge-label">Artwork <span style="color:var(--muted);font-weight:normal">(the image to animate)</span></label>
               <input type="file" class="input" id="forgeAnimSource" accept="image/jpeg,image/png,image/webp" onchange="forgeAnimPreview()">
               <div id="forgeAnimPreview" class="forge-ref-thumbs"></div>
             </div>
 
             <div class="forge-stack-label">3 · Motion</div>
             <div class="forge-input-group">
-              <label class="forge-label">Motion <span style="color:var(--muted);font-weight:normal">(describe the movement in plain words — text &amp; logos stay still)</span></label>
-              <textarea class="input" id="forgeAnimMotion" rows="4" placeholder="e.g. the ice slowly melts and drips · smoke drifts behind the type · the record spins on the deck"></textarea>
+              <label class="forge-label">Motion <span style="color:var(--muted);font-weight:normal">(plain words — text stays still)</span></label>
+              <textarea class="input" id="forgeAnimMotion" rows="4" placeholder="e.g. the ice melts and drips · smoke drifts behind the type"></textarea>
             </div>
 
             <div class="forge-stack-label">4 · Length</div>
             <div class="forge-input-group">
-              <select class="input" id="forgeAnimDuration">
-                <option value="5">5 seconds</option>
-                <option value="10">10 seconds</option>
-              </select>
+              <div class="forge-range">
+                <input type="range" id="forgeAnimDuration" min="5" max="10" step="5" value="5"
+                       oninput="document.getElementById('forgeAnimDurationVal').textContent=this.value+'s'">
+                <span class="forge-range-val" id="forgeAnimDurationVal">5s</span>
+              </div>
             </div>
 
             <button class="btn-red forge-go" type="button" style="width:100%" onclick="generateContent()">ANIMATE</button>

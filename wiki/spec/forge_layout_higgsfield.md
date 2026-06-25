@@ -64,6 +64,15 @@ The **centre output canvas** — pick an Etching, hit FORGE, and the flyer/anima
 - **Reference upload → `+` drop-block** (`.forge-dropzone`): replaced the native "Choose files" input with a dashed block (orange `+` and "ADD REFERENCE", accent border on hover) that clicks the now-`hidden` `#forgeRefImages` input. `handleRefImagesChange` + the thumb previews are unchanged. SoundCave dark grading off tokens.
 - No regressions: `node --check` clean, div balance 286/286, single IDs preserved, only the pre-existing favicon 404 + local-only CORS warnings (graceful static fallback) in console. Shots: `scratch/forge_pickers_top.png`, `forge_pickers_dropzone.png`.
 
-**Fast-follows (still not done):** live credit cost on the FORGE button (needs `CREDIT_COST` exposed via `/api/config`; ∞ for admins); the right run-history/refine rail; @elements/Spirits `@`-mentions in Direction; optional drag-and-drop onto the drop-block.
+**Pass 3 (2026-06-25, same branch) — input tidy-up (Doug's batch):**
+- **Format + Size → compact dropdowns on one row** (reverted the pass-2 pills, per Doug). Native `<select>`s, visible again.
+- **Size shows for ALL formats incl. Animation** (`updateForgeFields` no longer hides `#forgeSizeWrap`). ⚠️ Honest caveat: the i2v backend (`animate_video`) takes no aspect — animation output still follows the *source artwork's* ratio; the picker is there for consistency. Wiring aspect→Kling is a flagged follow-up.
+- **Removed Brand kit + Voice Profile** from the input. Both JS-safe (`populateBrandSelect`/`_selectedBrandKit`/init listeners already null-guard; `gatherForgeContext` defaults `voice` to `underground`). Voice will be *inferred from Direction* once the interpreter lands.
+- **Event details restructured:** Night/event name → Venue|City → **Date (`type=date` calendar) | Ticket price** → **Doors open | Close (`type=time`, one row)**. `gatherForgeContext` formats ISO date → `FRI 12 DEC` and 24h → `10PM` (`formatFlyerDate`/`formatClock`) so the baked flyer text stays human.
+- **Animation length → snap-slider** (`range min5 max10 step5`, live `5s`/`10s` label) per Doug's "slider, snaps to supported lengths" call.
+- **Condensed** the References / Direction / Artwork / Motion helper + placeholder text.
+- Native date/time pickers themed dark (`color-scheme: dark`). No JS readers broken; `node --check` clean, div 281/281, no new console errors. Shots: `scratch/forge_pass3_flyer.png`, `forge_pass3_animation.png`.
+
+**Fast-follows (still not done):** **history rail** (Higgsfield-style right panel, client-side v1 — Doug's next pass); **direction interpreter** (Claude rewrites direction for clarity + infers the voice — specced, not built); live credit cost on the FORGE button (needs `CREDIT_COST` via `/api/config`; ∞ for admins); wire aspect→Kling for animation; optional drag-and-drop on the drop-block; make the animation Artwork upload a drop-block too (consistency).
 
 **Open for Doug's review:** (1) is the rail width right (340px)? (2) want the FORGE CTA *louder* (solid fill, Higgsfield-style) or keep the consistent outline? (3) `FORGE` rename OK, or keep `GENERATE CONTENT`?

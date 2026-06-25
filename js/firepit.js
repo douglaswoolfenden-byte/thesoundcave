@@ -357,8 +357,30 @@ async function openManageTemplates() {
   }
 }
 
+// Iconised Format/Size pills drive the hidden native <select>s, so every reader
+// (updateForgeFields, generateContent, editStashItem) is unchanged. forgePick
+// sets the value + fires the select's change handler; syncForgePills mirrors the
+// active pill to the current value (covers init + programmatic sets like reopening
+// a Stash item).
+function forgePick(btn, selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.value = btn.dataset.value;
+  sel.dispatchEvent(new Event('change'));   // Format → updateForgeFields()
+  syncForgePills();
+}
+function syncForgePills() {
+  document.querySelectorAll('.forge-picker-group[data-for]').forEach(group => {
+    const sel = document.getElementById(group.dataset.for);
+    if (!sel) return;
+    group.querySelectorAll('.forge-picker-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.value === sel.value));
+  });
+}
+
 function updateForgeFields() {
   const type = document.getElementById('forgeContentType').value;
+  syncForgePills();   // keep Format/Size pills in step (init + editStashItem set the value)
   const ct = CONTENT_TYPES[type];
   if (!ct) return;
   // Animation swaps the whole standard input stack for its generative sub-form

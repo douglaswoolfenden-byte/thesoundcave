@@ -1341,6 +1341,31 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .forge-picker-btn.active { color: var(--color-accent); border-color: var(--color-accent); background: var(--elevated); }
 .forge-picker-ico { color: var(--color-accent); display: inline-flex; }
 .forge-picker-ico .sc-icon { width: 18px; height: 18px; }
+/* Inline icon inside a pill follows the pill's state (muted idle → accent on
+   hover/active) via currentColor. */
+.forge-picker-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* Reference drop-block — replaces the native "Choose files" input. Click to add.
+   SoundCave grading: dashed muted border, orange + and accent border on hover. */
+.forge-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-1); min-height: 88px; margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1.5px dashed var(--border-lt); border-radius: 6px;
+  background: var(--elevated); color: var(--muted); cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-soft),
+              color var(--motion-fast) var(--ease-soft),
+              background var(--motion-fast) var(--ease-soft);
+}
+.forge-dropzone:hover, .forge-dropzone:focus-visible {
+  border-color: var(--color-accent); color: var(--color-accent);
+  background: var(--card); outline: none;
+}
+.forge-dropzone-plus { font-size: 22px; line-height: 1; font-weight: 300; color: var(--color-accent); }
+.forge-dropzone-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-mono); text-transform: uppercase;
+}
 
 /* Higgsfield-style left→right reflow (wiki/spec/forge_layout_higgsfield.md):
    a compact control rail (left) feeds a hero output canvas (right). The reading

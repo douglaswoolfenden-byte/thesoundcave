@@ -59,6 +59,11 @@ The **centre output canvas** — pick an Etching, hit FORGE, and the flyer/anima
 - **No JS touched** — all IDs/handlers intact; div balance 284/284; only console error is a pre-existing `favicon.ico` 404.
 - **Verified on localhost** (admin login, Playwright): `scratch/forge_higgsfield_reflow.png`.
 
-**Fast-follows (not this pass):** live credit cost on the FORGE button (needs `CREDIT_COST` exposed via `/api/config`; shows ∞ for admins); the right run-history/refine rail; iconised aspect-ratio pills; @elements/Spirits `@`-mentions in Direction.
+**Pass 2 (2026-06-25, same branch) — iconised pickers + reference drop-block (Doug's follow-up):**
+- **Format & Size → iconised pill pickers** (Higgsfield's iconised aspect ratio). Reused the existing `.forge-picker` component; each pill has an inline SVG that follows the pill's state via `currentColor` (muted idle → accent active). The native `<select id="forgeContentType"|"forgeSize">`s are **kept but `hidden`** as the source-of-truth — pills drive them through `forgePick()` (sets value + dispatches `change`) and `syncForgePills()` (mirrors active pill; called inside `updateForgeFields()` so init + `editStashItem`'s programmatic set both stay in step). Verified: Format pills swap the stacks correctly (Animation→sub-form+size hidden, Flyer→event fields, Still→standard), Size pills drive `forgeSize`.
+- **Reference upload → `+` drop-block** (`.forge-dropzone`): replaced the native "Choose files" input with a dashed block (orange `+` and "ADD REFERENCE", accent border on hover) that clicks the now-`hidden` `#forgeRefImages` input. `handleRefImagesChange` + the thumb previews are unchanged. SoundCave dark grading off tokens.
+- No regressions: `node --check` clean, div balance 286/286, single IDs preserved, only the pre-existing favicon 404 + local-only CORS warnings (graceful static fallback) in console. Shots: `scratch/forge_pickers_top.png`, `forge_pickers_dropzone.png`.
+
+**Fast-follows (still not done):** live credit cost on the FORGE button (needs `CREDIT_COST` exposed via `/api/config`; ∞ for admins); the right run-history/refine rail; @elements/Spirits `@`-mentions in Direction; optional drag-and-drop onto the drop-block.
 
 **Open for Doug's review:** (1) is the rail width right (340px)? (2) want the FORGE CTA *louder* (solid fill, Higgsfield-style) or keep the consistent outline? (3) `FORGE` rename OK, or keep `GENERATE CONTENT`?

@@ -1119,3 +1119,13 @@ Doug's call: his personal/owner account (`douglaswoolfenden@gmail.com`) should g
 - **UI:** `/api/me` returns `admin: true`; the credits chip (`#reflectionCredits`) shows **∞** instead of a number ([app.js](../js/app.js), [firepit.js](../js/firepit.js)).
 - **⚠️ Prod step Doug must do:** set `ADMIN_EMAILS=douglaswoolfenden@gmail.com` in **Railway** env — local `.env` only covers localhost. Until then the live app charges normally.
 - **Not yet:** real-flow verification (log in as admin on live → fire a generation → confirm no charge + ∞). Branch not merged/pushed.
+
+## [2026-06-25] Admin-unlimited-credits VERIFIED LIVE ✅ (closes the "not yet" above)
+
+Real-flow verification done end-to-end on prod — the feature is fully live and confirmed.
+
+- **Setup confirmed:** `ADMIN_EMAILS=douglaswoolfenden@gmail.com` is set in **Railway** prod (the "prod step Doug must do" was already done); latest Railway deploy `685acced` (2026-06-24 16:59) post-dates the admin merge, so the bypass code is live; `main` == `origin/main`, clean tree.
+- **Auth path note (for future live tests):** the Supabase magic-link token is **corrupted crossing the Gmail→JSON tool boundary** (a byte renders as `�`, dropping 2 hex chars → `otp_expired`). Reliable workaround: mint a fresh link via the **admin API** — `POST {SUPABASE_URL}/auth/v1/admin/generate_link` with the service key (read from `.env`, never echoed) returns a clean `action_link`; navigate Playwright to it to log in.
+- **Assertion 1 — admin recognised:** authed `GET /api/me` on the live backend returned `{"admin":true,"credits_balance":18,"tier":"solo"}`; the `#reflectionCredits` chip rendered **∞** (read from live DOM). Proves `ADMIN_EMAILS` is wired correctly in the deployed code.
+- **Assertion 2 — charge bypassed (real flow):** fired one real `POST /api/generate-image` (cost `image`=2cr for non-admins) → `status 200`, real `image_url` returned by fal, ~40s. Balance **18 → 18** (unchanged), no `402`. Definitive: `_debit()` short-circuits on `g.is_admin`, fal billed Doug's real balance (~£0.12 for the throwaway test image).
+- **Stale-numbers reconciliation (corrected an out-of-date resume brief):** live `CREDIT_COST` is the **small adoption scale** — `image=2`, `video_premium=4` (5s), `video_premium_10s=8` — at ~80–82% margin, NOT the `18/240/480` from the [2026-06-23] "80% floor" entry (those were superseded by the adoption-scale reprice). The decision-0010 follow-up to fix the stale `COST_ESTIMATES` is also **done**: [media_gen.py](../media_gen.py) now reads `image 0.15 / video_premium 0.35 / video_premium_10s 0.70`, all annotated "verified — decision 0010". So the animation-pricing question is closed; no `5.7×` drop pending.

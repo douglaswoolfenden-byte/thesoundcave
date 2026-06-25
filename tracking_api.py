@@ -251,12 +251,16 @@ def health():
     this surfaces that the moment it happens.
 
     severity:
-      'down'     — no fresh data TODAY, an unfinished run, or zero artists
-                   collected. The catastrophic case; the GitHub Action hard-
+      'down'     — no fresh data TODAY (the catastrophic case: the daily
+                   snapshot stopped producing OK data). The GitHub Action hard-
                    fails (→ emails Doug) on this.
       'degraded' — fresh data exists but the latest run had some failed/partial
                    artists (one dead account ≠ outage). Warn, don't page.
-      'ok'       — fresh data today, every artist collected cleanly.
+      'ok'       — fresh data today, no failed/partial artists. NOTE: a run that
+                   collected 0 artists because today's data was ALREADY captured
+                   (the 00:00 catch-up legitimately beats the 07:00 cron, so the
+                   scheduled run no-ops) is healthy — freshness, not the latest
+                   run's ok-count, is the signal.
     """
     sb = supabase()
     today = datetime.now(timezone.utc).date()
@@ -283,9 +287,13 @@ def health():
     ok      = (run or {}).get('artists_ok') or 0
     failed  = (run or {}).get('artists_failed') or 0
     partial = (run or {}).get('artists_partial') or 0
-    completed = (run or {}).get('status') == 'completed'
 
-    if not fresh or not completed or ok == 0:
+    # 'down' == STALE DATA only. The token-outage class (runs that 'complete' with
+    # every artist failed) still trips this because it produces no OK snapshot today
+    # → not fresh. But a no-op scheduled run (0 ok because the catch-up already
+    # captured today) is NOT down — keying 'down' off the latest run's ok-count gave
+    # a daily false alarm. failed/partial with fresh data is a warning, not a page.
+    if not fresh:
         severity = 'down'
     elif failed or partial:
         severity = 'degraded'

@@ -1171,3 +1171,10 @@ Pre-flight before sending the live app to industry friends. Ran a 3-agent audit 
 - **Branch hygiene:** the feature branch was stacked on another session's unpushed Forge "Elements" commits; Doug chose to ship Free Trial **only**, so cherry-picked the single commit onto a clean branch off `main` (resolved content_api.py + log conflicts). Elements stays unshipped on its branch.
 - **Verified:** `py_compile`+`node --check` clean; `/api/billing/plans` 3-tier; `/api/redeem-invite` registered + 401 without auth; Doug eyeballed the modal (screenshot — looks right). **NOT fired:** happy-path redeem (needs migration 0020 live) — to verify on prod post-deploy.
 - **Go-live order:** apply db/0020 in Supabase · set `INVITE_CODES` (+ optional `FREE_TRIAL_CREDITS`) in Railway · `railway up` (backend) · push `main` (Vercel) · then real-flow redeem test + send the link.
+
+## [2026-06-25] Forge "Elements" — Phase 1 UI merge (branch forge-elements)
+
+Doug: "roll it out." Wrote the spec ([forge_elements.md](spec/forge_elements.md)) — unify References+Spirit+Artist into one "Elements" panel + a Cave→Firepit artist-asset bridge, built in phases. Design direction approved (unified typed elements; artist auto-populate = suggest-not-force; tracks → cover-art element + audio Beat; create Spirits inline).
+
+- **Phase 1 (UI merge) DONE:** collapsed `2·Style` + `3·Subject` → one **`2·Elements`** panel (References + Spirit + Artist under one header); renumbered Facts→3, Direction→4. Pure relabel/regroup — no input IDs moved, `gatherForgeContext` untouched. Verified on localhost (1·Format → 2·Elements → 3·Facts → 4·Direction), div 285/285. Shot: `scratch/forge_elements_p1_flyer.png`. NOT pushed.
+- **NEXT:** Phase 2 = Cave bridge (artist → suggest avatar + track cover-art as elements); Phase 3 = tracks as audio/Beat.

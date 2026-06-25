@@ -483,7 +483,10 @@
           <!-- Standard stack: Still / Carousel / Flyer. Hidden when Animation
                is the format (Animation runs the generative i2v sub-form below). -->
           <div id="forgeStandardStack">
-          <div class="forge-stack-label">2 · Style</div>
+          <!-- Elements (forge_elements.md): one panel for everything that goes IN —
+               references (role-tagged), a Spirit, and an Artist. Phase 1 = visual
+               merge of the old 2·Style + 3·Subject; gatherForgeContext unchanged. -->
+          <div class="forge-stack-label">2 · Elements</div>
           <div class="forge-input-group">
             <label class="forge-label">References <span style="color:var(--muted);font-weight:normal">(up to 5 — first sets the style)</span></label>
             <div class="forge-dropzone" role="button" tabindex="0" aria-label="Add reference image"
@@ -496,9 +499,8 @@
             <div id="forgeRefImagesPreview" class="forge-ref-thumbs"></div>
             <div id="forgeRefImagesError" class="forge-ref-error" style="display:none"></div>
           </div>
-          <div class="forge-stack-label">3 · Subject</div>
-          <!-- Spirit — an animated cartoon-like character asset (glossary, 2026-06-12).
-               The engine draws Spirits; real people travel as WHO refs (carbon copy). -->
+          <!-- Spirit — a saved character/avatar element (glossary, 2026-06-12).
+               The engine draws Spirits; real people travel as WHO refs. -->
           <div class="forge-input-group" id="forgeSpiritRow">
             <label class="forge-label">Spirit</label>
             <div class="forge-brand-selector">
@@ -510,10 +512,10 @@
           </div>
           <div id="forgeSubjectFields"></div>
 
-          <div class="forge-stack-label" id="forgeFactsLabel">4 · Facts</div>
+          <div class="forge-stack-label" id="forgeFactsLabel">3 · Facts</div>
           <div id="forgeFactFields"></div>
 
-          <div class="forge-stack-label">5 · Direction</div>
+          <div class="forge-stack-label">4 · Direction</div>
           <div class="forge-input-group">
             <label class="forge-label">Direction <span style="color:var(--muted);font-weight:normal">(what to make — layout, type, mood)</span></label>
             <textarea class="input" id="forgeFreeform" rows="4" placeholder="e.g. headliner huge up top, photo bottom-left, black &amp; white, acid warehouse energy"></textarea>

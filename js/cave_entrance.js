@@ -286,6 +286,22 @@
     // until the user clicks a toggle.
     startPulseLFO();
 
+    // Browsers block audio until a user gesture, so the ambient drone never
+    // reached anyone who didn't hunt for the {SOUND} toggle ("I can't hear the
+    // Soundcave noise" — esp. on mobile, where the toggle is a small chip).
+    // Kick it in on the FIRST tap/click anywhere — the entrance you'd expect —
+    // unless the user has explicitly muted before. The toggle still mutes, and
+    // a mute persists. Gesture-compliant (works on iOS); fires at most once.
+    let _ambientPrimed = false;
+    function primeAmbient() {
+      if (_ambientPrimed) return;
+      _ambientPrimed = true;
+      let muted = false;
+      try { muted = localStorage.getItem(STORAGE_KEY) === '0'; } catch (_) {}
+      if (!muted && !droneNodes) { try { window.caveSound.set(true); } catch (_) {} }
+    }
+    window.addEventListener('pointerdown', primeAmbient, { once: true, passive: true });
+
     // Glitch every major CTA on hover, site-wide. Delegated on document so it
     // also covers buttons rendered dynamically (e.g. the plan-selector cards).
     // Add `.glitch-cta` to opt any other button in. Disabled buttons are skipped.

@@ -1197,3 +1197,21 @@ The Elements feature (UI merge + Cave→Firepit bridge) is live on prod. Getting
 - **Shipped + verified LIVE on prod:** merged `forge-elements-ship` → `main` (ff `25ffaa3..75a62bc`), pushed (Vercel), `railway up`. Live checks (authed): `/api/artist/konzo` → avatar + 2 track artworks; `/api/proxy-image` of a real sndcdn image → **data-URL (200)**; SSRF guard on `169.254.169.254` → **400**; invite-gate intact (`/api/billing/plans` 200, `/api/me` 401). Frontend serves `2·Elements`.
 - **Lesson (again):** one session per repo, or worktrees. I should have re-checked `git branch` before the second commit. Branch cleanup done (mine deleted; `free-trial-invite-gate` left for the other session).
 - **NEXT:** Elements Phase 3 (artist tracks → Animation audio/Beat).
+
+## [2026-06-25] Mobile elevation pass — native-grade phone UX (branch `mobile-ux`)
+
+Goal (Doug): make S0UNDCAV3 "fit for purpose on mobile … show people on the move," same essence/branding, on a worktree off `main`. The app was already *functional* on phones (stage-1 shell + scattered component media queries); this pass takes it functional → native-grade. All changes additive inside `@media (max-width:720px)`/`560px`, built on `tokens.css`, palette law intact, **desktop untouched** (verified `mobileTabbar` = `display:none` @1280px). Files: `css/mobile.css` (expanded), `index.html` (tab-bar markup). Full detail + follow-ups in [spec/mobile_responsive.md → Build log](spec/mobile_responsive.md).
+
+- **Icon bottom tab bar** (cave/firepit/person `sc-icon`s inlined as HTML — the `data-icon` hydrate path renders SVG-namespaced nodes CSS can't size, so they came out 0×0; inline fixes it), active-glow + indicator, backdrop blur, safe-area, tap feedback.
+- **Header fix:** the ≤700px `.htab span:not(.count){display:none}` rule was blanking the sound toggle into an empty box — restored as a compact ghost control; logo shrunk; notch-safe top.
+- **Segmented scroll sub-nav pills · ≥46px touch targets · 16px inputs (no iOS zoom) · full-width primary CTAs · legibility bump.**
+- **Forge hero:** sticky FORGE/ANIMATE CTA above the tab bar (core action always thumb-reachable).
+- **Full-screen sheets** for the artist panel + centred modals; full-width Trail Map drawer; trimmed cavernous gaps.
+- **Verified** via headless-Chromium harness at 390×844 across all 9 screens + the panel sheet (`scratch/mobile_shots.js`, gitignored). Not deployed; built in a worktree off `main` for review.
+
+## [2026-06-25] Mobile fixes — dead cave sub-nav + silent ambient drone (branch `mobile-ux`)
+
+Two bugs Doug hit testing the preview on his phone.
+
+- **"Tabs in the cave don't work."** Root cause: the empty-state overlay `.stack-empty` (`position:absolute; inset:0; z-index:10`) anchors to the nearest *positioned* ancestor — but `.container` is unpositioned, so on an **empty cave** the overlay escaped to fill the whole viewport, an invisible layer swallowing every cave sub-nav tap (header + bottom tab bar survived — higher z-index). Doug's cave is empty, so he got it square-on. Fix (mobile.css, ≤720px): `.cave-hero{position:relative}` bounds the overlay to the hero box (below the pills), `.cave-subnav{position:relative;z-index:30}` as belt-and-braces. Verified: `elementFromPoint` over the FORAGING pill now returns the button (was `.stack-empty`); a real `.tap()` fires `switchTab:foraging`.
+- **"Can't hear the Soundcave noise."** Not a regression — ambient sound starts OFF by design (autoplay is gesture-gated) and only ever started if you found the `{SOUND}` toggle (a small chip on mobile). Fix (`cave_entrance.js`): start the drone on the **first `pointerdown` anywhere**, unless explicitly muted (`sc_sound_on === '0'`); fires once; the toggle still mutes and persists. Audio asset is committed + serves 200, so no 404. Also bumped the mobile sound toggle to a 44px target. **Behaviour change (global, not just mobile) — flag for Doug:** the drone now auto-starts on first interaction; revert to toggle-only if unwanted.

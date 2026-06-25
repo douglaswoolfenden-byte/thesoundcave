@@ -4,14 +4,14 @@
 
    Convention: ONE primary breakpoint — 720px (phones + phablets).
    A 560px secondary tier handles the tightest reflows.
-   This file supersedes the scattered ad-hoc @media queries; new
-   mobile rules go HERE, not inline in component CSS.
+   Built entirely on tokens.css variables + the palette law
+   (locked-dark, single orange accent). No new colours, no hex.
+
+   This is a RETROFIT, not a reskin: the same S0UNDCAV3 shrunk to a
+   thumb. Native bottom tab bar (icon + label), sticky CRT header,
+   segmented sub-nav pills, ≥44px touch targets, sheet-style panels.
 
    Spec: wiki/spec/mobile_responsive.md
-   Build order:
-     (1) app shell + bottom tab bar   ← this commit
-     (2) Forge/Firepit  (3) Cave  (4) Clan  (5) Foraging
-     (6) Footprints     (7) artist panel + modals
    ============================================================ */
 
 /* Bottom tab bar is desktop-hidden; the media query turns it on. */
@@ -22,69 +22,229 @@
    ───────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
 
-  /* ---- App shell -------------------------------------- */
+  /* ===========================================================
+     1 · APP SHELL — header + scroll container
+     =========================================================== */
   /* The desktop header tab-strip is replaced by the bottom bar.
-     Keep the brand logo (left) + sound toggle (right) on one row. */
+     Header becomes a slim sticky CRT bar: wordmark left, sound right. */
   .header-tabs { display: none; }
 
   header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
+    position: sticky; top: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: space-between;
     gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    /* clear the notch / status bar */
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+    background: rgba(10,10,10,0.82);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
+    backdrop-filter: blur(14px) saturate(1.1);
+    border-bottom: 1px solid var(--border);
   }
 
-  /* Content gutter shrinks; bottom pad clears the fixed bar. */
-  .container { padding: var(--space-4) var(--space-4) 88px; }
+  /* Brand mark shrinks from the desktop 68px tab into a clean logo. */
+  .htab-brand {
+    min-height: 0; min-width: 0; padding: 0;
+    background: transparent; border: none;
+  }
+  .htab-brand-logo { height: 30px; width: auto; display: block; }
 
-  /* ---- Bottom tab bar --------------------------------- */
+  /* Sound toggle: the desktop rule hides .htab labels ≤700px, which left an
+     empty bordered box. Re-show it as a compact ghost control (brand microcopy). */
+  .app-sound-toggle.htab {
+    min-height: 44px; min-width: 0; align-self: center;
+    padding: var(--space-2) var(--space-3);
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 2px;
+  }
+  .app-sound-toggle.is-on { color: var(--color-accent); border-color: var(--color-accent); }
+  .app-sound-toggle .htab-label { display: block !important; font-size: 10px; }
+  .app-sound-toggle.is-on { color: var(--color-accent); border-color: var(--color-accent); }
+
+  /* Content gutter shrinks; bottom pad clears the fixed tab bar + home bar. */
+  .container {
+    padding: var(--space-4) var(--space-4);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    max-width: 100%;
+  }
+  /* Belt-and-braces: nothing should push the page sideways. */
+  html, body { overflow-x: hidden; }
+
+  /* ===========================================================
+     2 · BOTTOM TAB BAR — the primary nav (icon + label)
+     =========================================================== */
   .mobile-tabbar {
     display: flex;
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 250;            /* above content (≤200); below panel(300)/modals(900)/splash(9999) */
-    background: var(--card);
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 250;            /* above content(≤200); below panel(300)/modals(900)/splash(9999) */
+    background: rgba(10,10,10,0.97);
+    -webkit-backdrop-filter: blur(18px) saturate(1.15);
+    backdrop-filter: blur(18px) saturate(1.15);
     border-top: 1px solid var(--border);
-    /* iPhone home-indicator safe area */
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.55);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .mobile-tab {
+    position: relative;
     flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 52px;        /* ≥ 44px touch target */
-    background: none;
-    border: none;
-    border-top: 2px solid transparent;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    min-height: 58px;
+    background: none; border: none;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 9.5px;
     letter-spacing: var(--tracking-mono);
     text-transform: uppercase;
     cursor: pointer;
-    transition: color var(--motion-fast) var(--ease-soft);
     -webkit-tap-highlight-color: transparent;
+    transition: color var(--motion-fast) var(--ease-soft),
+                transform var(--motion-fast) var(--ease-soft);
   }
-  .mobile-tab.active {
-    color: var(--red);
-    border-top-color: var(--red);
+  .mobile-tab-ico { display: inline-flex; line-height: 0; }
+  .mobile-tab-ico .sc-icon { width: 23px; height: 23px; }
+  .mobile-tab-label { line-height: 1; }
+  .mobile-tab:active { transform: scale(0.92); }
+
+  /* Active: orange icon + label with a soft glow, plus a short top indicator. */
+  .mobile-tab.active { color: var(--color-accent); }
+  .mobile-tab.active .mobile-tab-ico {
+    filter: drop-shadow(0 0 7px rgba(255,69,0,0.55));
+  }
+  .mobile-tab.active::before {
+    content: ''; position: absolute; top: 0; left: 50%;
+    width: 26px; height: 2px; transform: translateX(-50%);
+    background: var(--color-accent);
+    box-shadow: 0 0 8px rgba(255,69,0,0.7);
   }
 
-  /* ---- Sub-navs → horizontal scrollable pill row ------ */
-  /* JS controls display (none/flex); we only add scroll behaviour. */
+  /* ===========================================================
+     3 · SUB-NAV → segmented, horizontally-scrollable pill row
+     =========================================================== */
   .cave-subnav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;        /* Firefox */
+    display: flex; flex-wrap: nowrap;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     gap: var(--space-2);
-    margin-bottom: var(--space-4);
+    margin: 0 calc(-1 * var(--space-4)) var(--space-4);
+    padding: 0 var(--space-4) var(--space-1);
+    /* fade the right edge so it reads as scrollable */
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+            mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
   }
-  .cave-subnav::-webkit-scrollbar { display: none; }   /* WebKit */
+  .cave-subnav::-webkit-scrollbar { display: none; }
   .cave-subtab {
-    flex: 0 0 auto;
-    white-space: nowrap;
+    flex: 0 0 auto; white-space: nowrap;
+    min-height: 38px; padding: var(--space-2) var(--space-4);
+    border-radius: 999px;
+    border: 1px solid var(--border-lt);
+    background: var(--card);
+    -webkit-tap-highlight-color: transparent;
   }
+  .cave-subtab.active {
+    background: var(--red-faint);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* ===========================================================
+     4 · TYPOGRAPHY — legibility bump for arm's-length reading
+     =========================================================== */
+  /* Section intros / descriptions read a touch larger on glass. */
+  .section-sub, .forge-intro, .tab-intro p, .reflection-sub { font-size: 13px; line-height: 1.5; }
+  /* Big numeric values shouldn't dominate a narrow column. */
+  .panel-value { font-size: 30px !important; }
+
+  /* ===========================================================
+     5 · TOUCH TARGETS — inputs, selects, buttons, dropdowns ≥44px
+     16px input font stops iOS from zooming on focus.
+     =========================================================== */
+  .input, select.input, textarea.input,
+  .cave-login-input, .forge-dd-trigger, .plat-input {
+    min-height: 46px;
+    font-size: 16px;
+  }
+  textarea.input, .forge-output { min-height: 120px; }
+  select.input { min-height: 46px; }
+
+  .btn-red, .btn-outline, .action-btn, .icon-btn, .forge-dd-opt {
+    min-height: 46px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* Primary actions go full-width and bold on a phone. */
+  .btn-red { width: 100%; font-size: 13px; }
+  .forge-dd-menu { max-height: 60vh; overflow-y: auto; }
+
+  /* ===========================================================
+     6 · THE HERO — Forge (a promoter forging a flyer on a phone)
+     =========================================================== */
+  /* forge-grid already stacks at 900px; tighten the rhythm + make the
+     primary CTA a sticky, always-thumb-reachable bar. */
+  .forge-controls { position: static; }
+  .forge-canvas { min-height: 0; }
+  .forge-canvas #forgeOutputArea > .forge-loading { min-height: 240px; }
+
+  /* The FORGE / ANIMATE button sticks just above the tab bar so the core
+     action is one thumb-tap away no matter where you've scrolled the form. */
+  .forge-go {
+    position: sticky;
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    margin-top: var(--space-4);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+
+  /* ===========================================================
+     7 · RHYTHM — denser sections, no cavernous gaps on small glass
+     =========================================================== */
+  /* The dashboard centre stage is cinematic on desktop; on a phone trim it so
+     the stat rails aren't a full screen-height scroll away. */
+  .cave-stage { min-height: 360px !important; }
+  .cave-hero { gap: var(--space-4) !important; margin-bottom: var(--space-5); }
+  .cave-rail { gap: var(--space-3); }
+
+  /* CRITICAL TAP FIX: the empty-state overlay (`.stack-empty`, position:absolute
+     inset:0 z-index:10) is anchored to the nearest *positioned* ancestor. The
+     `.container` is unpositioned, so on an empty cave the overlay escaped to fill
+     the whole viewport — an invisible layer that swallowed every sub-nav tap
+     ("the tabs in the cave don't work"). Anchor it to the hero box instead, and
+     lift the sub-nav into its own stacking context so the pills always win. */
+  .cave-hero { position: relative; }
+  .cave-subnav { position: relative; z-index: 30; }
+
+  /* Generic card stacks: consistent vertical rhythm. */
+  .two-col, .stats-row, .metric-tiles { gap: var(--space-3); }
+
+  /* ===========================================================
+     8 · MODALS & PANELS → full-screen / bottom-sheet treatment
+     =========================================================== */
+  /* Artist detail panel: full-screen sheet, its own scroll, safe areas. */
+  .artist-panel {
+    width: 100vw !important; max-width: 100vw !important;
+    height: 100dvh; max-height: 100dvh;
+    border-left: none; border-radius: 0;
+  }
+  .panel-body, .artist-panel { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .panel-head { position: sticky; top: 0; z-index: 5; background: var(--card); }
+
+  /* Centred overlays (Forge modal, reflection editors, trail modal, stat modal)
+     become near-full-screen sheets instead of a cramped floating card. */
+  .modal-card, .stat-modal, .trail-modal, .reflection-card, .brand-editor {
+    width: 100vw !important; max-width: 100vw !important;
+    max-height: 92dvh; border-radius: 12px 12px 0 0;
+  }
+
+  /* The Trail Map stash drawer takes the full width when open. */
+  .trail-stash-drawer.open { width: 100vw !important; }
+}
+
+/* ─────────────────────────────────────────────────────────
+   TIGHTEST TIER  (≤ 560px) — small phones
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .container { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .cave-subnav { margin-left: calc(-1 * var(--space-3)); margin-right: calc(-1 * var(--space-3)); padding-left: var(--space-3); padding-right: var(--space-3); }
+  .mobile-tab-label { font-size: 9px; }
+  .panel-value { font-size: 26px !important; }
 }

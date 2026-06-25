@@ -970,9 +970,18 @@
      .mobile-tab so the existing switchTab() delegation (app.js
      ~L622) wires them automatically — no new nav logic. -->
 <nav class="mobile-tabbar" id="mobileTabbar" aria-label="Primary">
-  <button class="mobile-tab active" type="button" data-tab="cave">CAVE</button>
-  <button class="mobile-tab" type="button" data-tab="firepit">FIREPIT</button>
-  <button class="mobile-tab" type="button" data-tab="reflection">REFLECTION</button>
+  <button class="mobile-tab active" type="button" data-tab="cave">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20V12a9 9 0 0 1 18 0v8"/><path d="M3 20h18"/><path d="M8 20v-4M16 20v-4"/><circle cx="12" cy="11" r="0.8" fill="currentColor"/></svg></span>
+    <span class="mobile-tab-label">CAVE</span>
+  </button>
+  <button class="mobile-tab" type="button" data-tab="firepit">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1.5 3 3 4.5 3 7a3 3 0 0 1-6 0c0-1.2.6-2 1.5-3"/><path d="M5 20h14"/><path d="M6 20l3-4M18 20l-3-4M9 20l3-2.5L15 20"/></svg></span>
+    <span class="mobile-tab-label">FIREPIT</span>
+  </button>
+  <button class="mobile-tab" type="button" data-tab="reflection">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/><path d="M9 8h6"/></svg></span>
+    <span class="mobile-tab-label">REFLECTION</span>
+  </button>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════

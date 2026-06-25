@@ -1438,6 +1438,24 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .forge-dd-opt svg { width: 15px; height: 15px; color: var(--color-accent); flex-shrink: 0; }
 .forge-dd-opt:hover { background: var(--elevated); color: var(--color-accent); }
 
+/* Cave→Firepit asset suggestions (forge_elements.md Phase 2) — an artist's
+   SoundCloud avatar + track art, tap to add as a reference. */
+.forge-cave-assets { margin-top: var(--space-2); }
+.forge-cave-hint {
+  display: block; margin-bottom: var(--space-2);
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--color-accent);
+}
+.forge-cave-strip { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.forge-cave-asset {
+  width: 54px; height: 54px; padding: 0; overflow: hidden;
+  border: 1px solid var(--border-lt); border-radius: 4px;
+  background: var(--elevated); cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-soft);
+}
+.forge-cave-asset:hover { border-color: var(--color-accent); }
+.forge-cave-asset img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 /* Higgsfield-style left→right reflow (wiki/spec/forge_layout_higgsfield.md):
    a compact control rail (left) feeds a hero output canvas (right). The reading
    order IS the workflow — set up on the left, watch the result in the centre. */

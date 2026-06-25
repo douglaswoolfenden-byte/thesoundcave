@@ -1178,3 +1178,11 @@ Doug: "roll it out." Wrote the spec ([forge_elements.md](spec/forge_elements.md)
 
 - **Phase 1 (UI merge) DONE:** collapsed `2·Style` + `3·Subject` → one **`2·Elements`** panel (References + Spirit + Artist under one header); renumbered Facts→3, Direction→4. Pure relabel/regroup — no input IDs moved, `gatherForgeContext` untouched. Verified on localhost (1·Format → 2·Elements → 3·Facts → 4·Direction), div 285/285. Shot: `scratch/forge_elements_p1_flyer.png`. NOT pushed.
 - **NEXT:** Phase 2 = Cave bridge (artist → suggest avatar + track cover-art as elements); Phase 3 = tracks as audio/Beat.
+
+## [2026-06-25] Forge "Elements" — Phase 2: Cave→Firepit artist-asset bridge (branch forge-elements)
+
+The moat connection. Pick an artist in the Forge → a **"From the Cave — tap to add"** strip shows their SoundCloud avatar + top-track cover-art; tapping adds it as a reference (avatar→WHO, track art→STYLE).
+- **Backend:** `/api/artist/<username>` top_tracks now carry `artwork`; new `/api/proxy-image` (auth + host-whitelisted to `*.sndcdn.com`, 5MB cap, SSRF-safe) downloads a CDN image → data-URL so Cave assets join the data-URL-only ref pipeline without CORS.
+- **Frontend:** `loadArtistAssets()` (firepit.js) renders the strip on artist change; `addForgeRefFromUrl()` (forge_refs.js) proxies the tapped image → `_forgeRefImages`. Display via CDN URL (cross-origin `<img>` ok); only the add proxies. URLs upsized `-large`→`-t500x500`.
+- **Verified end-to-end (localhost, admin):** "konzo" → 3 assets (avatar t500x500 + 2 track arts) → tapped avatar → added as WHO data-URL ref (refs 0→1, no error). `py_compile`+`node --check` clean, div 285/285. Shot: `scratch/forge_elements_p2_cavebridge.png`. NOT pushed.
+- **Elements feature now P1+P2 = a coherent release.** Phase 3 (tracks as Animation audio/Beat) is the remaining piece. Bridge currently on single-artist formats (Still/Carousel); Flyer lineup could extend later.

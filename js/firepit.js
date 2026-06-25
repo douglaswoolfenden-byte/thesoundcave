@@ -413,11 +413,12 @@ function updateForgeFields() {
   if (ct.fields.includes('artist')) {
     subjectHtml += `<div class="forge-input-group">
       <label class="forge-label">Artist</label>
-      <select class="input" id="forgeArtist">
+      <select class="input" id="forgeArtist" onchange="loadArtistAssets(this.value)">
         <option value="">Select artist...</option>
         ${artists.map(a => `<option value="${esc(a.username)}">${esc(a.name)}</option>`).join('')}
         <option value="__custom">Custom (type below)</option>
       </select>
+      <div id="forgeArtistAssets" class="forge-cave-assets"></div>
     </div>`;
   }
 
@@ -501,6 +502,52 @@ async function checkApiStatus() {
     else { el.textContent = '🔴 Error'; el.style.color = 'var(--red)'; }
   } catch(e) {
     el.textContent = '⚫ Not running'; el.style.color = 'var(--muted)';
+  }
+}
+
+// Cave→Firepit bridge (forge_elements.md, Phase 2): when an artist is picked,
+// suggest THEIR SoundCloud assets (avatar + top track cover-art) as tappable
+// elements. Display uses the CDN URL directly (cross-origin <img> renders fine);
+// ADDING routes through the proxy (addForgeRefFromUrl) since refs need a data-URL.
+function _scUpsize(u) { return (u || '').replace('-large', '-t500x500'); }
+async function loadArtistAssets(username) {
+  const box = document.getElementById('forgeArtistAssets');
+  if (!box) return;
+  box.replaceChildren();
+  if (!username || username === '__custom') return;
+  const loading = document.createElement('span');
+  loading.className = 'forge-cave-hint';
+  loading.textContent = 'Loading their assets…';
+  box.appendChild(loading);
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/artist/${encodeURIComponent(username)}`);
+    const a = await r.json();
+    const items = [];
+    if (a.avatar_url) items.push({ url: _scUpsize(a.avatar_url), role: 'who', note: a.display_name || username });
+    (a.top_tracks || []).forEach(t => { if (t.artwork) items.push({ url: _scUpsize(t.artwork), role: 'style', note: t.title || 'track art' }); });
+    box.replaceChildren();
+    if (!items.length) return;
+    const hint = document.createElement('div');
+    hint.className = 'forge-cave-hint';
+    hint.textContent = 'From the Cave — tap to add';
+    box.appendChild(hint);
+    const strip = document.createElement('div');
+    strip.className = 'forge-cave-strip';
+    items.forEach(it => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'forge-cave-asset';
+      btn.title = `Add ${it.note} (${it.role.toUpperCase()})`;
+      const img = document.createElement('img');
+      img.src = it.url; img.alt = it.note; img.loading = 'lazy';
+      img.onerror = () => { btn.style.display = 'none'; };
+      btn.appendChild(img);
+      btn.addEventListener('click', () => addForgeRefFromUrl(it.url, it.role, it.note));
+      strip.appendChild(btn);
+    });
+    box.appendChild(strip);
+  } catch (e) {
+    box.replaceChildren();   // suggestions are a bonus — never block the form
   }
 }
 

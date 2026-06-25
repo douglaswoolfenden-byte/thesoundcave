@@ -1990,6 +1990,7 @@ def artist_stats(username):
         'plays': t.get('playback_count') or 0,
         'likes': t.get('likes_count') or t.get('favoritings_count') or 0,
         'date': (t.get('created_at') or '')[:10],
+        'artwork': t.get('artwork_url') or '',   # SoundCloud cover art → Forge Elements
     } for t in sorted(tracks, key=lambda t: t.get('playback_count') or 0, reverse=True)[:5]]
 
     record = {
@@ -2016,6 +2017,40 @@ def artist_stats(username):
     location = ', '.join([p for p in (city, country) if p])
     return jsonify({**record, 'top_tracks': top_tracks, 'city': city, 'country': country,
                     'location': location, 'cached': False, 'age_seconds': 0})
+
+
+@app.route('/api/proxy-image', methods=['GET'])
+def proxy_image():
+    """Download a SoundCloud CDN image server-side and return it as a data-URL.
+
+    The Forge reference system only accepts data-URLs, and the browser can't
+    fetch sndcdn images to base64 them (CORS). So Cave artist assets (avatar /
+    track art) come through here. Host-whitelisted to SoundCloud to block SSRF.
+    """
+    uid, err = _require_user()
+    if err:
+        return err
+    url = (request.args.get('url') or '').strip()
+    host = (urlparse(url).hostname or '').lower()
+    if not (host == 'sndcdn.com' or host.endswith('.sndcdn.com')):
+        return jsonify({'error': 'only SoundCloud CDN images are allowed'}), 400
+    try:
+        # allow_redirects=False so a whitelisted host can't 302 us onward to an
+        # internal address (the redirect-following SSRF the review flagged); only a
+        # direct 200 from the SoundCloud CDN is served.
+        r = http_requests.get(url, timeout=10, allow_redirects=False)
+        if r.status_code != 200:
+            return jsonify({'error': 'image unavailable'}), 502
+        ctype = (r.headers.get('Content-Type') or 'image/jpeg').split(';')[0].strip()
+        if not ctype.startswith('image/'):
+            return jsonify({'error': 'not an image'}), 400
+        data = r.content
+        if len(data) > REF_IMAGES_MAX_BYTES:
+            return jsonify({'error': 'image too large'}), 400
+        b64 = base64.b64encode(data).decode()
+        return jsonify({'data': f'data:{ctype};base64,{b64}'})
+    except Exception as e:
+        return jsonify({'error': f'fetch failed: {e}'}), 502
 
 
 # ── Scheduled searches store (committed JSON the weekly Action runs) ──────

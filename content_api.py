@@ -8,9 +8,11 @@ import re
 import json
 import time
 import base64
+import hmac
+import hashlib
 from datetime import datetime, timezone
-from urllib.parse import urlparse
-from flask import Flask, request, jsonify, g
+from urllib.parse import urlparse, urlencode
+from flask import Flask, request, jsonify, g, redirect as flask_redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
@@ -2055,40 +2057,22 @@ def artist_stats(username):
 
 
 # ── Liked tracks ──────────────────────────────────────────────────────────────
-# Returns tracks that the Cave SC account has liked for a given artist.
-# Requires SOUNDCLOUD_MY_USER_ID in .env (your SoundCloud numeric user ID).
-# Uses the existing client-credentials token — works for public profiles.
-# 10-min in-memory cache per artist to avoid hammering the SC API.
+# Returns tracks the viewer has liked on SoundCloud for a given artist.
+# Per-user: if the caller has connected their SC account (user_soundcloud_connections),
+# uses their token + their SC user id. Falls back to the admin SOUNDCLOUD_MY_USER_ID
+# (duggom8) when the caller has no SC connection (e.g. unauthenticated read).
+# Spec: wiki/spec/soundcloud_user_oauth.md
 
-_liked_tracks_cache = {}  # {username: (fetched_at_epoch, [track, ...])}
+_liked_tracks_cache = {}  # {(sc_user_id, artist_username): (fetched_at, [track, ...])}
 
-@app.route('/api/liked-tracks/<username>', methods=['GET'])
-def liked_tracks(username):
-    my_user_id = os.getenv('SOUNDCLOUD_MY_USER_ID', '').strip()
-    if not my_user_id:
-        return jsonify({'tracks': [], 'configured': False})
 
-    now = time.time()
-    cached = _liked_tracks_cache.get(username)
-    if cached and (now - cached[0]) < ARTIST_TTL_SECONDS:
-        return jsonify({'tracks': cached[1], 'cached': True})
-
-    # Resolve the artist username to their SC user_id for filtering
-    artist = sc_resolve_user(username)
-    if not artist:
-        return jsonify({'tracks': []})
-    artist_id = str(artist.get('id', ''))
-
-    token = get_sc_token()
-    if not token:
-        return jsonify({'tracks': [], 'error': 'no SC token'})
-
+def _fetch_liked_tracks_for(sc_user_id, artist_id, token):
+    """Scan up to 1000 liked tracks for sc_user_id and return those by artist_id."""
     headers = {'Authorization': f'OAuth {token}'}
-    url = f'https://api.soundcloud.com/users/{my_user_id}/likes/tracks'
+    url = f'https://api.soundcloud.com/users/{sc_user_id}/likes/tracks'
     params = {'limit': 200}
     tracks = []
-
-    for _ in range(5):  # max 1000 liked tracks scanned
+    for _ in range(5):
         try:
             r = http_requests.get(url, params=params, headers=headers, timeout=15)
         except Exception:
@@ -2100,8 +2084,7 @@ def liked_tracks(username):
         data = r.json()
         collection = data.get('collection', data if isinstance(data, list) else [])
         for t in (collection or []):
-            user = t.get('user', {})
-            if str(user.get('id', '')) == artist_id:
+            if str((t.get('user') or {}).get('id', '')) == artist_id:
                 tracks.append({
                     'title': t.get('title') or '',
                     'url': t.get('permalink_url') or '',
@@ -2115,9 +2098,234 @@ def liked_tracks(username):
             break
         url = next_href
         params = None
+    return tracks
 
-    _liked_tracks_cache[username] = (now, tracks)
+
+@app.route('/api/liked-tracks/<username>', methods=['GET'])
+def liked_tracks(username):
+    # Determine which SC user + token to use
+    caller_uid = _resolve_user_id()  # None when unauthenticated (public view)
+    sc_user_id = None
+    sc_token = None
+
+    if caller_uid:
+        # Try the caller's own SC connection first
+        try:
+            rows = (
+                _stash_client()
+                .table('user_soundcloud_connections')
+                .select('sc_user_id, access_token')
+                .eq('user_id', caller_uid).limit(1).execute().data or []
+            )
+            if rows:
+                sc_user_id = rows[0]['sc_user_id']
+                sc_token = rows[0]['access_token']
+        except Exception as e:
+            print(f'[liked-tracks] sc connection lookup failed: {e}')
+
+    # Fall back to admin duggom8 account when no user connection
+    if not sc_user_id:
+        sc_user_id = os.getenv('SOUNDCLOUD_MY_USER_ID', '').strip()
+        sc_token = get_sc_token()
+
+    if not sc_user_id or not sc_token:
+        return jsonify({'tracks': [], 'configured': False})
+
+    now = time.time()
+    cache_key = (sc_user_id, username)
+    cached = _liked_tracks_cache.get(cache_key)
+    if cached and (now - cached[0]) < ARTIST_TTL_SECONDS:
+        return jsonify({'tracks': cached[1], 'cached': True})
+
+    artist = sc_resolve_user(username)
+    if not artist:
+        return jsonify({'tracks': []})
+    artist_id = str(artist.get('id', ''))
+
+    tracks = _fetch_liked_tracks_for(sc_user_id, artist_id, sc_token)
+    _liked_tracks_cache[cache_key] = (now, tracks)
     return jsonify({'tracks': tracks, 'cached': False})
+
+
+# ── SoundCloud OAuth (per-user) ──────────────────────────────────────────────
+# Spec: wiki/spec/soundcloud_user_oauth.md (approved 2026-06-26)
+# Each user connects their own SC account; tokens live in user_soundcloud_connections.
+# State param = base64url(payload) + "." + HMAC-SHA256(payload, secret)
+# No extra DB table — stateless, expires in 10 minutes.
+
+_SC_OAUTH_CALLBACK = os.getenv(
+    'SOUNDCLOUD_REDIRECT_URI',
+    'https://soundcave-api-production.up.railway.app/api/auth/soundcloud/callback',
+)
+_SC_APP_FRONTEND = os.getenv(
+    'APP_FRONTEND_URL',
+    'https://douglaswoolfenden-byte.github.io/thesoundcave/',
+)
+
+
+def _sc_state_secret():
+    key = os.getenv('SUPABASE_SERVICE_KEY', '')
+    raw = key[:32].encode() if key else b''
+    return raw or b'soundcave-sc-oauth-fallback-key!'
+
+
+def _make_sc_state(user_id):
+    payload = base64.urlsafe_b64encode(
+        json.dumps({'u': user_id, 't': int(time.time())}).encode()
+    ).decode().rstrip('=')
+    sig = hmac.new(_sc_state_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    return f'{payload}.{sig}'
+
+
+def _verify_sc_state(state):
+    """Returns user_id string or None."""
+    try:
+        payload, sig = state.rsplit('.', 1)
+    except ValueError:
+        return None
+    expected = hmac.new(_sc_state_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        # Restore stripped padding
+        data = json.loads(base64.urlsafe_b64decode(payload + '=='))
+    except Exception:
+        return None
+    if time.time() - float(data.get('t', 0)) > 600:
+        return None
+    return data.get('u')
+
+
+@app.route('/api/auth/soundcloud/connect', methods=['GET'])
+def sc_oauth_connect():
+    """Return the SC authorize URL for the logged-in user."""
+    uid, err = _require_user()
+    if err:
+        return err
+    state = _make_sc_state(uid)
+    params = urlencode({
+        'client_id': SC_CLIENT_ID,
+        'redirect_uri': _SC_OAUTH_CALLBACK,
+        'response_type': 'code',
+        'scope': 'non-expiring',
+        'state': state,
+    })
+    return jsonify({'url': f'https://soundcloud.com/connect?{params}'})
+
+
+@app.route('/api/auth/soundcloud/callback', methods=['GET'])
+def sc_oauth_callback():
+    """SC redirects here after user approves. Exchanges code for tokens, stores in DB."""
+    code = request.args.get('code', '').strip()
+    state = request.args.get('state', '').strip()
+    error = request.args.get('error', '').strip()
+
+    if error:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error={error}')
+    if not code or not state:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=missing_params')
+
+    user_id = _verify_sc_state(state)
+    if not user_id:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=invalid_state')
+
+    # Exchange authorisation code for tokens (server-side; client_secret never sent to browser)
+    try:
+        tok_r = http_requests.post(
+            'https://api.soundcloud.com/oauth2/token',
+            data={
+                'grant_type': 'authorization_code',
+                'client_id': SC_CLIENT_ID,
+                'client_secret': SC_CLIENT_SECRET,
+                'redirect_uri': _SC_OAUTH_CALLBACK,
+                'code': code,
+            },
+            timeout=15,
+        )
+    except Exception as e:
+        print(f'[sc oauth] token exchange error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=token_exchange_failed')
+
+    if not tok_r.ok:
+        print(f'[sc oauth] token exchange {tok_r.status_code}: {tok_r.text[:300]}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=token_exchange_failed')
+
+    tok = tok_r.json()
+    access_token = tok.get('access_token', '')
+    refresh_token = tok.get('refresh_token', '')
+    scope = tok.get('scope', '')
+
+    # Fetch the user's SC profile to get their numeric id + permalink handle
+    try:
+        me_r = http_requests.get(
+            'https://api.soundcloud.com/me',
+            headers={'Authorization': f'OAuth {access_token}'},
+            timeout=10,
+        )
+    except Exception as e:
+        print(f'[sc oauth] /me fetch error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_fetch_failed')
+
+    if not me_r.ok:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_fetch_failed')
+
+    me_data = me_r.json()
+    sc_user_id = str(me_data.get('id', ''))
+    sc_username = me_data.get('permalink', '') or me_data.get('username', '')
+
+    if not sc_user_id or not sc_username:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_incomplete')
+
+    sb = _stash_client()
+    try:
+        sb.table('user_soundcloud_connections').upsert({
+            'user_id': user_id,
+            'sc_user_id': sc_user_id,
+            'sc_username': sc_username,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'scope': scope,
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }, on_conflict='user_id').execute()
+    except Exception as e:
+        print(f'[sc oauth] db upsert error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=db_write_failed')
+
+    print(f'[sc oauth] connected user {user_id[:8]} → @{sc_username}')
+    return flask_redirect(f'{_SC_APP_FRONTEND}?sc_connected=1')
+
+
+@app.route('/api/auth/soundcloud/status', methods=['GET'])
+def sc_oauth_status():
+    """Returns the logged-in user's SC connection status."""
+    uid, err = _require_user()
+    if err:
+        return err
+    sb = _stash_client()
+    rows = (
+        sb.table('user_soundcloud_connections')
+        .select('sc_user_id, sc_username, connected_at')
+        .eq('user_id', uid).limit(1).execute().data or []
+    )
+    if not rows:
+        return jsonify({'connected': False})
+    r = rows[0]
+    return jsonify({
+        'connected': True,
+        'sc_username': r['sc_username'],
+        'sc_user_id': r['sc_user_id'],
+        'connected_at': r['connected_at'],
+    })
+
+
+@app.route('/api/auth/soundcloud/disconnect', methods=['DELETE'])
+def sc_oauth_disconnect():
+    """Remove the logged-in user's SC connection."""
+    uid, err = _require_user()
+    if err:
+        return err
+    _stash_client().table('user_soundcloud_connections').delete().eq('user_id', uid).execute()
+    return jsonify({'ok': True})
 
 
 @app.route('/api/proxy-image', methods=['GET'])

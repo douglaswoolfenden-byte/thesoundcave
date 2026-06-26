@@ -372,6 +372,89 @@
 .reflection-pwd-form .cave-login-input { width: 100%; padding: 10px 12px; font-size: 13px; }
 .reflection-action[hidden] { display: none; }
 
+/* SoundCloud OAuth connection section */
+.reflection-sc {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-lt);
+  margin-bottom: 16px;
+}
+.reflection-sc-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.reflection-sc-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--secondary);
+}
+.reflection-sc-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--body);
+}
+.reflection-sc-status.connected { color: var(--color-accent); }
+.reflection-sc-msg {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--secondary);
+  padding: 4px 0;
+}
+.reflection-sc-msg.error { color: var(--red); }
+.reflection-sc-msg.success { color: var(--color-accent); }
+.reflection-sc-msg[hidden] { display: none; }
+.reflection-action-sc {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.reflection-action-sc:hover {
+  background: var(--hover);
+}
+
+/* SoundCloud OAuth onboarding nudge banner */
+.sc-oauth-nudge {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--body);
+  max-width: 520px;
+  width: calc(100vw - 48px);
+}
+.sc-nudge-cta {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sc-nudge-cta:hover { background: var(--hover); }
+.sc-nudge-dismiss {
+  background: none; border: none;
+  color: var(--secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.sc-nudge-dismiss:hover { color: var(--body); }
+
 /* Billing modal (Phase D) */
 .billing-modal[hidden] { display: none !important; }
 .billing-modal {

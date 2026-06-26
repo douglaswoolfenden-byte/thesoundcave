@@ -2164,9 +2164,12 @@ _SC_APP_FRONTEND = os.getenv(
 
 
 def _sc_state_secret():
-    key = os.getenv('SUPABASE_SERVICE_KEY', '')
-    raw = key[:32].encode() if key else b''
-    return raw or b'soundcave-sc-oauth-fallback-key!'
+    # Prefer a dedicated secret; fall back to the service key if not set.
+    # Never returns an empty or hardcoded value — raises instead.
+    secret = os.getenv('SC_OAUTH_STATE_SECRET') or os.getenv('SUPABASE_SERVICE_KEY', '')[:32]
+    if not secret:
+        raise RuntimeError('[sc oauth] SC_OAUTH_STATE_SECRET not configured')
+    return secret.encode() if isinstance(secret, str) else secret
 
 
 def _make_sc_state(user_id):

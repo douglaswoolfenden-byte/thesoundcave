@@ -41,19 +41,15 @@ ADMIN_EMAILS = {
     if e.strip()
 }
 
-# Free-trial invite gate (2026-06-25). New accounts start with 0 credits (see
-# db/0020); trial credits are gifted ONLY by redeeming a valid code, verified
-# server-side here. Gating the gift (not signup) is what actually protects the
-# fal balance — the Supabase anon key is public, so signup itself can't be gated
-# in the browser. Missing INVITE_CODES = nothing redeemable = safe default.
-import hmac, time as _time
+# Free-trial invite gate. New accounts start with 0 credits (see db/0020); trial
+# credits are gifted ONLY by redeeming a valid code (see /api/redeem-invite). Gating
+# the gift (not signup) is what protects the fal balance — the Supabase anon key is
+# public, so signup itself can't be gated in the browser. As of db/0021 codes live in
+# the invite_codes table (per-friend, single-use) — the old env INVITE_CODES shared
+# pool is superseded. Spec: wiki/spec/invite_codes_per_friend.md.
+import time as _time
 from collections import defaultdict as _defaultdict
-INVITE_CODES = {
-    c.strip().upper()                       # codes are case-insensitive
-    for c in os.getenv('INVITE_CODES', '').split(',')
-    if c.strip()
-}
-FREE_TRIAL_CREDITS = int(os.getenv('FREE_TRIAL_CREDITS', '100'))  # non-expiring gift size
+FREE_TRIAL_CREDITS = int(os.getenv('FREE_TRIAL_CREDITS', '50'))  # default grant; per-code value overrides
 
 # Tiny in-memory per-IP rate limiter for the invite-redeem endpoint (its only
 # attack surface: farming the gift). No new dependency; resets on restart. For a
@@ -1381,11 +1377,14 @@ def me():
 
 @app.route('/api/redeem-invite', methods=['POST'])
 def redeem_invite():
-    """Gift the free-trial credits in exchange for a valid invite code.
+    """Gift the free-trial credits in exchange for a valid, unused invite code.
 
     The gate is here (server-side), not on signup: a fresh account has 0 credits
-    and can't generate, so it costs nothing until a code is redeemed. One claim
-    per account (users.trial_claimed). Rate-limited per IP to blunt code-leak farming."""
+    and can't generate, so it costs nothing until a code is redeemed. Codes live in
+    the invite_codes table and are single-use *globally* (redeemed_by set once,
+    atomically) — a leaked code is already spent. An account may claim at most one
+    trial (users.trial_claimed). Rate-limited per IP to blunt guessing/farming.
+    Spec: wiki/spec/invite_codes_per_friend.md."""
     uid, err = _require_user()
     if err:
         return err
@@ -1394,25 +1393,38 @@ def redeem_invite():
     code = ((request.get_json(silent=True) or {}).get('code') or '').strip().upper()
     if not code:
         return jsonify({'error': 'code_required'}), 400
-    # Constant-time compare against the allowlist (avoids timing oracles).
-    if not any(hmac.compare_digest(code, c) for c in INVITE_CODES):
-        return jsonify({'error': 'invalid_code'}), 403
     sb = _stash_client()
-    # Atomic one-time claim: only the request that flips false→true gets to grant.
-    claim = sb.table('users').update({'trial_claimed': True}) \
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # 1) Claim the CODE first (atomic, single-use): only the request that flips a
+    #    still-open code (redeemed_by IS NULL) to this user wins. Unknown OR already
+    #    -used both return the same 403 → no enumeration of which codes exist. The
+    #    account is untouched on a bad code, so a typo costs the user nothing.
+    code_claim = sb.table('invite_codes') \
+        .update({'redeemed_by': uid, 'redeemed_at': now_iso}) \
+        .eq('code', code).is_('redeemed_by', 'null').execute()
+    if not code_claim.data:
+        return jsonify({'error': 'invalid_code'}), 403
+    grant_amount = code_claim.data[0].get('credits') or FREE_TRIAL_CREDITS
+    # 2) Claim the ACCOUNT (atomic, one trial per account). If it already claimed,
+    #    don't waste this fresh code — roll it back to open.
+    acct_claim = sb.table('users').update({'trial_claimed': True}) \
         .eq('id', uid).eq('trial_claimed', False).execute()
-    if not claim.data:
+    if not acct_claim.data:
+        sb.table('invite_codes').update({'redeemed_by': None, 'redeemed_at': None}) \
+            .eq('code', code).eq('redeemed_by', uid).execute()
         return jsonify({'error': 'already_claimed'}), 409
+    # 3) Grant. On failure, roll back BOTH so the user (and the code) can retry.
     try:
         new_balance = sb.rpc('grant_credits', {
-            'p_user_id': uid, 'p_amount': FREE_TRIAL_CREDITS, 'p_reason': 'free_trial_invite',
+            'p_user_id': uid, 'p_amount': grant_amount, 'p_reason': 'free_trial_invite',
         }).execute().data
     except Exception as e:
-        # Roll back the claim so the user isn't locked out of a retry.
         sb.table('users').update({'trial_claimed': False}).eq('id', uid).execute()
+        sb.table('invite_codes').update({'redeemed_by': None, 'redeemed_at': None}) \
+            .eq('code', code).eq('redeemed_by', uid).execute()
         print('grant on redeem failed:', e)
         return jsonify({'error': 'grant_failed'}), 500
-    return jsonify({'ok': True, 'granted': FREE_TRIAL_CREDITS, 'credits_balance': new_balance})
+    return jsonify({'ok': True, 'granted': grant_amount, 'credits_balance': new_balance})
 
 
 @app.route('/api/stash', methods=['GET'])

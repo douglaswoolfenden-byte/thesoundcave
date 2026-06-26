@@ -1,5 +1,24 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-26] Stash — square format-agnostic thumbnails (branch `stash-thumbnail-crop`)
+Doug flagged the Stash grid reading ragged: every Forge format outputs a different ratio (Still 1:1,
+Carousel 4:5, Flyer 9:16, Animation 16:9, Poster 2:3) and each card grew to its image's native height —
+a portrait flyer towered over a landscape still. The cover (`.stash-block-cover`) *intended* to crop to
+`16/10 + object-fit:cover`, but it was a **flexbox** with the `<img>` as a flex child at `height:100%`;
+the flex item's `min-height:auto` overrode the container `aspect-ratio`, so the box stretched to the
+image. (The crop was on `main` + deployed, yet visually dead — a CSS bug, not a stale deploy.)
+- **Decision (Doug):** square **1:1**, top-anchored crop (artwork is mostly portrait flyers → a landscape
+  slice loses the headline; square keeps the title zone). Click behaviour **unchanged** — opens the piece
+  in the Forge (the full uncropped render lives in the output panel; no lightbox built).
+- **Fix** (`css/style.css`, one shared rule): `aspect-ratio 16/10 → 1/1`, `overflow:hidden`, dropped flex;
+  media is now `position:absolute; inset:0` (can't stretch the box past 1:1 — root cause killed) with
+  `object-fit:cover; object-position:top center`; `.stash-block-noimg` re-centres itself. Overlay badges
+  (count / slide ×N / countdown / play ▶) already absolute → still paint on top. Fixes both tile builders
+  (`_postTileHTML` + `_campaignTileHTML`) at once. No JS, no grid-column change → responsiveness untouched.
+- **Verified:** standalone repro linking the real `style.css` with mismatched-ratio cards (1:1/4:5/9:16/
+  16:9/2:3 + no-image) → Playwright @1280px: all covers identical squares, title band survives every crop,
+  placeholder centres, console clean. Spec: [stash_thumbnail_crop.md](spec/stash_thumbnail_crop.md).
+
 ## [2026-06-26] Beat — waveform segment picker (branch `forge-beat-from-cave`)
 Pivot of "Elements Phase 3". The spec'd P3 ("pull a SoundCloud track's audio into the Beat") hit a
 wall: ripping the SC stream violates SC's API ToS (risks the access that powers scout/clan discovery)

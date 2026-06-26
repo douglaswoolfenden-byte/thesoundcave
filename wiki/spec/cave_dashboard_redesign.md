@@ -91,3 +91,11 @@ Doug: the floating corner panels overlapped the artist thumbnails; wanted it tid
 - **Hover dropdown removed:** deleted `showCaveTooltip`/`hideCaveTooltip`, the `#caveStatTooltip` element and its CSS. Hover is now pure-CSS ring+lift; click opens the modal. Wheel-cycle rebound from the whole hero to `.cave-stage` only (scrolling over a rail scrolls the page).
 - Right-rail stat panels right-align (facing inward); New Drops list stays left-aligned. Responsive: 2-narrower-rails < 1200px, single column (stage on top) < 920px.
 - Verified via Playwright (6 seeded artists): grid `250 / 585 / 250`, stage clips, 0 cards drawn over rails, click opens modal, wheel still cycles, 0 console errors.
+
+## Update 2026-06-26 — wheel-cycle robustness (branch `mural`)
+
+Doug: scrolling the diagonal window ran the **page** to the bottom instead of cycling the clan. Root cause in `attachStackInteractions` (`js/cave.js`): the wheel handler returned early on `Math.abs(delta) < 5` *before* `preventDefault`, so slow trackpad scrolls (tiny per-event deltas) fell through to the page; and a 220ms hard lock only advanced one card per burst (never "smooth").
+
+- **Capture model.** Listener moved back onto `#caveHero` but **gated on `e.target.closest('.cave-stage')`** — functionally the same contract as the 2026-06-10 "stage-only" rebind (rails still scroll the page), but robust to cards that visually overflow the stage box, since they're DOM children of `.cave-stage` regardless of pixel position. Over the window → `preventDefault` always fires (page can't move); over a rail → not consumed (page scrolls).
+- **Proportional cycling.** Replaced the lock with a delta accumulator: `_caveWheelAccum += delta`, step one card per `CAVE_WHEEL_STEP = 50`px. Gentle nudge = 1 artist, fast flick = several. Removed `_caveWheelLock`.
+- Verified (Playwright, 8 seeded artists): Δ50→+1, Δ150→+3, Δ−50→wrap, all `defaultPrevented=true`; Δ50 over a rail panel → stack unchanged, `defaultPrevented=false`. 0 console errors.

@@ -7,9 +7,10 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 let _caveFocusIndex = 0;
-let _caveWheelLock = false;
+let _caveWheelAccum = 0;            // accumulated wheel travel (px) toward the next card step
 let _caveClanCache = [];
 const STACK_VISIBLE_RADIUS = 4;
+const CAVE_WHEEL_STEP = 50;         // wheel px per one-card advance — lower = more sensitive
 
 const setHTML = (el, html) => { if (el) { el['inner' + 'HTML'] = html; } };
 
@@ -277,21 +278,33 @@ function updateStackMeta() {
 }
 
 function attachStackInteractions() {
-  // Wheel cycles the stack only when the cursor is over the CENTER stage —
-  // scrolling over the side rails scrolls the page (the rails own that gesture).
-  const stage = document.getElementById('caveStage') || document.getElementById('caveHero');
-  if (!stage || stage._stackBound) return;
-  stage._stackBound = true;
+  // The diagonal window OWNS the wheel: scrolling over it cycles the stack and
+  // never scrolls the page. Scrolling over the side rails/panels scrolls the
+  // page as normal. We bind on the whole hero and gate on `.cave-stage` (the
+  // window) via closest() — so even cards that visually overflow the stage box
+  // are still caught (they're DOM children of the stage), while the rails leak
+  // through to the page. Replaces the old fixed 5px threshold + 220ms lock,
+  // which let slow trackpad scrolls (tiny per-event deltas) fall through to the
+  // page — that's what scrolled you to the bottom instead of through the clan.
+  const hero = document.getElementById('caveHero');
+  if (!hero || hero._stackBound) return;
+  hero._stackBound = true;
 
-  stage.addEventListener('wheel', (e) => {
+  hero.addEventListener('wheel', (e) => {
     if (!_caveClanCache.length) return;
-    if (_caveWheelLock) { e.preventDefault(); return; }
-    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-    if (Math.abs(delta) < 5) return;
-    e.preventDefault();
-    _caveWheelLock = true;
-    cycleStack(delta > 0 ? 1 : -1);
-    setTimeout(() => { _caveWheelLock = false; }, 220);
+    if (!e.target.closest || !e.target.closest('.cave-stage')) return;  // rails → page scroll
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (!delta) return;
+    e.preventDefault();                       // over the window → page never moves
+    // Accumulate scroll travel and step one card per CAVE_WHEEL_STEP px, so a
+    // gentle nudge advances one artist and a fast flick advances several —
+    // smooth and proportional, no matter how the device chunks its deltas.
+    _caveWheelAccum += delta;
+    const dir = _caveWheelAccum > 0 ? 1 : -1;
+    while (Math.abs(_caveWheelAccum) >= CAVE_WHEEL_STEP) {
+      _caveWheelAccum -= dir * CAVE_WHEEL_STEP;
+      cycleStack(dir);
+    }
   }, { passive: false });
 
   document.addEventListener('keydown', (e) => {

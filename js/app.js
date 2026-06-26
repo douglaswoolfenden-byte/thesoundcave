@@ -525,8 +525,17 @@ function buildLineChart(datasets, labels, width=600, height=220, opts={}) {
     svg += `<line x1="${pl}" y1="${y}" x2="${pl+cw}" y2="${y}" stroke="#3a3a3a" stroke-width="1"/>`;
     svg += `<text x="${pl-6}" y="${parseFloat(y)+4}" fill="#888" font-size="9" text-anchor="end" font-family="DM Mono,monospace">${fmt(Math.round(v))}</text>`;
   }
-  // X labels
+  // X labels — thinned so the axis never crowds. As days accumulate, only every
+  // Nth date prints (daily → every 2 days → weekly → fortnightly → monthly…),
+  // chosen so at most ~maxLabels fit the chart's width. Snapshots are daily, so
+  // an index stride maps straight to a calendar frequency. Anchored to the LAST
+  // point so the most recent date always shows; every point still hovers a tip.
+  const maxLabels = Math.max(4, Math.min(10, Math.floor(cw / 70)));
+  const STRIDE_DAYS = [1, 2, 7, 14, 30, 60, 90, 180, 365];
+  let step = STRIDE_DAYS[STRIDE_DAYS.length - 1];
+  for (const s of STRIDE_DAYS) { if (Math.ceil(labels.length / s) <= maxLabels) { step = s; break; } }
   labels.forEach((l,i) => {
+    if ((labels.length - 1 - i) % step !== 0) return;   // keep only every `step`-th date
     svg += `<text x="${toX(i).toFixed(1)}" y="${pt+ch+18}" fill="#aaa" font-size="9" text-anchor="middle" font-family="DM Sans,sans-serif">${esc(l)}</text>`;
   });
   // Area + line + dots

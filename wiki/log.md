@@ -1238,3 +1238,31 @@ Two bugs Doug hit testing the preview on his phone.
 
 - **"Tabs in the cave don't work."** Root cause: the empty-state overlay `.stack-empty` (`position:absolute; inset:0; z-index:10`) anchors to the nearest *positioned* ancestor — but `.container` is unpositioned, so on an **empty cave** the overlay escaped to fill the whole viewport, an invisible layer swallowing every cave sub-nav tap (header + bottom tab bar survived — higher z-index). Doug's cave is empty, so he got it square-on. Fix (mobile.css, ≤720px): `.cave-hero{position:relative}` bounds the overlay to the hero box (below the pills), `.cave-subnav{position:relative;z-index:30}` as belt-and-braces. Verified: `elementFromPoint` over the FORAGING pill now returns the button (was `.stack-empty`); a real `.tap()` fires `switchTab:foraging`.
 - **"Can't hear the Soundcave noise."** Not a regression — ambient sound starts OFF by design (autoplay is gesture-gated) and only ever started if you found the `{SOUND}` toggle (a small chip on mobile). Fix (`cave_entrance.js`): start the drone on the **first `pointerdown` anywhere**, unless explicitly muted (`sc_sound_on === '0'`); fires once; the toggle still mutes and persists. Audio asset is committed + serves 200, so no 404. Also bumped the mobile sound toggle to a 44px target. **Behaviour change (global, not just mobile) — flag for Doug:** the drone now auto-starts on first interaction; revert to toggle-only if unwanted.
+
+
+## 2026-06-26 — Forge: carousel per-slide text, output meta panel, button fixes
+
+Branch: `forge-carousel-output-panel` (cut from `forge-output-ux`). Commit `f789e95`.
+
+**What landed:**
+- **Per-slide text inputs (Carousel)** — when Carousel format is selected, N labelled text inputs appear below the slide picker (one per slide). User types artist name, date, venue, event info etc. These replace the LLM-split `---` copy as the baked text on each image. Fall back to the old LLM-split behaviour if all inputs are blank. Values persist to Stash (`slideTexts`) and restore on edit.
+- **Output meta panel** — a persistent strip at the bottom of the output card shows: Direction text, Format+size (e.g. "Carousel · 4:5 · 5 slides"), Reference image thumbnails, and Model/quality (provider, model, dims). Populated as soon as FORGE is clicked; model fills in once the first image returns. Cleared on DISCARD.
+- **API indicator removed** — the "API: CONNECTED" green dot in the Firepit header is gone entirely. `checkApiStatus()` call removed from `renderFirepit()`; function kept.
+- **Button stuck-animation fix** — `saveToStash` now disables during async + re-enables in `finally`. `refineImage` and `makeBeatVideo` moved their button restore into `finally` blocks (previously after try/catch, could silently stay disabled on uncaught throws).
+- **DOWNLOAD ALL** — new action button for carousel sets; triggers sequential blob downloads, one file per slide (`soundcave_slide_01.png` … `_05.png` etc.), with 350ms gap between triggers.
+
+**Spec:** `wiki/spec/forge_carousel_per_slide.md`
+
+## [2026-06-26] Per-friend single-use invite codes — SHIPPED LIVE + verified (branch `invite-codes` → main)
+
+Replaced the env `INVITE_CODES` shared-pool gate (from [0012](decisions/0012_invite_gate_launch_safety.md)/[0020](../db/0020_free_trial_invite.sql)) with **per-friend, single-use, DB-backed codes** so Doug can send the live app to industry friends without a leaked code reopening the fal drain. Spec: [invite_codes_per_friend.md](spec/invite_codes_per_friend.md).
+
+- **Why:** a shared code is redeemable once *per account* but *unlimited times across accounts* → one leaked code = every new signup claims credits (drain returns) + no attribution. A code consumed by the **first account to redeem it** makes a leak already-spent, and records who/when.
+- **Migration `db/0021_invite_codes.sql`** (applied to prod): `invite_codes` table (code · label · credits · redeemed_by · redeemed_at), RLS on with no policies (service-role only — codes are secrets, never browser-readable).
+- **Backend** ([content_api.py](../content_api.py) `/api/redeem-invite`): claim the **code** first (atomic single-use, 403 on unknown *or* used → no enumeration; account untouched on a bad code), then claim the **account** (one trial each; roll back the code if already claimed so a fresh code isn't wasted → 409), then `grant_credits(code.credits)`; roll back both on grant failure. Default grant **100→50** (Doug's call). Frontend untouched (existing Claim flow still POSTs `{code}`). Killed dead `hmac` import + the superseded env `INVITE_CODES` constant.
+- **Scripts** (run from project root; never commit a live code — repo is public): [scripts/mint_invite.py](../scripts/mint_invite.py) `"email" --code X` issues a code (prints to terminal only); [scripts/list_invites.py](../scripts/list_invites.py) shows the open/redeemed ledger.
+- **Deployed:** merged `invite-codes` → `main` (merge `603cd12`; auto-merged content_api.py with the concurrent Beat session's `cb8cdfd`, both kept, compiles), pushed (gitleaks clean), `railway up`. Prod `/api/billing/plans` Free Trial now shows 50.
+- **Real-flow verified on prod** (throwaway codes + 2 throwaway accounts via admin generate_link, all cleaned up): valid redeem → **200 + 50 credits granted** (balance landed); same spent code → **403**; **second account, same code → 403 (single-use ✅)**; already-claimed account + fresh code → **409**, fresh code stayed **open** (rollback, no waste); per-IP limiter fired **429** after 8 hits. Every spec acceptance criterion met.
+- **First codes minted (open, 50cr each):** for georgeshipton8@gmail.com and josh@grail-talent.com. Code strings live only in the DB + Doug's records (not git).
+- **Also:** corrected stale local `.env` `FREE_TRIAL_CREDITS` 100→50 (it over-minted the first codes to 100; patched both rows back to 50). Railway has no override → defaults to 50, matching the plan card.
+- **Concurrent-session note:** built in isolated worktree `~/Documents/thesoundcave-invite-wt`; the Beat work landed on main mid-session — the merge combined cleanly. Worktree isolation paid off again.

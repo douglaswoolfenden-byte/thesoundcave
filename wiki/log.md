@@ -1,5 +1,35 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-26] Mural scroll smoothness + glitch-button restore (branch `cave-scroll-glitch-polish`)
+Two interaction-polish fixes Doug flagged (both Cave/site-wide, not Firepit → one branch).
+
+**1. Diagonal clan stack scrolled too fast / couldn't land one-by-one.** The 06-26 wheel rewrite used a
+delta accumulator that stepped one card per `CAVE_WHEEL_STEP` px **inside a `while` loop** with no
+cooldown. A trackpad flick fires a long momentum tail (~1s, ~850px), so a single flick stepped through
+**~17 cards** and the 600ms (`--motion-mid`) card glides never settled → fast + choppy.
+- Fix (`js/cave.js` wheel handler): step **at most one card per gesture** (`while`→`if`), reset the
+  accumulator after a step, and open a **480ms cooldown** (`_caveWheelLockUntil`, keyed off monotonic
+  `e.timeStamp`) during which momentum deltas are swallowed. Raised `CAVE_WHEEL_STEP` 50→80. `preventDefault`
+  still runs FIRST so the page never scrolls over the window (preserves the 06-26 rails behaviour).
+- Verified (Node sim, faithful copies of old vs new algo on realistic streams): FLICK 851px → OLD 17
+  steps / **NEW 1**; gentle NUDGE → 1/1 (responsiveness kept); DELIBERATE 2s scroll → OLD 12 / NEW 3
+  (paced ~1.5/sec so each glide lands). Arrow keys bypass the lock (unchanged). Tuning knobs: `CAVE_WHEEL_STEP`
+  (sensitivity) + `CAVE_WHEEL_COOLDOWN` (browse speed).
+
+**2. Glitch-scramble action buttons stayed corrupted on a quick skim.** The site-wide hover effect
+(`js/cave_entrance.js`) read the target word **live from `textContent`** (`dataset.glitchText || textContent`)
+on every hover — but `dataset.glitchText` was only ever set for the login button. So skimming across a
+`.btn-red`/`.btn-outline` mid-animation re-read the **half-scrambled text as the new target** and locked
+the garbage in permanently (`CLAN`→`C+}?`). Only resting the mouse long enough to finish the first run
+restored it.
+- Fix: capture the **pristine label once** before any scramble can run — `if (t.dataset.glitchText == null)
+  t.dataset.glitchText = t.textContent.trim()` — and always pass that as the target. caveGlitch always ends
+  on `write(target)`, so every hover now converges back to the original word regardless of duration.
+- Verified (A/B on the real `cave_entrance.js` via Playwright, synthetic mouseover/out): OLD → final
+  `C+}?` (corrupted, restored:false, glitchText never set); NEW → re-skim-mid-scramble, 6× rapid skims, and
+  single quick flick **all converge to `CLAN`** (sampled `CL_]`→`CLA+`→`CLAN`), glitchText captured.
+- Specs touched: [cave_dashboard_redesign.md](spec/cave_dashboard_redesign.md) (scroll), [splash_cave_entrance.md](spec/splash_cave_entrance.md) (glitch).
+
 ## [2026-06-26] Stash — square format-agnostic thumbnails (branch `stash-thumbnail-crop`)
 Doug flagged the Stash grid reading ragged: every Forge format outputs a different ratio (Still 1:1,
 Carousel 4:5, Flyer 9:16, Animation 16:9, Poster 2:3) and each card grew to its image's native height —

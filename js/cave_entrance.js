@@ -312,8 +312,16 @@
     document.addEventListener('mouseover', (e) => {
       const t = e.target.closest && e.target.closest(GLITCH_SELECTOR);
       if (!t || t.disabled || t._glitchHover) return;
+      // Anchor the target to the PRISTINE label, captured once before any
+      // scramble can run. Previously the target was read live from textContent,
+      // so a quick re-hover mid-animation read the half-scrambled text as the
+      // target and locked it in — the word stayed corrupted with code chars if
+      // you skimmed across the button instead of resting on it. With the label
+      // anchored in dataset.glitchText, every hover (however brief) resolves
+      // back to the original word, regardless of how long you hover.
+      if (t.dataset.glitchText == null) t.dataset.glitchText = t.textContent.trim();
       t._glitchHover = true;                       // guard: don't restart on inner re-enter
-      window.caveGlitch(t, (t.dataset.glitchText || t.textContent).trim());
+      window.caveGlitch(t, t.dataset.glitchText);
     });
     document.addEventListener('mouseout', (e) => {
       const t = e.target.closest && e.target.closest(GLITCH_SELECTOR);

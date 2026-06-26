@@ -8,9 +8,13 @@
 
 let _caveFocusIndex = 0;
 let _caveWheelAccum = 0;            // accumulated wheel travel (px) toward the next card step
+let _caveWheelLockUntil = 0;        // e.timeStamp until which further steps are swallowed (momentum guard)
 let _caveClanCache = [];
 const STACK_VISIBLE_RADIUS = 4;
-const CAVE_WHEEL_STEP = 50;         // wheel px per one-card advance — lower = more sensitive
+const CAVE_WHEEL_STEP = 80;         // wheel px to advance ONE card — higher = less twitchy
+const CAVE_WHEEL_COOLDOWN = 480;    // ms lock after a step: swallows trackpad momentum so one flick =
+                                    // one card and each 600ms card glide settles. Deliberate scrolling
+                                    // still paces ~2 cards/sec; ARROW keys bypass the lock entirely.
 
 const setHTML = (el, html) => { if (el) { el['inner' + 'HTML'] = html; } };
 
@@ -295,15 +299,19 @@ function attachStackInteractions() {
     if (!e.target.closest || !e.target.closest('.cave-stage')) return;  // rails → page scroll
     const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     if (!delta) return;
-    e.preventDefault();                       // over the window → page never moves
-    // Accumulate scroll travel and step one card per CAVE_WHEEL_STEP px, so a
-    // gentle nudge advances one artist and a fast flick advances several —
-    // smooth and proportional, no matter how the device chunks its deltas.
+    e.preventDefault();                       // ALWAYS first → page never moves over the window
+    // One card per deliberate scroll, NOT per pixel. A trackpad flick fires a
+    // long tail of momentum events; the old `while` loop stepped once per
+    // CAVE_WHEEL_STEP px of that tail, so a single flick blew through many
+    // artists and the 600ms card glides never settled (fast + choppy). Now a
+    // step opens a cooldown during which momentum deltas are swallowed
+    // (accumulator pinned at 0) → one flick = one card, and each glide lands.
+    if (e.timeStamp < _caveWheelLockUntil) { _caveWheelAccum = 0; return; }
     _caveWheelAccum += delta;
-    const dir = _caveWheelAccum > 0 ? 1 : -1;
-    while (Math.abs(_caveWheelAccum) >= CAVE_WHEEL_STEP) {
-      _caveWheelAccum -= dir * CAVE_WHEEL_STEP;
-      cycleStack(dir);
+    if (Math.abs(_caveWheelAccum) >= CAVE_WHEEL_STEP) {
+      cycleStack(_caveWheelAccum > 0 ? 1 : -1);
+      _caveWheelAccum = 0;
+      _caveWheelLockUntil = e.timeStamp + CAVE_WHEEL_COOLDOWN;
     }
   }, { passive: false });
 

@@ -51,6 +51,7 @@
 | **Beat** | Rights-gated audio attached to posts (clip picker + copyright gate). | `firepit_beat`, `hero_track_url` |
 | **Summon / Gathering** | A single event/campaign. | a row in `events` |
 | **Etchings / an Etching** | The curated style gallery inside Forge — pick a look ("an Etching") as a *starting anchor* for generation (deviate via refs + Additional Context). Each tile is backed by an owned "in-style-of" plate + fonts/palette; picking one injects a STYLE-role ref. | *(to build)* — Forge style picker; see [spec/style_gallery](spec/style_gallery.md) |
+| **Corner stamp** | The faint bottom-left mono stamp — `{coords} {S0UNDCAV3 / V<version>} {<Age>}`. Shown on the splash and on every app page. Version is read live from `/VERSION`; Age from `js/version.js`. | splash `.cave-stamp` (`#caveStamp`) + app-shell `.app-stamp` (`#appStamp`); painted by [`js/version.js`](../js/version.js) |
 
 ## Versioning terms (internal — not UI labels)
 

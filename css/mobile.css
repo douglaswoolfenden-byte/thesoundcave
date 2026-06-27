@@ -29,6 +29,10 @@
      Header becomes a slim sticky CRT bar: wordmark left, sound right. */
   .header-tabs { display: none; }
 
+  /* Persistent version stamp is desktop-only — the bottom tab bar owns
+     the bottom edge on phones. The splash stamp still shows pre-entry. */
+  .app-stamp { display: none; }
+
   header {
     position: sticky; top: 0; z-index: 200;
     display: flex; align-items: center; justify-content: space-between;

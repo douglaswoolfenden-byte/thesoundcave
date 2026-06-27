@@ -1,5 +1,11 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-27] Version surfaced in the corner stamp (branch `claude/version-tier-roadmap-l3nzhu`)
+Carried the live version into the UI off the back of the Ages system below. The splash bottom-left stamp went from a hardcoded `{S0UNDCAV3 / V1}` to `{51.5°N 0.1°W} {S0UNDCAV3 / V1.0.0} {FIRST AGE}`, and the **same stamp now persists bottom-left on every app page** (Doug's ask — "locked in at the bottom left on every page").
+- **Single source of truth:** new [`js/version.js`](../js/version.js) reads the root `/VERSION` file and paints any `[data-version]` / `[data-age]` slot → `V<number>` + the Age label. Splash (`#caveStamp`) and app-shell (`#appStamp`) share the markup contract, so one paint keeps both in sync. Bumping `/VERSION` updates the UI automatically; the Age is a one-line constant in `version.js` (bumps only at a graduation gate).
+- **App stamp** (`.app-stamp`, new in [css/style.css](../css/style.css)) lives **outside `.app-wrap`** — that ancestor has `transform: scale()`, which re-anchors `position: fixed` (same gotcha as corner-nav / mobile-tabbar). Fixed bottom-left, `pointer-events:none`, z 40 (below modals, hidden behind the splash overlay until entry). **Hidden on mobile** ([css/mobile.css](../css/mobile.css)) so it never collides with the bottom tab bar.
+- Verified headless (Playwright): both stamps render `{S0UNDCAV3 / V1.0.0} {FIRST AGE}` from `/VERSION`; app stamp anchored at viewport bottom-left, clear of the OVERVIEW/INDEX corner-nav.
+
 ## [2026-06-27] FROM STASH (cont.) — proxy allow-list now passes own Stash images (branch `firepit-stash-edit-fix`)
 Live-testing the picker fix on `localhost:3000` (against the prod Railway backend) surfaced the *next* error
 when picking a still: **"only SoundCloud CDN images are allowed."** Root cause: `/api/proxy-image`
@@ -35,6 +41,7 @@ Verified: Node sim of both functions — filter shows only stills (animation/vid
 old handler reproduces the never-fired bug, the new handler fires with the picked item. ⚠️ Doug to confirm
 live (login + a saved still/flyer) that picking a still lands it in the Forge. Spec:
 [stash_forge_integration.md](spec/stash_forge_integration.md).
+
 ## [2026-06-27] Version system (Ages) + go-to-market plan (branch `claude/version-tier-roadmap-l3nzhu`)
 Gave the product a formal versioning spine and spec'd the era after this one. **No app code changed** — wiki + a root `VERSION` file + one git tag.
 - **Scheme:** `Age.Milestone.Iteration` (e.g. `1.2.3`), git-tagged `v1.2.3`. Age = strategic era (bumps only at a **graduation gate**), Milestone = roadmap step within the Age, Iteration = each shipped release. "Age" chosen over "Tier" to avoid colliding with subscription tiers (`tier_*`) + video tiers. Rule in [decision 0013](decisions/0013_version_ages.md); live position in [roadmap](roadmap.md).

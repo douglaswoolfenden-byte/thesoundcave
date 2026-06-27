@@ -1,5 +1,13 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-27] Version system (Ages) + go-to-market plan (branch `claude/version-tier-roadmap-l3nzhu`)
+Gave the product a formal versioning spine and spec'd the era after this one. **No app code changed** — wiki + a root `VERSION` file + one git tag.
+- **Scheme:** `Age.Milestone.Iteration` (e.g. `1.2.3`), git-tagged `v1.2.3`. Age = strategic era (bumps only at a **graduation gate**), Milestone = roadmap step within the Age, Iteration = each shipped release. "Age" chosen over "Tier" to avoid colliding with subscription tiers (`tier_*`) + video tiers. Rule in [decision 0013](decisions/0013_version_ages.md); live position in [roadmap](roadmap.md).
+- **Three Ages:** First = The Studio (now), Second = The Market (first 100→1000), Third = The Platform. Each has an explicit graduation gate so "when does the next era start" is a checklist, not a feeling. First-Age milestones map 1:1 onto [build_plan](build_plan.md) Stages 0–4.
+- **GTM plan** ([gtm.md](gtm.md)) — the Second Age: design partners → first 100 (hand-to-hand, "done-for-you first flyer") → first 1000 (referral loop + Etchings-as-portfolio). North-star = assets *posted*, not generated. Ties into the built invite-gate + Starter/Pro plans.
+- **Anchors:** root `VERSION` = `1.0.0` (machine-readable source of truth); tagged `v1.0.0` on the current beta baseline (`main` @ `ea343bc`). Tag messages point back to this log (log stays the changelog).
+- **Index/glossary updated:** roadmap + gtm + decisions 0011–0013 linked; glossary gains Age/Milestone/Iteration + a "Tier ≠ Age" note.
+
 ## [2026-06-26] Favicon — cave logo on brand dark square (branch n/a, site-wide asset)
 Added a real favicon (was none). Self-contained `favicon.svg` wraps the actual brand logo
 (`brand/logo/soundcave_logo_2026-05-11.svg`) on a `#0a0a0a` rounded square (rx 104) so the light-grey mark

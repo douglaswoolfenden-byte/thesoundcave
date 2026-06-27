@@ -1,7 +1,9 @@
 # Sound Cave Wiki — Index
 
 ## 🧭 Current focus
-- [Build plan](build_plan.md) — the staged "next few builds" (P0 → prove 3 looks → Etchings → refine loop → 20+). **Keep top of mind. We are at Stage 0 (P0).**
+- [Roadmap — the Ages](roadmap.md) — the **era-level map** (`Age.Milestone.Iteration` versioning, the 3 Ages + graduation gates). **We are at `v1.0.0` · First Age · Milestone `1.1` next.**
+- [Build plan](build_plan.md) — the staged builds *inside* the First Age (P0 → prove 3 looks → Etchings → refine loop → 20+). **Keep top of mind.**
+- [Go-to-market](gtm.md) — first 100 → first 1000 users (the Second Age). **Plan, not yet executing.**
 
 ## Terminology
 - [Glossary](glossary.md) — **source of truth** for UI labels ↔ what they mean ↔ internal code names ↔ old aliases. Read this when a term on the website doesn't match the code. Keep current on every rename.
@@ -41,6 +43,9 @@
 - [0008 — Campaign Studio leads (tech-house first)](decisions/0008_campaign_studio_first.md) — **current north star (2026-06-17).**
 - [0009 — Baked-in text default; overlay = constrained escape hatch](decisions/0009_baked_vs_overlay.md)
 - [0010 — Media-gen COGS verified; stay on fal (no Higgsfield sub)](decisions/0010_media_gen_cogs_verified.md) — **flags animation credits priced ~5.7× over true COGS (2026-06-23).**
+- [0011 — Admin accounts bypass in-app credits](decisions/0011_admin_unlimited_credits.md)
+- [0012 — Invite-gate launch safety (gate the gift, not the signup)](decisions/0012_invite_gate_launch_safety.md)
+- [0013 — Versioning by Ages (Age.Milestone.Iteration)](decisions/0013_version_ages.md) — **the version system + roadmap framing (2026-06-27).**
 
 ## Personas
 - [Artist](personas/artist.md) — stub

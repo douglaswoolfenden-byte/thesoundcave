@@ -52,7 +52,19 @@
 | **Summon / Gathering** | A single event/campaign. | a row in `events` |
 | **Etchings / an Etching** | The curated style gallery inside Forge — pick a look ("an Etching") as a *starting anchor* for generation (deviate via refs + Additional Context). Each tile is backed by an owned "in-style-of" plate + fonts/palette; picking one injects a STYLE-role ref. | *(to build)* — Forge style picker; see [spec/style_gallery](spec/style_gallery.md) |
 
+## Versioning terms (internal — not UI labels)
+
+| Term | What it is | Notes |
+|---|---|---|
+| **Age** | A strategic **era** of the product — the 1st version digit. First Age = The Studio, Second = The Market, Third = The Platform. | The roadmap's top level. See [roadmap](roadmap.md), [decision 0013](decisions/0013_version_ages.md). **Not** a subscription tier. |
+| **Milestone** | A roadmap step **within an Age** — the 2nd version digit. In the First Age, Milestone `1.N` = [build_plan](build_plan.md) Stage N. | |
+| **Iteration** | A shipped release **within a milestone** — the 3rd version digit. | |
+| **Version** | `Age.Milestone.Iteration` (e.g. `1.2.3`), git-tagged `v1.2.3`. Current number = root [`VERSION`](../VERSION) file. | |
+| **Graduation gate** | The explicit checklist that must clear before the next Age starts (the Age digit bumps). | |
+| **Tier** | **Subscription plan** (`tier_solo_monthly` — Solo/Label/Agency, [decision 0003](decisions/0003_saas_architecture.md)) **or** a video quality level (composite/standard/premium). **≠ Age** — eras are "Ages," never "Tiers." | Reserved word; don't reuse for eras. |
+
 ## Rename log (UI label history)
+- **2026-06-27:** versioning vocabulary added — **Age / Milestone / Iteration** (eras are "Ages," not "Tiers"; "Tier" stays subscription/video). See [decision 0013](decisions/0013_version_ages.md).
 - **2026-06-17:** new label **Etchings** (Forge style gallery, not yet built); "Markings"/"Cave Paintings"/"Totems" considered, **Etchings** chosen ("Markings" rejected — collides with "Marks").
 - **2026-06-09:** Dashboard → **Mural**; Roster → **Clan** (reverted); Summons → **Gatherings**.
 - **2026-05-28:** Events → Summons.

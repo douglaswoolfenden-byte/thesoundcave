@@ -2,6 +2,7 @@
 
 > The staged plan from here. **Canonical sequence** — the specs hold detail, this holds the map + where we are.
 > Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
+> **Versioning:** these stages are **First-Age milestones** — Stage N = version `1.N` ([roadmap](roadmap.md) · [decision 0013](decisions/0013_version_ages.md)). Currently `v1.0.0` (Stage 0 done); next ship is `1.1.0`.
 
 ## 📍 WHERE WE ARE
 **Stage 0 (P0) — ✅ DONE (2026-06-22).** Fired a real fal generation (TECHNO HOUSE ref + forced 12-act lineup). Verdict: **dense text bakes clean** (content trigger dropped, decision [0009](decisions/0009_baked_vs_overlay.md)); **model capable, recipe is the bottleneck** (3 fixable flaws: stranded leftover text · duplicate lineup blocks · inverted headline hierarchy). Doug's taste: **close — recipe fixes get it there.** Full verdict in [log 2026-06-22](log.md).

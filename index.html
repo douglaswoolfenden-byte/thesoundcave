@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>S0UNDCAV3</title>
+  <!-- Favicon: cave logo on the brand dark square. SVG for modern browsers, PNG fallbacks. -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#0a0a0a">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="css/style.css">
@@ -397,15 +402,9 @@
 
   <!-- ─── FIREPIT TAB ─────────────────────────────────── -->
   <div id="tab-firepit" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <div>
-        <h2 style="font-size:20px;font-weight:700;color:var(--heading)">FIREPIT</h2>
-        <p class="subtitle" style="margin-bottom:20px">Create, store and plan content for your artists, labels and events.</p>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:11px;color:var(--muted)">API:</span>
-        <span id="apiStatus" style="font-size:11px;color:var(--muted)">Not connected</span>
-      </div>
+    <div style="margin-bottom:6px">
+      <h2 style="font-size:20px;font-weight:700;color:var(--heading)">FIREPIT</h2>
+      <p class="subtitle" style="margin-bottom:20px">Create, store and plan content for your artists, labels and events.</p>
     </div>
 
     <!-- (internal firepit-modes strip removed 2026-05-28 — replaced by global #firepitSubnav, see spec/firepit_headline.md) -->
@@ -418,7 +417,10 @@
              2026-06-12): Format → Style → Subject → Facts → Direction & Mood.
              Same order in every format; a format hides layers it doesn't use. -->
         <div class="card forge-controls">
-          <div class="section-label">Input</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="section-label" style="margin-bottom:0">Input</div>
+            <button type="button" class="forge-clear-btn" onclick="newForge()" title="Clear all inputs and start fresh">{CLEAR ALL}</button>
+          </div>
 
           <div class="forge-stack-label">1 · Format</div>
           <div class="forge-input-group">
@@ -433,15 +435,15 @@
                 <div class="forge-dd" data-for="forgeContentType">
                   <button type="button" class="forge-dd-trigger" onclick="forgeDDToggle(this)"></button>
                   <div class="forge-dd-menu">
-                    <button type="button" class="forge-dd-opt" data-value="social_post" onclick="forgeDDPick(this)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="5.5" cy="6.5" r="1"/><path d="M3 12l3-3 2 2 2.5-2.5L13 11"/></svg>Still</button>
-                    <button type="button" class="forge-dd-opt" data-value="social_carousel" onclick="forgeDDPick(this)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="3.5" width="8" height="9" rx="1"/><path d="M3 5.5v6a1 1 0 0 0 1 1h6"/></svg>Carousel</button>
+                    <button type="button" class="forge-dd-opt" data-value="social_post" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="5.5" cy="6.5" r="1"/><path d="M3 12l3-3 2 2 2.5-2.5L13 11"/></svg>Still<span class="forge-soon">soon</span></button>
+                    <button type="button" class="forge-dd-opt" data-value="social_carousel" disabled><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="3.5" width="8" height="9" rx="1"/><path d="M3 5.5v6a1 1 0 0 0 1 1h6"/></svg>Carousel<span class="forge-soon">soon</span></button>
                     <button type="button" class="forge-dd-opt" data-value="event_poster" onclick="forgeDDPick(this)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="12" rx="1"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>Flyer</button>
                     <button type="button" class="forge-dd-opt" data-value="animation" onclick="forgeDDPick(this)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M7 6.3l3 1.7-3 1.7z" fill="currentColor" stroke="none"/></svg>Animation</button>
                   </div>
                   <select class="input" id="forgeContentType" onchange="updateForgeFields()" hidden>
-                    <option value="social_post">Still</option>
-                    <option value="social_carousel">Carousel</option>
-                    <option value="event_poster">Flyer</option>
+                    <option value="social_post" disabled>Still</option>
+                    <option value="social_carousel" disabled>Carousel</option>
+                    <option value="event_poster" selected>Flyer</option>
                     <option value="animation">Animation</option>
                   </select>
                 </div>
@@ -466,7 +468,7 @@
             <!-- Carousel only: how many stills in the set (Phase B) -->
             <div id="forgeSlideCountWrap" style="display:none;margin-top:10px">
               <label class="forge-label">Slides <span style="color:var(--muted);font-weight:normal">(one image per slide, one locked style)</span></label>
-              <select class="input" id="forgeSlideCount">
+              <select class="input" id="forgeSlideCount" onchange="syncSlideTextCount()">
                 <option value="2">2</option>
                 <option value="3">3</option>
                 <option value="4">4</option>
@@ -478,42 +480,39 @@
                 <option value="10">10</option>
               </select>
             </div>
+            <!-- Per-slide text baked into each image (carousel only) -->
+            <div id="forgeSlideTextsWrap" style="display:none;margin-top:12px">
+              <label class="forge-label">Slide text <span style="color:var(--muted);font-weight:normal">(baked into each image — artist, date, venue…)</span></label>
+              <div id="forgeSlideTextInputs"></div>
+            </div>
           </div>
 
           <!-- Standard stack: Still / Carousel / Flyer. Hidden when Animation
                is the format (Animation runs the generative i2v sub-form below). -->
           <div id="forgeStandardStack">
-          <div class="forge-stack-label">2 · Style</div>
+          <!-- Elements (forge_elements.md): one panel for everything that goes IN —
+               references (role-tagged), a Spirit, and an Artist. Phase 1 = visual
+               merge of the old 2·Style + 3·Subject; gatherForgeContext unchanged. -->
+          <div class="forge-stack-label">2 · Elements</div>
           <div class="forge-input-group">
             <label class="forge-label">References <span style="color:var(--muted);font-weight:normal">(up to 5 — first sets the style)</span></label>
             <div class="forge-dropzone" role="button" tabindex="0" aria-label="Add reference image"
                  onclick="document.getElementById('forgeRefImages').click()"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('forgeRefImages').click()}">
               <span class="forge-dropzone-plus" aria-hidden="true">+</span>
-              <span class="forge-dropzone-label">Add reference</span>
+              <span class="forge-dropzone-label">Upload from device</span>
             </div>
+            <button type="button" class="forge-stash-btn" onclick="addStashAsRef()">↓ FROM STASH — use existing artwork</button>
             <input type="file" id="forgeRefImages" multiple accept="image/jpeg,image/png,image/webp" onchange="handleRefImagesChange(event)" hidden>
             <div id="forgeRefImagesPreview" class="forge-ref-thumbs"></div>
             <div id="forgeRefImagesError" class="forge-ref-error" style="display:none"></div>
           </div>
-          <div class="forge-stack-label">3 · Subject</div>
-          <!-- Spirit — an animated cartoon-like character asset (glossary, 2026-06-12).
-               The engine draws Spirits; real people travel as WHO refs (carbon copy). -->
-          <div class="forge-input-group" id="forgeSpiritRow">
-            <label class="forge-label">Spirit</label>
-            <div class="forge-brand-selector">
-              <select class="input" id="forgeSpiritSelect">
-                <option value="">— No spirit —</option>
-              </select>
-              <button type="button" class="btn-red forge-summon-btn" onclick="openSpirits()" title="Summon &amp; manage spirits">+ SUMMON</button>
-            </div>
-          </div>
-          <div id="forgeSubjectFields"></div>
+          <div id="forgeSubjectFields" style="display:none"></div>
 
-          <div class="forge-stack-label" id="forgeFactsLabel">4 · Facts</div>
+          <div class="forge-stack-label" id="forgeFactsLabel">3 · Facts</div>
           <div id="forgeFactFields"></div>
 
-          <div class="forge-stack-label">5 · Direction</div>
+          <div class="forge-stack-label">4 · Direction</div>
           <div class="forge-input-group">
             <label class="forge-label">Direction <span style="color:var(--muted);font-weight:normal">(what to make — layout, type, mood)</span></label>
             <textarea class="input" id="forgeFreeform" rows="4" placeholder="e.g. headliner huge up top, photo bottom-left, black &amp; white, acid warehouse energy"></textarea>
@@ -534,8 +533,9 @@
                    onclick="document.getElementById('forgeAnimSource').click()"
                    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('forgeAnimSource').click()}">
                 <span class="forge-dropzone-plus" aria-hidden="true">+</span>
-                <span class="forge-dropzone-label">Add artwork</span>
+                <span class="forge-dropzone-label">Upload from device</span>
               </div>
+              <button type="button" class="forge-stash-btn" onclick="addStashAsAnimSource()">↓ FROM STASH — use existing artwork</button>
               <input type="file" id="forgeAnimSource" accept="image/jpeg,image/png,image/webp" onchange="forgeAnimPreview()" hidden>
               <div id="forgeAnimPreview" class="forge-ref-thumbs"></div>
             </div>
@@ -599,16 +599,37 @@
             </div>
           </div>
 
-          <!-- P1.5 controls: the 10-button wall died. Save is the hero. -->
+          <!-- P1.5 controls: icon toolbar — Save is the hero, others are secondary. -->
           <div id="forgeActions" style="display:none">
             <div class="forge-actions">
-              <button class="btn-red" type="button" onclick="saveToStash()">SAVE TO STASH</button>
-              <button class="btn-outline" type="button" onclick="generateContent()">REGEN</button>
-              <button class="btn-outline" type="button" id="btnRegenImage" onclick="regenerateImage()" style="display:none">NEW IMAGE</button>
-              <button class="btn-outline" type="button" id="btnRefineImage" onclick="toggleRefinePanel()" style="display:none" title="Make one small change — keep everything else">✎ REFINE</button>
-              <button class="btn-outline" type="button" id="btnMakeVideo" onclick="openBeatPanel()" style="display:none" title="Add a track — export a video that pulses to the beat">+ ADD A BEAT</button>
-              <button class="btn-outline" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none">DOWNLOAD</button>
-              <button class="btn-outline" type="button" onclick="resetForgeOutput()" title="Clear this output">DISCARD</button>
+              <button class="forge-icon-btn forge-icon-btn--primary no-glitch" type="button" onclick="saveToStash()" title="Save to Stash">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="9" rx="1"/><path d="M3 11l2-5h14l2 5"/><path d="M9 15h6"/></svg>
+                <span class="forge-icon-btn-label">Stash</span>
+              </button>
+              <button class="forge-icon-btn no-glitch" type="button" onclick="generateContent()" title="Regenerate">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/></svg>
+                <span class="forge-icon-btn-label">Regen</span>
+              </button>
+              <button class="forge-icon-btn no-glitch" type="button" id="btnRefineImage" onclick="toggleRefinePanel()" style="display:none" title="Make one small change">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span class="forge-icon-btn-label">Refine</span>
+              </button>
+              <button class="forge-icon-btn no-glitch" type="button" id="btnMakeVideo" onclick="openBeatPanel()" title="Add a beat track">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="18" r="2.5"/><circle cx="18" cy="16" r="2"/><path d="M11.5 18V6l9-2v12"/></svg>
+                <span class="forge-icon-btn-label">Beat</span>
+              </button>
+              <button class="forge-icon-btn no-glitch" type="button" id="btnDownloadImage" onclick="downloadForgeImage()" style="display:none" title="Download">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+                <span class="forge-icon-btn-label">Download</span>
+              </button>
+              <button class="forge-icon-btn no-glitch" type="button" id="btnDownloadAll" onclick="downloadAllSlides()" style="display:none" title="Download all slides">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/><path d="M3 3l3 3"/></svg>
+                <span class="forge-icon-btn-label">All</span>
+              </button>
+              <button class="forge-icon-btn forge-icon-btn--danger no-glitch" type="button" onclick="resetForgeOutput()" title="Discard output">
+                <svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+                <span class="forge-icon-btn-label">Discard</span>
+              </button>
             </div>
             <!-- Iteration loop (wiki/spec/forge_iteration_loop.md) — refine the last output, never reroll -->
             <div id="forgeRefinePanel" class="forge-refine-panel" style="display:none">
@@ -631,7 +652,42 @@
             <!-- Phase D: Beat → composite MP4 (still + motion + waveform to the beat) -->
             <div id="forgeBeatPanel" class="forge-beat-panel" style="display:none">
               <div class="forge-stack-label" style="margin-top:0">Beat <span style="color:var(--muted);font-weight:normal">— the track this post carries</span></div>
-              <input type="file" class="input" id="forgeBeatFile" accept="audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg">
+              <!-- Audio file picker — styled to match reference image dropzone -->
+              <div class="forge-dropzone forge-beat-drop" role="button" tabindex="0" aria-label="Choose audio file"
+                   onclick="document.getElementById('forgeBeatFile').click()"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('forgeBeatFile').click()}">
+                <svg class="sc-icon" style="width:20px;height:20px;color:var(--color-accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="18" r="2.5"/><circle cx="18" cy="16" r="2"/><path d="M11.5 18V6l9-2v12"/></svg>
+                <span class="forge-dropzone-label" id="forgeBeatFileName">Add audio</span>
+              </div>
+              <input type="file" id="forgeBeatFile" accept="audio/mpeg,audio/wav,audio/mp4,audio/aac,audio/ogg" onchange="beatSegmentInit(this.files[0])" hidden>
+              <!-- Two-handle waveform picker: drag left handle = in-point, right = out-point -->
+              <div id="beatSegment" class="beat-segment" style="display:none">
+                <div id="beatWaveWrap" class="beat-wave-wrap">
+                  <canvas id="beatWave" class="beat-wave"></canvas>
+                  <div id="beatRegion" class="beat-region"></div>
+                  <div id="beatHandleL" class="beat-handle beat-handle-l" role="slider" tabindex="0" aria-label="In-point — drag to set start">
+                    <span class="beat-handle-grip"></span>
+                  </div>
+                  <div id="beatHandleR" class="beat-handle beat-handle-r" role="slider" tabindex="0" aria-label="Out-point — drag to set end">
+                    <span class="beat-handle-grip"></span>
+                  </div>
+                  <div id="beatSegPlayhead" class="beat-seg-playhead" style="display:none"></div>
+                </div>
+                <div class="beat-seg-row">
+                  <button type="button" class="beat-seg-play" id="beatSegPlay" onclick="beatSegmentPreview()" aria-label="Preview selection">▶</button>
+                  <span class="beat-seg-time" id="beatSegTime">0:00 – 0:00  (0:00)</span>
+                  <span class="beat-seg-hint">drag handles to set in / out</span>
+                </div>
+                <div class="beat-loop-row">
+                  <label class="beat-loop-label">
+                    <input type="checkbox" id="forgeBeatLoop" class="beat-loop-check">
+                    <span class="beat-loop-indicator"></span>
+                    <span class="beat-loop-text">Loop</span>
+                  </label>
+                  <span class="beat-loop-hint" id="beatLoopHint"></span>
+                </div>
+              </div>
+              <audio id="beatSegAudio" preload="auto" style="display:none"></audio>
               <label class="forge-label" style="margin-top:10px">Rights <span style="color:var(--muted);font-weight:normal">(required — platforms fingerprint audio and enforce later)</span></label>
               <select class="input" id="forgeBeatRights">
                 <option value="">— Classify this track —</option>
@@ -646,11 +702,16 @@
               <input class="input" id="forgeBeatProof" style="margin-top:10px" placeholder="Proof link (licence receipt / written permission / CC0 link)">
               <div style="display:flex;gap:8px;margin-top:10px">
                 <button class="btn-red" type="button" onclick="makeBeatVideo(this)">FORGE THE VIDEO</button>
-                <button class="btn-outline no-glitch" type="button" onclick="document.getElementById('forgeBeatPanel').style.display='none'">CANCEL</button>
+                <button class="btn-outline no-glitch" type="button" onclick="document.getElementById('forgeBeatPanel').style.display='none';beatSegmentReset()">CANCEL</button>
               </div>
               <div id="forgeBeatError" class="forge-ref-error" style="display:none"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Generation meta — direction, format, refs, model (populated by updateForgeMetaPanel) -->
+        <div id="forgeMetaPanel" class="forge-meta-panel" style="display:none">
+          <div class="forge-meta-grid" id="forgeMetaGrid"></div>
         </div>
 
         <!-- Image lightbox — click any generated image to zoom (Esc / click-away closes) -->
@@ -911,6 +972,17 @@
         </div>
       </section>
 
+      <!-- SoundCloud connection -->
+      <section class="reflection-sc" id="reflectionScSection">
+        <div class="reflection-sc-row">
+          <span class="reflection-sc-label">SOUNDCLOUD</span>
+          <span class="reflection-sc-status" id="reflectionScStatus">—</span>
+        </div>
+        <div class="reflection-sc-msg" id="reflectionScMsg" hidden></div>
+        <button class="reflection-action reflection-action-sc" id="reflectionConnectSc" type="button">Connect SoundCloud</button>
+        <button class="reflection-action reflection-action-danger" id="reflectionDisconnectSc" type="button" hidden>Disconnect SoundCloud</button>
+      </section>
+
       <section class="reflection-actions">
         <button class="reflection-action" id="reflectionConnectSocials" type="button">Connect socials</button>
         <button class="reflection-action" id="reflectionSetPassword" type="button">Set / change password</button>
@@ -968,9 +1040,18 @@
      .mobile-tab so the existing switchTab() delegation (app.js
      ~L622) wires them automatically — no new nav logic. -->
 <nav class="mobile-tabbar" id="mobileTabbar" aria-label="Primary">
-  <button class="mobile-tab active" type="button" data-tab="cave">CAVE</button>
-  <button class="mobile-tab" type="button" data-tab="firepit">FIREPIT</button>
-  <button class="mobile-tab" type="button" data-tab="reflection">REFLECTION</button>
+  <button class="mobile-tab active" type="button" data-tab="cave">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20V12a9 9 0 0 1 18 0v8"/><path d="M3 20h18"/><path d="M8 20v-4M16 20v-4"/><circle cx="12" cy="11" r="0.8" fill="currentColor"/></svg></span>
+    <span class="mobile-tab-label">CAVE</span>
+  </button>
+  <button class="mobile-tab" type="button" data-tab="firepit">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1.5 3 3 4.5 3 7a3 3 0 0 1-6 0c0-1.2.6-2 1.5-3"/><path d="M5 20h14"/><path d="M6 20l3-4M18 20l-3-4M9 20l3-2.5L15 20"/></svg></span>
+    <span class="mobile-tab-label">FIREPIT</span>
+  </button>
+  <button class="mobile-tab" type="button" data-tab="reflection">
+    <span class="mobile-tab-ico"><svg class="sc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.5-4 4-6 7-6s5.5 2 7 6"/><path d="M9 8h6"/></svg></span>
+    <span class="mobile-tab-label">REFLECTION</span>
+  </button>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -1076,8 +1157,10 @@
 <script src="js/compositor_templates.js"></script>
 <script src="js/compositor.js"></script>
 <script src="js/forge_refs.js"></script>
+<script src="js/beat_segment.js"></script>
 <script src="js/firepit.js"></script>
 <script src="js/stash.js"></script>
+<script src="js/stash_picker.js"></script>
 <script src="js/spirits.js"></script>
 <script src="js/trail_map.js"></script>
 <script src="js/brands.js"></script>
@@ -1087,5 +1170,6 @@
 <script src="js/events_match.js"></script>
 <script src="js/events_detail.js"></script>
 <script src="js/events_post_editor.js"></script>
+<script src="js/sc_oauth.js"></script>
 </body>
 </html>

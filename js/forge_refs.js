@@ -178,3 +178,22 @@ function forgeRefImagesPayload() {
     note: e.note || '',
   }));
 }
+
+// Add a Cave artist asset (avatar / track art) as a reference. SoundCloud URLs
+// aren't data-URLs and CORS blocks a client-side fetch, so the backend proxies
+// the image to a data-URL; it then joins the normal ref pipeline.
+async function addForgeRefFromUrl(url, role, note) {
+  const errEl = document.getElementById('forgeRefImagesError');
+  const fail = msg => { if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; } };
+  if (errEl) errEl.style.display = 'none';
+  if (_forgeRefImages.length >= REF_IMAGES_MAX_COUNT) { fail(`Max ${REF_IMAGES_MAX_COUNT} references.`); return; }
+  try {
+    const r = await scAuth.authedFetch(`${forgeApiUrl}/api/proxy-image?url=${encodeURIComponent(url)}`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.data) throw new Error(j.error || `HTTP ${r.status}`);
+    _forgeRefImages.push({ data: j.data, role: REF_ROLES.includes(role) ? role : 'style', note: note || '' });
+    renderRefImageThumbs();
+  } catch (e) {
+    fail(`Couldn't add that asset: ${e.message}`);
+  }
+}

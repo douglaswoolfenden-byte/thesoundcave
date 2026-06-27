@@ -7,9 +7,15 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 let _caveFocusIndex = 0;
-let _caveWheelLock = false;
+let _caveWheelAccum = 0;            // banked wheel travel (px) waiting to be drained into card steps
+let _caveWheelDrainTimer = null;    // setTimeout handle while banked travel drains one card at a time
 let _caveClanCache = [];
 const STACK_VISIBLE_RADIUS = 4;
+const CAVE_WHEEL_STEP = 60;         // wheel px per ONE card — lower = more sensitive
+const CAVE_WHEEL_DRAIN_MS = 110;    // ms between drained cards during a fast scroll — caps the riffle
+                                    // rate (~9 cards/sec) so each still glides. Lower = faster riffle.
+const CAVE_WHEEL_MAX_BANK = 8;      // max cards a single burst can queue — stops one violent flick
+                                    // from rifling the whole clan (the old `while` loop did ~17 at once).
 
 const setHTML = (el, html) => { if (el) { el['inner' + 'HTML'] = html; } };
 
@@ -261,6 +267,20 @@ function cycleStack(delta) {
   updateStackMeta();
 }
 
+// Drain banked wheel travel into card steps, one per CAVE_WHEEL_DRAIN_MS, so a
+// fast scroll riffles smoothly (each card glides) instead of jumping. Stops when
+// less than one card's worth remains, carrying that remainder into the next scroll.
+function drainCaveWheel() {
+  if (Math.abs(_caveWheelAccum) >= CAVE_WHEEL_STEP) {
+    const dir = _caveWheelAccum > 0 ? 1 : -1;
+    _caveWheelAccum -= dir * CAVE_WHEEL_STEP;
+    cycleStack(dir);
+    _caveWheelDrainTimer = setTimeout(drainCaveWheel, CAVE_WHEEL_DRAIN_MS);
+  } else {
+    _caveWheelDrainTimer = null;            // idle; keep the sub-threshold remainder
+  }
+}
+
 function updateStackMeta() {
   const el = document.getElementById('caveStackMeta');
   if (!el) return;
@@ -277,21 +297,35 @@ function updateStackMeta() {
 }
 
 function attachStackInteractions() {
-  // Wheel cycles the stack only when the cursor is over the CENTER stage —
-  // scrolling over the side rails scrolls the page (the rails own that gesture).
-  const stage = document.getElementById('caveStage') || document.getElementById('caveHero');
-  if (!stage || stage._stackBound) return;
-  stage._stackBound = true;
+  // The diagonal window OWNS the wheel: scrolling over it cycles the stack and
+  // never scrolls the page. Scrolling over the side rails/panels scrolls the
+  // page as normal. We bind on the whole hero and gate on `.cave-stage` (the
+  // window) via closest() — so even cards that visually overflow the stage box
+  // are still caught (they're DOM children of the stage), while the rails leak
+  // through to the page. Replaces the old fixed 5px threshold + 220ms lock,
+  // which let slow trackpad scrolls (tiny per-event deltas) fall through to the
+  // page — that's what scrolled you to the bottom instead of through the clan.
+  const hero = document.getElementById('caveHero');
+  if (!hero || hero._stackBound) return;
+  hero._stackBound = true;
 
-  stage.addEventListener('wheel', (e) => {
+  hero.addEventListener('wheel', (e) => {
     if (!_caveClanCache.length) return;
-    if (_caveWheelLock) { e.preventDefault(); return; }
-    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-    if (Math.abs(delta) < 5) return;
-    e.preventDefault();
-    _caveWheelLock = true;
-    cycleStack(delta > 0 ? 1 : -1);
-    setTimeout(() => { _caveWheelLock = false; }, 220);
+    if (!e.target.closest || !e.target.closest('.cave-stage')) return;  // rails → page scroll
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (!delta) return;
+    e.preventDefault();                       // ALWAYS first → page never moves over the window
+    // BANK the scroll travel, then DRAIN it one card at a time on a timer so
+    // each card gets its own glide. The faster/more you scroll, the more banks
+    // up and the more cards riffle past — speed-proportional — but spread over
+    // time (CAVE_WHEEL_DRAIN_MS apart) instead of 17 cards jumping in a single
+    // frame like the old `while` loop. A gentle nudge banks <1 step → exactly
+    // one card; a hard flick is capped at CAVE_WHEEL_MAX_BANK so it can't rifle
+    // the whole clan. Sub-threshold travel carries into the next scroll.
+    _caveWheelAccum += delta;
+    const cap = CAVE_WHEEL_STEP * CAVE_WHEEL_MAX_BANK;
+    _caveWheelAccum = Math.max(-cap, Math.min(cap, _caveWheelAccum));
+    if (!_caveWheelDrainTimer && Math.abs(_caveWheelAccum) >= CAVE_WHEEL_STEP) drainCaveWheel();
   }, { passive: false });
 
   document.addEventListener('keydown', (e) => {

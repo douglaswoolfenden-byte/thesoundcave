@@ -286,6 +286,26 @@
     // until the user clicks a toggle.
     startPulseLFO();
 
+    // Browsers block audio until a user gesture, so the ambient drone never
+    // reached anyone who didn't hunt for the {SOUND} toggle ("I can't hear the
+    // Soundcave noise" — esp. on mobile, where the toggle is a small chip).
+    // Kick it in on the FIRST gesture anywhere — the entrance you'd expect.
+    // We deliberately IGNORE a stored mute here: the drone is the brand's
+    // signature, and a stale 'off' from earlier testing was suppressing it for
+    // exactly the people who said they couldn't hear it. The toggle still mutes
+    // for the rest of the session (primeAmbient is one-shot, so it won't fight a
+    // mid-session mute). Gesture-compliant → works on iOS Safari.
+    let _ambientPrimed = false;
+    function primeAmbient() {
+      if (_ambientPrimed) return;
+      _ambientPrimed = true;
+      if (!droneNodes) { try { window.caveSound.set(true); } catch (_) {} }
+    }
+    // Cover the spread of gesture types (pointer / touch / click / key); the
+    // one-shot guard means whichever fires first wins, the rest no-op.
+    ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+      window.addEventListener(ev, primeAmbient, { once: true, passive: true }));
+
     // Glitch every major CTA on hover, site-wide. Delegated on document so it
     // also covers buttons rendered dynamically (e.g. the plan-selector cards).
     // Add `.glitch-cta` to opt any other button in. Disabled buttons are skipped.
@@ -296,8 +316,16 @@
     document.addEventListener('mouseover', (e) => {
       const t = e.target.closest && e.target.closest(GLITCH_SELECTOR);
       if (!t || t.disabled || t._glitchHover) return;
+      // Anchor the target to the PRISTINE label, captured once before any
+      // scramble can run. Previously the target was read live from textContent,
+      // so a quick re-hover mid-animation read the half-scrambled text as the
+      // target and locked it in — the word stayed corrupted with code chars if
+      // you skimmed across the button instead of resting on it. With the label
+      // anchored in dataset.glitchText, every hover (however brief) resolves
+      // back to the original word, regardless of how long you hover.
+      if (t.dataset.glitchText == null) t.dataset.glitchText = t.textContent.trim();
       t._glitchHover = true;                       // guard: don't restart on inner re-enter
-      window.caveGlitch(t, (t.dataset.glitchText || t.textContent).trim());
+      window.caveGlitch(t, t.dataset.glitchText);
     });
     document.addEventListener('mouseout', (e) => {
       const t = e.target.closest && e.target.closest(GLITCH_SELECTOR);

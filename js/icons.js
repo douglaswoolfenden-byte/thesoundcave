@@ -141,6 +141,24 @@
       <rect x="3" y="5" width="18" height="14" rx="1"/>
       <path d="M3 6l9 7 9-7"/>
     `),
+    stash: WRAP(`
+      <rect x="3" y="11" width="18" height="9" rx="1"/>
+      <path d="M3 11l2-5h14l2 5"/>
+      <path d="M9 15h6"/>
+    `),
+    regen: WRAP(`
+      <path d="M21 12a9 9 0 1 1-3-6.7"/>
+      <path d="M21 3v5h-5"/>
+    `),
+    refine: WRAP(`
+      <path d="M12 20h9"/>
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+    `),
+    beat: WRAP(`
+      <circle cx="9" cy="18" r="2.5"/>
+      <circle cx="18" cy="16" r="2"/>
+      <path d="M11.5 18V6l9-2v12"/>
+    `),
   };
 
   window.scIcon = function scIcon(name) {

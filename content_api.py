@@ -8,9 +8,11 @@ import re
 import json
 import time
 import base64
+import hmac
+import hashlib
 from datetime import datetime, timezone
-from urllib.parse import urlparse
-from flask import Flask, request, jsonify, g
+from urllib.parse import urlparse, urlencode
+from flask import Flask, request, jsonify, g, redirect as flask_redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
@@ -27,8 +29,16 @@ from media_gen import (
 )
 import conjure_gen   # Forge "Conjure" format — generative image edit + video (fal orchestration)
 
-# Load .env from workspace root (one level up from project)
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+# Load .env from workspace root — walk up until we find it (handles worktrees at varying depths)
+def _find_dotenv(start):
+    d = os.path.abspath(start)
+    for _ in range(5):
+        candidate = os.path.join(d, '.env')
+        if os.path.isfile(candidate):
+            return candidate
+        d = os.path.dirname(d)
+    return None
+load_dotenv(_find_dotenv(os.path.dirname(__file__)))
 
 # Admin allowlist (env-driven — never hardcode an email, this repo is public).
 # Comma-separated emails in ADMIN_EMAILS bypass in-app credit charges entirely:
@@ -41,19 +51,15 @@ ADMIN_EMAILS = {
     if e.strip()
 }
 
-# Free-trial invite gate (2026-06-25). New accounts start with 0 credits (see
-# db/0020); trial credits are gifted ONLY by redeeming a valid code, verified
-# server-side here. Gating the gift (not signup) is what actually protects the
-# fal balance — the Supabase anon key is public, so signup itself can't be gated
-# in the browser. Missing INVITE_CODES = nothing redeemable = safe default.
-import hmac, time as _time
+# Free-trial invite gate. New accounts start with 0 credits (see db/0020); trial
+# credits are gifted ONLY by redeeming a valid code (see /api/redeem-invite). Gating
+# the gift (not signup) is what protects the fal balance — the Supabase anon key is
+# public, so signup itself can't be gated in the browser. As of db/0021 codes live in
+# the invite_codes table (per-friend, single-use) — the old env INVITE_CODES shared
+# pool is superseded. Spec: wiki/spec/invite_codes_per_friend.md.
+import time as _time
 from collections import defaultdict as _defaultdict
-INVITE_CODES = {
-    c.strip().upper()                       # codes are case-insensitive
-    for c in os.getenv('INVITE_CODES', '').split(',')
-    if c.strip()
-}
-FREE_TRIAL_CREDITS = int(os.getenv('FREE_TRIAL_CREDITS', '100'))  # non-expiring gift size
+FREE_TRIAL_CREDITS = int(os.getenv('FREE_TRIAL_CREDITS', '50'))  # default grant; per-code value overrides
 
 # Tiny in-memory per-IP rate limiter for the invite-redeem endpoint (its only
 # attack surface: farming the gift). No new dependency; resets on restart. For a
@@ -713,7 +719,8 @@ def _is_own_storage_url(url):
 
 
 def _dispatch_media(media_type, image_prompt, audio_path, w, h, duration_seconds,
-                    base_image_bytes=None):
+                    base_image_bytes=None, audio_start_seconds=0,
+                    loop_audio=False, clip_duration=0):
     """Route to the right media_gen function. Returns (bytes, provider, model, ext)."""
     if media_type == 'image':
         b, p, m = generate_image(image_prompt, w, h)
@@ -721,10 +728,10 @@ def _dispatch_media(media_type, image_prompt, audio_path, w, h, duration_seconds
     if media_type == 'video_composite':
         if not audio_path:
             raise ValueError('video_composite requires an audio_file')
-        # Flagship "make THIS still move": animate the already-generated image
-        # when the frontend passes it; else regenerate a cover (legacy).
         b, p, m, _ = generate_video_composite(image_prompt, audio_path, w, h,
-                                              duration_seconds, base_image_bytes=base_image_bytes)
+                                              duration_seconds, base_image_bytes=base_image_bytes,
+                                              audio_start_seconds=audio_start_seconds,
+                                              loop_audio=loop_audio, clip_duration=clip_duration)
         return b, p, m, 'mp4'
     if media_type == 'video_standard':
         b, p, m, _ = generate_video_standard(image_prompt, audio_path, w, h, duration_seconds)
@@ -752,6 +759,18 @@ def generate_media_endpoint():
     duration_seconds = int(ctx.get('duration_seconds', 5))
     if duration_seconds <= 0 or duration_seconds > MAX_VIDEO_DURATION_SECONDS:
         return jsonify({'error': f'duration_seconds must be 1..{MAX_VIDEO_DURATION_SECONDS}'}), 400
+
+    # Beat segment start (the waveform picker). Seconds into the uploaded track;
+    # the FFmpeg composite seeks here so the clip is the bit the user dragged to.
+    try:
+        audio_start_seconds = max(0.0, float(ctx.get('audio_start_seconds', 0) or 0))
+    except (TypeError, ValueError):
+        audio_start_seconds = 0.0
+    loop_audio = bool(ctx.get('loop_audio', False))
+    try:
+        clip_duration = max(0.0, float(ctx.get('clip_duration', 0) or 0))
+    except (TypeError, ValueError):
+        clip_duration = 0.0
 
     if media_type == 'video_composite' and audio_bytes is None:
         return jsonify({'error': 'video_composite requires an audio_file (multipart)'}), 400
@@ -816,6 +835,8 @@ def generate_media_endpoint():
             audio_path=(audio_track['local_path'] if audio_track else None),
             w=w, h=h, duration_seconds=duration_seconds,
             base_image_bytes=base_image_bytes,
+            audio_start_seconds=audio_start_seconds,
+            loop_audio=loop_audio, clip_duration=clip_duration,
         )
 
         if ext == 'png':
@@ -1371,11 +1392,14 @@ def me():
 
 @app.route('/api/redeem-invite', methods=['POST'])
 def redeem_invite():
-    """Gift the free-trial credits in exchange for a valid invite code.
+    """Gift the free-trial credits in exchange for a valid, unused invite code.
 
     The gate is here (server-side), not on signup: a fresh account has 0 credits
-    and can't generate, so it costs nothing until a code is redeemed. One claim
-    per account (users.trial_claimed). Rate-limited per IP to blunt code-leak farming."""
+    and can't generate, so it costs nothing until a code is redeemed. Codes live in
+    the invite_codes table and are single-use *globally* (redeemed_by set once,
+    atomically) — a leaked code is already spent. An account may claim at most one
+    trial (users.trial_claimed). Rate-limited per IP to blunt guessing/farming.
+    Spec: wiki/spec/invite_codes_per_friend.md."""
     uid, err = _require_user()
     if err:
         return err
@@ -1384,25 +1408,38 @@ def redeem_invite():
     code = ((request.get_json(silent=True) or {}).get('code') or '').strip().upper()
     if not code:
         return jsonify({'error': 'code_required'}), 400
-    # Constant-time compare against the allowlist (avoids timing oracles).
-    if not any(hmac.compare_digest(code, c) for c in INVITE_CODES):
-        return jsonify({'error': 'invalid_code'}), 403
     sb = _stash_client()
-    # Atomic one-time claim: only the request that flips false→true gets to grant.
-    claim = sb.table('users').update({'trial_claimed': True}) \
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # 1) Claim the CODE first (atomic, single-use): only the request that flips a
+    #    still-open code (redeemed_by IS NULL) to this user wins. Unknown OR already
+    #    -used both return the same 403 → no enumeration of which codes exist. The
+    #    account is untouched on a bad code, so a typo costs the user nothing.
+    code_claim = sb.table('invite_codes') \
+        .update({'redeemed_by': uid, 'redeemed_at': now_iso}) \
+        .eq('code', code).is_('redeemed_by', 'null').execute()
+    if not code_claim.data:
+        return jsonify({'error': 'invalid_code'}), 403
+    grant_amount = code_claim.data[0].get('credits') or FREE_TRIAL_CREDITS
+    # 2) Claim the ACCOUNT (atomic, one trial per account). If it already claimed,
+    #    don't waste this fresh code — roll it back to open.
+    acct_claim = sb.table('users').update({'trial_claimed': True}) \
         .eq('id', uid).eq('trial_claimed', False).execute()
-    if not claim.data:
+    if not acct_claim.data:
+        sb.table('invite_codes').update({'redeemed_by': None, 'redeemed_at': None}) \
+            .eq('code', code).eq('redeemed_by', uid).execute()
         return jsonify({'error': 'already_claimed'}), 409
+    # 3) Grant. On failure, roll back BOTH so the user (and the code) can retry.
     try:
         new_balance = sb.rpc('grant_credits', {
-            'p_user_id': uid, 'p_amount': FREE_TRIAL_CREDITS, 'p_reason': 'free_trial_invite',
+            'p_user_id': uid, 'p_amount': grant_amount, 'p_reason': 'free_trial_invite',
         }).execute().data
     except Exception as e:
-        # Roll back the claim so the user isn't locked out of a retry.
         sb.table('users').update({'trial_claimed': False}).eq('id', uid).execute()
+        sb.table('invite_codes').update({'redeemed_by': None, 'redeemed_at': None}) \
+            .eq('code', code).eq('redeemed_by', uid).execute()
         print('grant on redeem failed:', e)
         return jsonify({'error': 'grant_failed'}), 500
-    return jsonify({'ok': True, 'granted': FREE_TRIAL_CREDITS, 'credits_balance': new_balance})
+    return jsonify({'ok': True, 'granted': grant_amount, 'credits_balance': new_balance})
 
 
 @app.route('/api/stash', methods=['GET'])
@@ -1990,6 +2027,7 @@ def artist_stats(username):
         'plays': t.get('playback_count') or 0,
         'likes': t.get('likes_count') or t.get('favoritings_count') or 0,
         'date': (t.get('created_at') or '')[:10],
+        'artwork': t.get('artwork_url') or '',   # SoundCloud cover art → Forge Elements
     } for t in sorted(tracks, key=lambda t: t.get('playback_count') or 0, reverse=True)[:5]]
 
     record = {
@@ -2016,6 +2054,315 @@ def artist_stats(username):
     location = ', '.join([p for p in (city, country) if p])
     return jsonify({**record, 'top_tracks': top_tracks, 'city': city, 'country': country,
                     'location': location, 'cached': False, 'age_seconds': 0})
+
+
+# ── Liked tracks ──────────────────────────────────────────────────────────────
+# Returns tracks the viewer has liked on SoundCloud for a given artist.
+# Per-user: if the caller has connected their SC account (user_soundcloud_connections),
+# uses their token + their SC user id. Falls back to the admin SOUNDCLOUD_MY_USER_ID
+# (duggom8) when the caller has no SC connection (e.g. unauthenticated read).
+# Spec: wiki/spec/soundcloud_user_oauth.md
+
+_liked_tracks_cache = {}  # {(sc_user_id, artist_username): (fetched_at, [track, ...])}
+
+
+def _fetch_liked_tracks_for(sc_user_id, artist_id, token):
+    """Scan up to 1000 liked tracks for sc_user_id and return those by artist_id."""
+    headers = {'Authorization': f'OAuth {token}'}
+    url = f'https://api.soundcloud.com/users/{sc_user_id}/likes/tracks'
+    params = {'limit': 200}
+    tracks = []
+    for _ in range(5):
+        try:
+            r = http_requests.get(url, params=params, headers=headers, timeout=15)
+        except Exception:
+            break
+        if r.status_code == 401:
+            break
+        if not r.ok:
+            break
+        data = r.json()
+        collection = data.get('collection', data if isinstance(data, list) else [])
+        for t in (collection or []):
+            if str((t.get('user') or {}).get('id', '')) == artist_id:
+                tracks.append({
+                    'title': t.get('title') or '',
+                    'url': t.get('permalink_url') or '',
+                    'plays': t.get('playback_count') or 0,
+                    'likes': t.get('likes_count') or t.get('favoritings_count') or 0,
+                    'date': (t.get('created_at') or '')[:10],
+                    'artwork': t.get('artwork_url') or '',
+                })
+        next_href = data.get('next_href') if isinstance(data, dict) else None
+        if not next_href:
+            break
+        url = next_href
+        params = None
+    return tracks
+
+
+@app.route('/api/liked-tracks/<username>', methods=['GET'])
+def liked_tracks(username):
+    # Determine which SC user + token to use
+    caller_uid = _resolve_user_id()  # None when unauthenticated (public view)
+    sc_user_id = None
+    sc_token = None
+
+    if caller_uid:
+        # Try the caller's own SC connection first
+        try:
+            rows = (
+                _stash_client()
+                .table('user_soundcloud_connections')
+                .select('sc_user_id, access_token')
+                .eq('user_id', caller_uid).limit(1).execute().data or []
+            )
+            if rows:
+                sc_user_id = rows[0]['sc_user_id']
+                sc_token = rows[0]['access_token']
+        except Exception as e:
+            print(f'[liked-tracks] sc connection lookup failed: {e}')
+
+    # Fall back to admin duggom8 account when no user connection
+    if not sc_user_id:
+        sc_user_id = os.getenv('SOUNDCLOUD_MY_USER_ID', '').strip()
+        sc_token = get_sc_token()
+
+    if not sc_user_id or not sc_token:
+        return jsonify({'tracks': [], 'configured': False})
+
+    now = time.time()
+    cache_key = (sc_user_id, username)
+    cached = _liked_tracks_cache.get(cache_key)
+    if cached and (now - cached[0]) < ARTIST_TTL_SECONDS:
+        return jsonify({'tracks': cached[1], 'cached': True})
+
+    artist = sc_resolve_user(username)
+    if not artist:
+        return jsonify({'tracks': []})
+    artist_id = str(artist.get('id', ''))
+
+    tracks = _fetch_liked_tracks_for(sc_user_id, artist_id, sc_token)
+    _liked_tracks_cache[cache_key] = (now, tracks)
+    return jsonify({'tracks': tracks, 'cached': False})
+
+
+# ── SoundCloud OAuth (per-user) ──────────────────────────────────────────────
+# Spec: wiki/spec/soundcloud_user_oauth.md (approved 2026-06-26)
+# Each user connects their own SC account; tokens live in user_soundcloud_connections.
+# State param = base64url(payload) + "." + HMAC-SHA256(payload, secret)
+# No extra DB table — stateless, expires in 10 minutes.
+
+_SC_OAUTH_CALLBACK = os.getenv(
+    'SOUNDCLOUD_REDIRECT_URI',
+    'https://soundcave-api-production.up.railway.app/api/auth/soundcloud/callback',
+)
+_SC_APP_FRONTEND = os.getenv(
+    'APP_FRONTEND_URL',
+    'https://douglaswoolfenden-byte.github.io/thesoundcave/',
+)
+
+
+def _sc_state_secret():
+    # Prefer a dedicated secret; fall back to the service key if not set.
+    # Never returns an empty or hardcoded value — raises instead.
+    secret = os.getenv('SC_OAUTH_STATE_SECRET') or os.getenv('SUPABASE_SERVICE_KEY', '')[:32]
+    if not secret:
+        raise RuntimeError('[sc oauth] SC_OAUTH_STATE_SECRET not configured')
+    return secret.encode() if isinstance(secret, str) else secret
+
+
+def _make_sc_state(user_id):
+    payload = base64.urlsafe_b64encode(
+        json.dumps({'u': user_id, 't': int(time.time())}).encode()
+    ).decode().rstrip('=')
+    sig = hmac.new(_sc_state_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    return f'{payload}.{sig}'
+
+
+def _verify_sc_state(state):
+    """Returns user_id string or None."""
+    try:
+        payload, sig = state.rsplit('.', 1)
+    except ValueError:
+        return None
+    expected = hmac.new(_sc_state_secret(), payload.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        # Restore stripped padding
+        data = json.loads(base64.urlsafe_b64decode(payload + '=='))
+    except Exception:
+        return None
+    if time.time() - float(data.get('t', 0)) > 600:
+        return None
+    return data.get('u')
+
+
+@app.route('/api/auth/soundcloud/connect', methods=['GET'])
+def sc_oauth_connect():
+    """Return the SC authorize URL for the logged-in user."""
+    uid, err = _require_user()
+    if err:
+        return err
+    state = _make_sc_state(uid)
+    params = urlencode({
+        'client_id': SC_CLIENT_ID,
+        'redirect_uri': _SC_OAUTH_CALLBACK,
+        'response_type': 'code',
+        'scope': 'non-expiring',
+        'state': state,
+    })
+    return jsonify({'url': f'https://soundcloud.com/connect?{params}'})
+
+
+@app.route('/api/auth/soundcloud/callback', methods=['GET'])
+def sc_oauth_callback():
+    """SC redirects here after user approves. Exchanges code for tokens, stores in DB."""
+    code = request.args.get('code', '').strip()
+    state = request.args.get('state', '').strip()
+    error = request.args.get('error', '').strip()
+
+    if error:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error={error}')
+    if not code or not state:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=missing_params')
+
+    user_id = _verify_sc_state(state)
+    if not user_id:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=invalid_state')
+
+    # Exchange authorisation code for tokens (server-side; client_secret never sent to browser)
+    try:
+        tok_r = http_requests.post(
+            'https://api.soundcloud.com/oauth2/token',
+            data={
+                'grant_type': 'authorization_code',
+                'client_id': SC_CLIENT_ID,
+                'client_secret': SC_CLIENT_SECRET,
+                'redirect_uri': _SC_OAUTH_CALLBACK,
+                'code': code,
+            },
+            timeout=15,
+        )
+    except Exception as e:
+        print(f'[sc oauth] token exchange error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=token_exchange_failed')
+
+    if not tok_r.ok:
+        print(f'[sc oauth] token exchange {tok_r.status_code}: {tok_r.text[:300]}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=token_exchange_failed')
+
+    tok = tok_r.json()
+    access_token = tok.get('access_token', '')
+    refresh_token = tok.get('refresh_token', '')
+    scope = tok.get('scope', '')
+
+    # Fetch the user's SC profile to get their numeric id + permalink handle
+    try:
+        me_r = http_requests.get(
+            'https://api.soundcloud.com/me',
+            headers={'Authorization': f'OAuth {access_token}'},
+            timeout=10,
+        )
+    except Exception as e:
+        print(f'[sc oauth] /me fetch error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_fetch_failed')
+
+    if not me_r.ok:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_fetch_failed')
+
+    me_data = me_r.json()
+    sc_user_id = str(me_data.get('id', ''))
+    sc_username = me_data.get('permalink', '') or me_data.get('username', '')
+
+    if not sc_user_id or not sc_username:
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=profile_incomplete')
+
+    sb = _stash_client()
+    try:
+        sb.table('user_soundcloud_connections').upsert({
+            'user_id': user_id,
+            'sc_user_id': sc_user_id,
+            'sc_username': sc_username,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'scope': scope,
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        }, on_conflict='user_id').execute()
+    except Exception as e:
+        print(f'[sc oauth] db upsert error: {e}')
+        return flask_redirect(f'{_SC_APP_FRONTEND}?sc_error=db_write_failed')
+
+    print(f'[sc oauth] connected user {user_id[:8]} → @{sc_username}')
+    return flask_redirect(f'{_SC_APP_FRONTEND}?sc_connected=1')
+
+
+@app.route('/api/auth/soundcloud/status', methods=['GET'])
+def sc_oauth_status():
+    """Returns the logged-in user's SC connection status."""
+    uid, err = _require_user()
+    if err:
+        return err
+    sb = _stash_client()
+    rows = (
+        sb.table('user_soundcloud_connections')
+        .select('sc_user_id, sc_username, connected_at')
+        .eq('user_id', uid).limit(1).execute().data or []
+    )
+    if not rows:
+        return jsonify({'connected': False})
+    r = rows[0]
+    return jsonify({
+        'connected': True,
+        'sc_username': r['sc_username'],
+        'sc_user_id': r['sc_user_id'],
+        'connected_at': r['connected_at'],
+    })
+
+
+@app.route('/api/auth/soundcloud/disconnect', methods=['DELETE'])
+def sc_oauth_disconnect():
+    """Remove the logged-in user's SC connection."""
+    uid, err = _require_user()
+    if err:
+        return err
+    _stash_client().table('user_soundcloud_connections').delete().eq('user_id', uid).execute()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/proxy-image', methods=['GET'])
+def proxy_image():
+    """Download a SoundCloud CDN image server-side and return it as a data-URL.
+
+    The Forge reference system only accepts data-URLs, and the browser can't
+    fetch sndcdn images to base64 them (CORS). So Cave artist assets (avatar /
+    track art) come through here. Host-whitelisted to SoundCloud to block SSRF.
+    """
+    uid, err = _require_user()
+    if err:
+        return err
+    url = (request.args.get('url') or '').strip()
+    host = (urlparse(url).hostname or '').lower()
+    if not (host == 'sndcdn.com' or host.endswith('.sndcdn.com')):
+        return jsonify({'error': 'only SoundCloud CDN images are allowed'}), 400
+    try:
+        # allow_redirects=False so a whitelisted host can't 302 us onward to an
+        # internal address (the redirect-following SSRF the review flagged); only a
+        # direct 200 from the SoundCloud CDN is served.
+        r = http_requests.get(url, timeout=10, allow_redirects=False)
+        if r.status_code != 200:
+            return jsonify({'error': 'image unavailable'}), 502
+        ctype = (r.headers.get('Content-Type') or 'image/jpeg').split(';')[0].strip()
+        if not ctype.startswith('image/'):
+            return jsonify({'error': 'not an image'}), 400
+        data = r.content
+        if len(data) > REF_IMAGES_MAX_BYTES:
+            return jsonify({'error': 'image too large'}), 400
+        b64 = base64.b64encode(data).decode()
+        return jsonify({'data': f'data:{ctype};base64,{b64}'})
+    except Exception as e:
+        return jsonify({'error': f'fetch failed: {e}'}), 502
 
 
 # ── Scheduled searches store (committed JSON the weekly Action runs) ──────

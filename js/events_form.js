@@ -173,20 +173,46 @@
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files[0];
       if (!file) return;
-      btn.disabled = true; btn.textContent = '{UPLOADING…}';
+      btn.disabled = true; stashBtn.disabled = true; btn.textContent = '{UPLOADING…}';
       status.textContent = '';
       try {
         const fd = new FormData();
         fd.append('file', file);
         const r = await E.authedFetch(`${API}/api/events/${draft.editing_id}/flyer`, { method: 'POST', body: fd });
         const j = await r.json();
-        if (!r.ok) { status.textContent = j.error || `Upload failed (${r.status})`; btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}'; return; }
+        if (!r.ok) { status.textContent = j.error || `Upload failed (${r.status})`; btn.disabled = false; stashBtn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}'; return; }
         state.draft.flyer_image_url = j.flyer_image_url;
-        renderForm();  // re-render the form so the thumb updates
+        renderForm();
       } catch (e) {
         status.textContent = `Upload failed: ${e.message}`;
-        btn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}';
+        btn.disabled = false; stashBtn.disabled = false; btn.textContent = currentUrl ? '{REPLACE MEDIA}' : '{UPLOAD MEDIA}';
       }
+    });
+
+    const stashBtn = h('button', { type: 'button', class: 'forge-stash-btn', style: { display: 'block', width: '100%', marginTop: '4px', padding: '8px 12px' } }, '↓ FROM STASH — use existing artwork');
+    stashBtn.addEventListener('click', () => {
+      if (typeof openStashPicker !== 'function') { status.textContent = 'Stash picker not available.'; return; }
+      openStashPicker(async item => {
+        btn.disabled = true; stashBtn.disabled = true;
+        status.textContent = 'Loading from Stash…';
+        try {
+          const pr = await E.authedFetch(`${API}/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`);
+          const pj = await pr.json().catch(() => ({}));
+          if (!pr.ok || !pj.data) throw new Error(pj.error || `proxy ${pr.status}`);
+          const res = await fetch(pj.data);
+          const blob = await res.blob();
+          const fd = new FormData();
+          fd.append('file', blob, 'stash-image.jpg');
+          const r = await E.authedFetch(`${API}/api/events/${draft.editing_id}/flyer`, { method: 'POST', body: fd });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j.error || `Upload failed (${r.status})`);
+          state.draft.flyer_image_url = j.flyer_image_url;
+          renderForm();
+        } catch (e) {
+          status.textContent = `Failed: ${e.message}`;
+          btn.disabled = false; stashBtn.disabled = false;
+        }
+      });
     });
 
     return h('label', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } }, [
@@ -195,6 +221,7 @@
         thumb,
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
           btn,
+          stashBtn,
           fileInput,
           h('div', { style: { fontSize: '10px', color: 'var(--muted)' } }, 'PNG / JPG / WEBP, up to 10MB. Inspires generated post imagery — your brand language carries across all posts.'),
           status,

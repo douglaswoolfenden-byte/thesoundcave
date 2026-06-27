@@ -37,7 +37,7 @@ client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 # ── Cost + safety guardrails ───────────────────────────────
 # All set conservatively for v1; Phase H or a dedicated decision lifts them.
-MAX_VIDEO_DURATION_SECONDS = 10        # Tier 2/3 cost scales linearly; cap is the brake
+MAX_VIDEO_DURATION_SECONDS = 90        # covers all major short-form platforms (IG Reels 90s, YT Shorts 60s)
 MAX_AUDIO_FILE_BYTES = 25 * 1024 * 1024  # 25MB
 # Per-model poll timeouts. Video models are genuinely slow:
 #   LTX     ~60–180s warm, ~3 min cold
@@ -986,7 +986,8 @@ def probe_audio_duration(audio_path):
     return float(r.stdout.strip())
 
 
-def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, fps=30):
+def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, fps=30,
+                      audio_start_seconds=0, loop_audio=False, clip_duration=0):
     """Run the FFmpeg pipeline. Returns mp4 bytes.
 
     Pipeline:
@@ -998,6 +999,8 @@ def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, 
       - waveform_height = 12% of video height, capped 200px (visual balance)
       - zoompan goes 1.00 → 1.15 over the duration (slow Ken Burns)
       - -shortest stops at the shorter of audio/video tracks
+      - audio_start_seconds seeks into the track (the Beat segment picker) so the
+        clip is the bit the user chose, not always 0:00.
     """
     import subprocess
     import tempfile
@@ -1022,10 +1025,27 @@ def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, 
             f"[bg][wave]overlay=0:H-h:format=auto[v]"
         )
 
+        if loop_audio and clip_duration > 0:
+            # Extract just the selected segment to a temp file, then stream_loop it
+            # so the audio fills the full duration_seconds output.
+            seg_path = os.path.join(tmp, 'segment.aac')
+            subprocess.run([
+                'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
+                '-ss', f'{float(audio_start_seconds):.3f}',
+                '-t', f'{float(clip_duration):.3f}',
+                '-i', audio_path, '-c:a', 'aac', '-b:a', '320k', seg_path,
+            ], capture_output=True, check=True, timeout=60)
+            audio_in = ['-stream_loop', '-1', '-i', seg_path]
+        elif audio_start_seconds and audio_start_seconds > 0:
+            # Input-side seek: fast + accurate enough for the waveform to stay in sync.
+            audio_in = ['-ss', f'{float(audio_start_seconds):.3f}', '-i', audio_path]
+        else:
+            audio_in = ['-i', audio_path]
+
         cmd = [
             'ffmpeg', '-y', '-hide_banner', '-loglevel', 'error',
             '-loop', '1', '-i', img_path,
-            '-i', audio_path,
+            *audio_in,
             '-filter_complex', filter_graph,
             '-map', '[v]', '-map', '1:a',
             '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
@@ -1044,7 +1064,8 @@ def _ffmpeg_composite(image_bytes, audio_path, width, height, duration_seconds, 
 
 
 def generate_video_composite(prompt, audio_path, width, height, duration_seconds=15,
-                             base_image_bytes=None):
+                             base_image_bytes=None, audio_start_seconds=0,
+                             loop_audio=False, clip_duration=0):
     """Tier 1: FFmpeg composite video. Returns (mp4_bytes, provider, model, duration_seconds).
 
     Muxes the user's audio under a still with Ken Burns motion + a waveform that
@@ -1052,11 +1073,11 @@ def generate_video_composite(prompt, audio_path, width, height, duration_seconds
     already-generated still as `base_image_bytes`; otherwise a cover is generated
     from `prompt` (legacy path).
 
-    `audio_path` is a local file path (caller fetches the track from Storage and
-    writes a temp file first).
+    `loop_audio=True` repeats the selected segment (clip_duration seconds from
+    audio_start_seconds) to fill the full duration_seconds output.
     """
-    if duration_seconds <= 0 or duration_seconds > 30:
-        raise ValueError('duration_seconds must be 0 < d <= 30 (Phase H lifts the cap)')
+    if duration_seconds <= 0 or duration_seconds > MAX_VIDEO_DURATION_SECONDS:
+        raise ValueError(f'duration_seconds must be 0 < d <= {MAX_VIDEO_DURATION_SECONDS}')
     if not _ffmpeg_available():
         raise RuntimeError('ffmpeg not on PATH — install via `brew install ffmpeg`')
 
@@ -1065,7 +1086,9 @@ def generate_video_composite(prompt, audio_path, width, height, duration_seconds
     else:
         img_bytes, img_provider, img_model = generate_image(prompt, width, height)
         src = f'{img_provider}/{img_model}'
-    mp4_bytes = _ffmpeg_composite(img_bytes, audio_path, width, height, duration_seconds)
+    mp4_bytes = _ffmpeg_composite(img_bytes, audio_path, width, height, duration_seconds,
+                                  audio_start_seconds=audio_start_seconds,
+                                  loop_audio=loop_audio, clip_duration=clip_duration)
     return mp4_bytes, 'ffmpeg', f'composite+{src}', duration_seconds
 
 

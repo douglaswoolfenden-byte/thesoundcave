@@ -372,6 +372,89 @@
 .reflection-pwd-form .cave-login-input { width: 100%; padding: 10px 12px; font-size: 13px; }
 .reflection-action[hidden] { display: none; }
 
+/* SoundCloud OAuth connection section */
+.reflection-sc {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-lt);
+  margin-bottom: 16px;
+}
+.reflection-sc-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.reflection-sc-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--secondary);
+}
+.reflection-sc-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--body);
+}
+.reflection-sc-status.connected { color: var(--color-accent); }
+.reflection-sc-msg {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--secondary);
+  padding: 4px 0;
+}
+.reflection-sc-msg.error { color: var(--red); }
+.reflection-sc-msg.success { color: var(--color-accent); }
+.reflection-sc-msg[hidden] { display: none; }
+.reflection-action-sc {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.reflection-action-sc:hover {
+  background: var(--hover);
+}
+
+/* SoundCloud OAuth onboarding nudge banner */
+.sc-oauth-nudge {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--body);
+  max-width: 520px;
+  width: calc(100vw - 48px);
+}
+.sc-nudge-cta {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sc-nudge-cta:hover { background: var(--hover); }
+.sc-nudge-dismiss {
+  background: none; border: none;
+  color: var(--secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.sc-nudge-dismiss:hover { color: var(--body); }
+
 /* Billing modal (Phase D) */
 .billing-modal[hidden] { display: none !important; }
 .billing-modal {
@@ -1437,6 +1520,30 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 }
 .forge-dd-opt svg { width: 15px; height: 15px; color: var(--color-accent); flex-shrink: 0; }
 .forge-dd-opt:hover { background: var(--elevated); color: var(--color-accent); }
+.forge-dd-opt:disabled { opacity: 0.38; cursor: not-allowed; }
+.forge-dd-opt:disabled:hover { background: transparent; color: var(--secondary); }
+.forge-soon {
+  margin-left: auto; font-size: 9px; letter-spacing: 0.06em;
+  color: var(--muted); text-transform: uppercase;
+}
+
+/* Cave→Firepit asset suggestions (forge_elements.md Phase 2) — an artist's
+   SoundCloud avatar + track art, tap to add as a reference. */
+.forge-cave-assets { margin-top: var(--space-2); }
+.forge-cave-hint {
+  display: block; margin-bottom: var(--space-2);
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--color-accent);
+}
+.forge-cave-strip { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.forge-cave-asset {
+  width: 54px; height: 54px; padding: 0; overflow: hidden;
+  border: 1px solid var(--border-lt); border-radius: 4px;
+  background: var(--elevated); cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-soft);
+}
+.forge-cave-asset:hover { border-color: var(--color-accent); }
+.forge-cave-asset img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* Higgsfield-style left→right reflow (wiki/spec/forge_layout_higgsfield.md):
    a compact control rail (left) feeds a hero output canvas (right). The reading
@@ -1472,7 +1579,30 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 }
 .forge-output:focus { outline: none; border-color: var(--red); }
 .forge-output::placeholder { color: var(--muted); }
-.forge-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.forge-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; align-items: flex-start; }
+
+/* Icon toolbar buttons — icon above label */
+.forge-icon-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5px; padding: 8px 10px; min-width: 54px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 5px; cursor: pointer; color: var(--muted);
+  transition: border-color var(--motion-fast) var(--ease-soft),
+              color var(--motion-fast) var(--ease-soft),
+              background var(--motion-fast) var(--ease-soft);
+}
+.forge-icon-btn .sc-icon { width: 17px; height: 17px; flex-shrink: 0; }
+.forge-icon-btn-label {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: var(--tracking-mono); text-transform: uppercase;
+  line-height: 1; white-space: nowrap;
+}
+.forge-icon-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.forge-icon-btn--primary {
+  background: var(--color-accent); border-color: var(--color-accent); color: #fff;
+}
+.forge-icon-btn--primary:hover { background: var(--color-accent-hot); border-color: var(--color-accent-hot); }
+.forge-icon-btn--danger:hover { border-color: var(--red, #c0392b); color: var(--red, #c0392b); }
 .forge-char-count {
   font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
   margin-top: 8px; text-align: right;
@@ -1550,6 +1680,86 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   margin-top: 10px; padding: 12px;
   border: 1px solid var(--border); border-radius: 6px; background: var(--elevated);
 }
+
+/* Beat segment picker — waveform + drag-to-pick window (wiki/spec/forge_beat_segment.md).
+   The window dims everything outside via a huge box-shadow "spotlight" (no canvas redraw). */
+.forge-beat-drop { min-height: 64px; margin-top: var(--space-2); }
+
+.beat-segment { margin-top: var(--space-2); }
+.beat-wave-wrap {
+  position: relative; width: 100%; height: 84px;
+  background: var(--color-bg); border: 1px solid var(--border); border-radius: 6px;
+  overflow: visible; touch-action: none; user-select: none; -webkit-user-select: none;
+  clip-path: inset(0 round 6px);
+}
+.beat-wave { display: block; width: 100%; height: 100%; }
+
+/* Highlighted region between in/out handles */
+.beat-region {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+  background: rgba(255,69,0,0.07); pointer-events: none; z-index: 1;
+}
+
+/* Drag handles — left (in-point) and right (out-point) */
+.beat-handle {
+  position: absolute; top: 0; bottom: 0; width: 16px;
+  transform: translateX(-50%);
+  cursor: ew-resize; touch-action: none; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--motion-fast);
+}
+.beat-handle::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - 1px);
+  width: 2px; background: var(--color-accent); pointer-events: none;
+  transition: background var(--motion-fast);
+}
+.beat-handle-grip {
+  position: relative; z-index: 1;
+  width: 7px; height: 26px; border-radius: 3px;
+  background: var(--color-accent);
+  transition: background var(--motion-fast);
+}
+.beat-handle:hover::before,
+.beat-handle:active::before { background: var(--color-accent-hot); }
+.beat-handle:hover .beat-handle-grip,
+.beat-handle:active .beat-handle-grip { background: var(--color-accent-hot); }
+.beat-handle:active { cursor: grabbing; }
+
+.beat-seg-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: #fff; pointer-events: none; z-index: 4; }
+.beat-seg-row { display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); }
+.beat-seg-play {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--color-accent); background: transparent; color: var(--color-accent);
+  cursor: pointer; font-size: 11px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: background var(--motion-fast) var(--ease-soft);
+}
+.beat-seg-play:hover { background: rgba(255,69,0,0.12); }
+.beat-seg-time { font-family: var(--font-mono); font-size: 12px; color: var(--color-text); letter-spacing: var(--tracking-mono); }
+.beat-seg-hint { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* Loop toggle */
+.beat-loop-row { display: flex; align-items: center; gap: 10px; margin-top: var(--space-2); }
+.beat-loop-label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+}
+.beat-loop-check { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.beat-loop-indicator {
+  flex-shrink: 0; width: 30px; height: 16px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--color-bg);
+  position: relative;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+}
+.beat-loop-indicator::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--motion-fast), background var(--motion-fast);
+}
+.beat-loop-check:checked + .beat-loop-indicator { border-color: var(--color-accent); background: rgba(255,69,0,0.15); }
+.beat-loop-check:checked + .beat-loop-indicator::after { transform: translateX(14px); background: var(--color-accent); }
+.beat-loop-text { font-family: var(--font-mono); font-size: 11px; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--muted); }
+.beat-loop-check:checked ~ .beat-loop-text { color: var(--color-accent); }
+.beat-loop-hint { font-size: 11px; color: var(--muted); margin-left: auto; font-family: var(--font-mono); }
 
 /* Carousel set badge on a Stash tile (Phase B) */
 .stash-slide-badge {
@@ -1644,6 +1854,42 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
   animation: skeleton-shimmer 1.5s infinite;
 }
 @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Per-slide text inputs (Carousel) ─────────────────── */
+.forge-slide-text-group { margin-bottom: 8px; }
+.forge-slide-text-heading {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--color-muted); margin-bottom: 4px;
+}
+.forge-slide-text-heading::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Output meta panel ─────────────────────────────────── */
+.forge-meta-panel {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.forge-meta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px;
+}
+.forge-meta-entry { display: flex; flex-direction: column; gap: 2px; }
+.forge-meta-key {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted);
+}
+.forge-meta-val {
+  font-size: 11px; color: var(--color-text); word-break: break-word; line-height: 1.4;
+}
+.forge-meta-val-muted { color: var(--color-muted); font-style: italic; }
+.forge-meta-refs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.forge-meta-ref-thumb {
+  width: 28px; height: 28px; object-fit: cover;
+  border-radius: 3px; border: 1px solid var(--border);
+}
+
 .stash-thumb {
   width: 44px; height: 44px; border-radius: 6px;
   object-fit: cover; flex-shrink: 0; border: 1px solid var(--border);
@@ -1693,13 +1939,27 @@ textarea.input { resize: vertical; font-family: inherit; line-height: 1.4; }
 .stash-block--campaign { cursor: pointer; }
 .stash-block--campaign:hover { border-color: var(--red); }
 
+/* Square, format-agnostic thumbnail. Every piece — Still, Carousel, Flyer,
+   Animation — crops to the same 1:1 reference tile so the Stash grid reads
+   evenly regardless of the source artwork's ratio. The media is absolutely
+   positioned (NOT a flex child) so it can never stretch the box past 1:1 —
+   the old flex layout let a portrait <img>'s min-height override the
+   aspect-ratio and each card grew to its image's native height. Crop is
+   top-anchored: poster/flyer headlines live up top, so we keep those. */
 .stash-block-cover {
-  position: relative; aspect-ratio: 16 / 10; background: var(--card); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border);
+  position: relative; aspect-ratio: 1 / 1; background: var(--card); cursor: pointer;
+  overflow: hidden; border-bottom: 1px solid var(--border);
 }
 .stash-block-cover img,
-.stash-block-cover video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.stash-block-noimg { font-size: 32px; opacity: 0.5; }
+.stash-block-cover video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block;
+}
+.stash-block-noimg {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; opacity: 0.5;
+}
 /* Video stash tiles (Animation): play badge over the poster frame. */
 .stash-play-badge {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -2445,3 +2705,126 @@ h4 { font-size: 12px; }
 /* Footprints — artist name links out to SoundCloud; hover shifts white→orange */
 .fp-artist-link { color: var(--heading); text-decoration: none; transition: color .15s ease; }
 .fp-artist-link:hover { color: var(--red); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Stash Picker Modal ───────────────────────── */
+.stash-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 1001;
+  align-items: center;
+  justify-content: center;
+}
+.stash-picker-overlay.open { display: flex; }
+.stash-picker-modal {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 540px;
+  width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.stash-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.stash-picker-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.stash-picker-close:hover { color: var(--heading); }
+.stash-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.stash-picker-cell {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 1/1;
+  transition: border-color .15s;
+}
+.stash-picker-cell:hover { border-color: var(--color-accent); }
+.stash-picker-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stash-picker-empty {
+  grid-column: 1/-1;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* Forge: CLEAR ALL chip at top of Input card */
+@keyframes forge-clear-flash {
+  0%   { opacity: 1; }
+  25%  { opacity: .4; }
+  50%  { opacity: 1; }
+  75%  { opacity: .7; }
+  100% { opacity: 1; }
+}
+.forge-clear-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 3px 7px;
+  line-height: 1;
+  transition: color .2s, border-color .2s, text-shadow .2s;
+}
+.forge-clear-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  text-shadow: 0 0 10px var(--color-accent);
+  animation: forge-clear-flash .35s ease;
+}
+
+/* FROM STASH button — standalone row below dropzone, clearly visible */
+.forge-stash-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 8px 12px;
+  white-space: nowrap;
+  width: 100%;
+  text-align: center;
+  margin-top: 6px;
+  transition: color .2s, border-color .2s, background .2s, text-shadow .2s;
+}
+.forge-stash-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: rgba(255, 90, 0, 0.06);
+  text-shadow: 0 0 8px var(--color-accent);
+}

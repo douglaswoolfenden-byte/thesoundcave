@@ -38,6 +38,7 @@ At upload the promoter classifies the audio into exactly one category. The categ
 - Audio is uploaded once into `audio_tracks` (private bucket, signed URLs) and reused across many posts — "one track → 30 reels" (`firepit_video.md`).
 - A Beat is a **clip window** on that track: `stash_items.start_seconds` / `end_seconds`, capped at `MAX_VIDEO_DURATION_SECONDS = 10`. Slicing is stream-copy (bit-perfect; audio never re-encoded).
 - The clip-picker is the **manual** version of the OpusClips-style auto-clipping flagged as Phase H in `firepit_video.md` — beat/drop auto-detection stays out of scope for v1.
+  - **Built 2026-06-26** as the slick waveform segment picker (drag a window onto the drop) — `wiki/spec/forge_beat_segment.md`. Emits `audio_start_seconds`; `_ffmpeg_composite` seeks with `-ss`. Currently sets `start` only (fixed 10s window); free `end` is a parked follow-up.
 
 ## How it threads the pipeline
 Forge (pick image + upload/select Beat + classify rights + set clip) → `POST /api/generate-media` (Tier-1 composite) → Stash item `media_type='video_composite'` with `audio_track_id` + clip bounds → Trail Map (drag to schedule) → **scheduling gate re-checks rights** → Ayrshare publishes the MP4.

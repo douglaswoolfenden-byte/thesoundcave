@@ -289,18 +289,22 @@
     // Browsers block audio until a user gesture, so the ambient drone never
     // reached anyone who didn't hunt for the {SOUND} toggle ("I can't hear the
     // Soundcave noise" — esp. on mobile, where the toggle is a small chip).
-    // Kick it in on the FIRST tap/click anywhere — the entrance you'd expect —
-    // unless the user has explicitly muted before. The toggle still mutes, and
-    // a mute persists. Gesture-compliant (works on iOS); fires at most once.
+    // Kick it in on the FIRST gesture anywhere — the entrance you'd expect.
+    // We deliberately IGNORE a stored mute here: the drone is the brand's
+    // signature, and a stale 'off' from earlier testing was suppressing it for
+    // exactly the people who said they couldn't hear it. The toggle still mutes
+    // for the rest of the session (primeAmbient is one-shot, so it won't fight a
+    // mid-session mute). Gesture-compliant → works on iOS Safari.
     let _ambientPrimed = false;
     function primeAmbient() {
       if (_ambientPrimed) return;
       _ambientPrimed = true;
-      let muted = false;
-      try { muted = localStorage.getItem(STORAGE_KEY) === '0'; } catch (_) {}
-      if (!muted && !droneNodes) { try { window.caveSound.set(true); } catch (_) {} }
+      if (!droneNodes) { try { window.caveSound.set(true); } catch (_) {} }
     }
-    window.addEventListener('pointerdown', primeAmbient, { once: true, passive: true });
+    // Cover the spread of gesture types (pointer / touch / click / key); the
+    // one-shot guard means whichever fires first wins, the rest no-op.
+    ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+      window.addEventListener(ev, primeAmbient, { once: true, passive: true }));
 
     // Glitch every major CTA on hover, site-wide. Delegated on document so it
     // also covers buttons rendered dynamically (e.g. the plan-selector cards).

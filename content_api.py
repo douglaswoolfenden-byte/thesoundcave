@@ -2333,19 +2333,24 @@ def sc_oauth_disconnect():
 
 @app.route('/api/proxy-image', methods=['GET'])
 def proxy_image():
-    """Download a SoundCloud CDN image server-side and return it as a data-URL.
+    """Download an image server-side and return it as a data-URL.
 
     The Forge reference system only accepts data-URLs, and the browser can't
-    fetch sndcdn images to base64 them (CORS). So Cave artist assets (avatar /
-    track art) come through here. Host-whitelisted to SoundCloud to block SSRF.
+    fetch these cross-origin to base64 them (CORS). Two sources come through here:
+    Cave artist assets (SoundCloud CDN) and the user's own Stash images (our
+    Supabase Storage host). Host-whitelisted to those two origins to block SSRF.
     """
     uid, err = _require_user()
     if err:
         return err
     url = (request.args.get('url') or '').strip()
     host = (urlparse(url).hostname or '').lower()
-    if not (host == 'sndcdn.com' or host.endswith('.sndcdn.com')):
-        return jsonify({'error': 'only SoundCloud CDN images are allowed'}), 400
+    # Allow SoundCloud CDN (Cave artist assets) OR the user's own Stash images,
+    # which live on our Supabase Storage host. Reuses the same SSRF guard the media
+    # endpoints use; allow_redirects=False below still blocks redirect-based SSRF.
+    is_soundcloud = host == 'sndcdn.com' or host.endswith('.sndcdn.com')
+    if not (is_soundcloud or _is_own_storage_url(url)):
+        return jsonify({'error': 'only SoundCloud CDN or your own Stash images are allowed'}), 400
     try:
         # allow_redirects=False so a whitelisted host can't 302 us onward to an
         # internal address (the redirect-following SSRF the review flagged); only a

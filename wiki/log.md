@@ -1,5 +1,20 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-27] FROM STASH (cont.) — proxy allow-list now passes own Stash images (branch `firepit-stash-edit-fix`)
+Live-testing the picker fix on `localhost:3000` (against the prod Railway backend) surfaced the *next* error
+when picking a still: **"only SoundCloud CDN images are allowed."** Root cause: `/api/proxy-image`
+(`content_api.py`) — which base64s a URL server-side so it can be used as a Forge reference — whitelisted
+**only** `sndcdn.com` for SSRF safety. Stash images live on our **Supabase Storage** host, so they were
+rejected. Fix: also allow URLs that pass the existing `_is_own_storage_url()` guard (same SSRF-safe check
+the media endpoints already use; `allow_redirects=False` still blocks redirect SSRF). Error copy + docstring
+updated. Verified (Python sim of the new condition): accepts our Stash + SoundCloud, rejects other-project
+Supabase, the cloud-metadata IP, http-downgrade, and arbitrary hosts.
+
+⚠️ **Backend change → needs `railway up`** (decision 0007: Railway deploys manually, not from GitHub). The
+`:3000` test frontend points at the live Railway backend, so this fix is invisible until the backend is
+redeployed. Additive + backward-compatible (only widens the allow-list), so safe to deploy independently of
+the frontend merge.
+
 ## [2026-06-27] FROM STASH picker — pick now loads; stills-only (branch `firepit-stash-edit-fix`)
 Two fixes to the shared FROM STASH picker (`js/stash_picker.js`), which feeds all three FROM STASH buttons
 (Forge references, Animation artwork, Gatherings flyer).

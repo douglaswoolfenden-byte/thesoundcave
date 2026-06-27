@@ -19,6 +19,7 @@
 - [Forge context pipeline](spec/forge_context_pipeline.md) — every generation digests ALL context; WHO/WHERE/WHAT/STYLE role-tagged refs + the Context Stack. **Signed off 2026-06-11.**
 - [Style gallery — "Etchings"](spec/style_gallery.md) — "pick a look" curated STYLE tiles (visual genre selection) over the role-tagged pipeline. **Approved 2026-06-17.**
 - [Forge UX principles](spec/forge_ux_principles.md) — iterative control · examples as guide-rails · series style-consistency · closing the vision gap. **Captured 2026-06-17 (2 tensions with P1.5 flagged).**
+- [Invite sheet sync](spec/invite_sheet_sync.md) — bulk-mint beta invite codes from the tracker Google Sheet (one-way, in-session). **Built 2026-06-27 (option A; two-way write-back deferred).**
 
 ## Features
 - [The Cave](features/the_cave.md) — the discovery **umbrella** (Mural · Foraging · Clan · Footprints). The **Mural** is its dashboard scene (UI label was "Dashboard"). Built; print stylesheet pending.

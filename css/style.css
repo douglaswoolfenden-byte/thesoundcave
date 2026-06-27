@@ -116,6 +116,23 @@
   text-transform: uppercase;
 }
 
+/* Persistent app-shell version stamp — the splash corner stamp carried
+   into the app on every page. Fixed bottom-left, faint, non-interactive.
+   Sits below modals/header but above page content; hidden behind the
+   splash overlay until entry. Desktop only (mobile.css hides it so it
+   never collides with the mobile bottom tab bar). */
+.app-stamp {
+  position: fixed;
+  bottom: var(--space-5); left: var(--space-5);
+  z-index: 40;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: var(--tracking-mono);
+  color: var(--color-faint);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 /* Logo block centered in mouth */
 .cave-logo {
   position: absolute;

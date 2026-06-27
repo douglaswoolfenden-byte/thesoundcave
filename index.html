@@ -37,7 +37,7 @@
           aria-pressed="false" aria-label="Toggle ambient sound">
     {SOUND <span id="caveSoundState">OFF</span>}
   </button>
-  <div class="cave-stamp">{51.5°N 0.1°W} &nbsp; {S0UNDCAV3 / V1}</div>
+  <div class="cave-stamp" id="caveStamp">{51.5°N 0.1°W} &nbsp; {S0UNDCAV3 / <span data-version>V1.0.0</span>} &nbsp; {<span data-age>FIRST AGE</span>}</div>
 
   <div class="cave-crt" aria-hidden="true"></div>
   <div class="cave-grain" aria-hidden="true"></div>
@@ -1022,6 +1022,15 @@
 
 </div><!-- /.app-wrap -->
 
+<!-- ─── BOTTOM-LEFT VERSION STAMP ────────────────────────
+     The splash corner stamp, carried into the app on every page.
+     Lives OUTSIDE .app-wrap (same transform:scale() re-anchor reason
+     as corner-nav / mobile-tabbar). Version number is read from
+     /VERSION by js/version.js — single source of truth, see
+     wiki/decisions/0013_version_ages.md. Hidden behind the splash
+     overlay (z 9999) until the user enters the cave. -->
+<div class="app-stamp" id="appStamp" aria-hidden="true">{51.5°N 0.1°W} &nbsp; {S0UNDCAV3 / <span data-version>V1.0.0</span>} &nbsp; {<span data-age>FIRST AGE</span>}</div>
+
 <!-- ─── BOTTOM-RIGHT CORNER NAV ──────────────────────────
      OVERVIEW = the existing tab-home content (rebranded).
      INDEX    = the new tab-index above.
@@ -1145,6 +1154,7 @@
 
 <script src="js/lib/supabase.js"></script>
 <script src="js/config.js"></script>
+<script src="js/version.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/cave_entrance.js"></script>
 <script src="js/roster_sync.js"></script>

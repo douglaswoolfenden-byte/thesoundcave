@@ -1822,16 +1822,37 @@ def get_sc_token():
     return None
 
 
-def sc_fetch_tracks(genre, limit=50):
+def sc_fetch_tracks(genre='', limit=50, keyword='', genre_as_query=False):
+    """Fetch tracks from SoundCloud's /tracks endpoint.
+
+    - keyword        → sent as a real full-text `q` search (the thing the user
+                       typed). This is what actually finds artists by name/vibe;
+                       a local substring filter over a handful of genre tracks
+                       (the old behaviour) returned nothing for most keywords.
+    - genre          → matched against SoundCloud's free-text `genres` tag.
+    - genre_as_query → search the genre via `q` instead of the `genres` tag.
+                       Loose fallback for when the exact tag matches nothing
+                       ("Tech House" vs "tech-house" vs "House" are all distinct
+                       tags on SoundCloud, so exact matching often whiffs).
+    """
     token = get_sc_token()
     if not token:
         return []
     headers = {'Authorization': f'OAuth {token}'}
-    params = {'genres': genre, 'limit': limit, 'order': 'hotness', 'filter': 'streamable'}
+    params = {'limit': limit, 'order': 'hotness', 'filter': 'streamable'}
+    q_parts = []
+    if keyword:
+        q_parts.append(keyword)
+    if genre and genre_as_query:
+        q_parts.append(genre)
+    elif genre:
+        params['genres'] = genre
+    if q_parts:
+        params['q'] = ' '.join(q_parts)
     try:
         r = http_requests.get('https://api.soundcloud.com/tracks', params=params, headers=headers, timeout=10)
         r.raise_for_status()
-        return r.json()
+        return r.json() or []
     except Exception:
         return []
 
@@ -2451,7 +2472,10 @@ def save_scheduled_searches():
 def search():
     genre = request.args.get('genre', '')
     min_followers = int(request.args.get('min_followers', 0))
-    max_followers = int(request.args.get('max_followers', 5000))
+    # 0 (or blank) = no upper ceiling. Previously defaulted to 5000, which
+    # silently dropped every artist above 5k followers whenever the user left
+    # "Max followers" blank — a frequent cause of empty / thin results.
+    max_followers = int(request.args.get('max_followers', 0) or 0)
     keyword = request.args.get('keyword', '').strip()
     limit = min(int(request.args.get('limit', 20)), 100)
 
@@ -2459,13 +2483,24 @@ def search():
     if not token:
         return jsonify({'error': 'SoundCloud credentials not configured. Set SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET in .env'}), 500
 
-    # Determine which genres to search
-    genres_to_search = [genre] if genre else SCOUT_GENRES
+    # With a keyword, SoundCloud's full-text `q` search does the work, so a
+    # single query suffices — no need to fan out across every genre. Without
+    # one, sweep the chosen genre (or the whole genre list).
+    if genre:
+        genres_to_search = [genre]
+    elif keyword:
+        genres_to_search = ['']
+    else:
+        genres_to_search = SCOUT_GENRES
     all_tracks = []
     seen_ids = set()
 
     for g in genres_to_search:
-        tracks = sc_fetch_tracks(g, limit=50)
+        tracks = sc_fetch_tracks(g, limit=50, keyword=keyword)
+        # Loose-genre fallback: an exact `genres` tag that matches nothing gets
+        # retried as a free-text query so "tech house" etc. still find artists.
+        if g and not tracks:
+            tracks = sc_fetch_tracks(g, limit=50, keyword=keyword, genre_as_query=True)
         for track in tracks:
             track_id = track.get('id')
             if not track_id or track_id in seen_ids:
@@ -2481,13 +2516,13 @@ def search():
                 followers = sc_fetch_followers(user_id)
                 user['followers_count'] = followers
 
-            # Apply filters
-            if followers < min_followers or followers > max_followers:
+            # Apply filters. max_followers == 0 means "no ceiling".
+            if followers < min_followers:
+                continue
+            if max_followers and followers > max_followers:
                 continue
             plays = track.get('playback_count') or 0
             if plays < 100:
-                continue
-            if keyword and keyword.lower() not in (track.get('title', '') + ' ' + user.get('username', '')).lower():
                 continue
 
             track['_score'] = sc_score_track(track)

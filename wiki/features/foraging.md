@@ -4,7 +4,7 @@
 
 ## What it does
 Three sub-tabs for finding artists outside the weekly scout cycle:
-1. **Manual Search** — live SoundCloud API queries via `/api/search` on `content_api.py`. Below the search form, **This Week's Rotation** and **Watching** sit as two columns side-by-side (so the artists user is actively monitoring stay visible at the top of the page). **Previously Discovered / Pending** sits full-width below. Results show the filter summary that produced them.
+1. **Manual Search** — live SoundCloud API queries via `/api/search` on `content_api.py`. The **keyword** is sent to SoundCloud as a real full-text `q` search (not a local substring filter), **genre** matches the `genres` tag with a loose `q` fallback when the exact tag returns nothing, and an empty "Max followers" means **no ceiling** (fixed 2026-06-27 — see log; previously a hidden 5k cap + keyword-never-searched silently emptied results). Below the search form, **This Week's Rotation** and **Watching** sit as two columns side-by-side (so the artists user is actively monitoring stay visible at the top of the page). **Previously Discovered / Pending** sits full-width below. Results show the filter summary that produced them.
 2. **Scheduled Search** — saved named searches (genre/keyword + follower range) persisted to `data/scheduled_searches.json` via `content_api` `/api/scheduled-searches` (localStorage fallback offline). **Real as of 2026-06-09** — see `wiki/spec/scheduled_searches.md`.
 3. **Running** — the latest results of each scheduled search, **grouped per search** (name + filters + last-run), triaged with Clan/Watch/Cut. Searches run weekly via the `scheduled_searches.yml` GitHub Action (`scheduled_scout.py` writes `data/searches/<id>.json`).
 

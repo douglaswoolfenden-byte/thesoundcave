@@ -34,3 +34,16 @@
 - `index.html` — CLEAR ALL button, FROM STASH buttons, stash_picker.js script tag
 - `js/firepit.js` — `newForge()`, `addStashAsRef()`, `addStashAsAnimSource()`, `_forgeAnimSourceUrl`, modified `generateAnimation()`
 - `js/events_form.js` — FROM STASH button in `renderFlyerField`
+
+## Fixed (2026-06-27) — branch `firepit-stash-edit-fix`
+
+Doug reported: the FROM STASH grid opens, but selecting an item didn't load it into the Forge.
+
+1. **Pick never fired.** `stash_picker.js` cell-click ran `_close()` (which nulls `_currentCallback`)
+   *before* the `if (_currentCallback)` check — so the callback never ran. Now the callback is captured
+   into a local before `_close()`. This was the actual root cause; it broke every item type.
+2. **Stills-only.** Animation items keep their video URL in `imageUrl`, so picking one would feed a video
+   into image-only handlers. Decision (Doug): FROM STASH imports **still images only** — new `_isStill()`
+   predicate excludes `type === 'animation'` and `context.kind === 'video'`. **To edit a saved animation,
+   open it from the Stash grid** (`editStashItem` reopens it as a playable video) — that path is unchanged
+   and was always video-aware.

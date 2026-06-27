@@ -63,9 +63,18 @@
     return head;
   }
 
+  // Only still images can be pulled into a forge. Animations (videos) store their
+  // video URL in imageUrl, so they're excluded here — a video can't be used as a
+  // reference or animation-artwork source. To edit a saved animation, open it from
+  // the Stash grid (editStashItem) instead.
+  function _isStill(item) {
+    return item.imageUrl && item.type !== 'animation'
+      && !(item.context && item.context.kind === 'video');
+  }
+
   function _render() {
     const lib = (typeof getContentLibrary === 'function') ? getContentLibrary() : [];
-    const items = lib.filter(i => i.imageUrl);
+    const items = lib.filter(_isStill);
     _overlay.replaceChildren();
 
     const modal = document.createElement('div');
@@ -78,7 +87,7 @@
     if (!items.length) {
       const empty = document.createElement('div');
       empty.className = 'stash-picker-empty';
-      empty.textContent = 'No artwork in Stash yet — save something to the Stash first.';
+      empty.textContent = 'No still images in Stash yet — save a still or flyer first (animations can’t be imported).';
       grid.appendChild(empty);
     } else {
       items.forEach(item => {
@@ -91,8 +100,9 @@
         img.loading = 'lazy';
         cell.appendChild(img);
         cell.addEventListener('click', () => {
+          const cb = _currentCallback;   // capture before _close() nulls it
           _close();
-          if (_currentCallback) _currentCallback(item);
+          if (cb) cb(item);
         });
         grid.appendChild(cell);
       });

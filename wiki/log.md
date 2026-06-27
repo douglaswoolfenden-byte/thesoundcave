@@ -1,5 +1,26 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-27] FROM STASH picker — pick now loads; stills-only (branch `firepit-stash-edit-fix`)
+Two fixes to the shared FROM STASH picker (`js/stash_picker.js`), which feeds all three FROM STASH buttons
+(Forge references, Animation artwork, Gatherings flyer).
+
+**1. Picking an item didn't load it into the Forge (root cause of Doug's report).** The cell-click handler
+called `_close()` — which sets `_currentCallback = null` — and only THEN ran
+`if (_currentCallback) _currentCallback(item)`, so the pick callback never fired: the modal closed but
+nothing loaded. Fix: capture the callback into a local (`const cb = _currentCallback`) before `_close()`,
+then invoke `cb(item)`. Affected every item type (stills and animations alike).
+
+**2. Animations excluded from the picker (Doug's call).** Animation stash items store their VIDEO url in
+`imageUrl` (the very field the picker hands to image-only code), so a picked animation would fail as a
+reference/artwork source. FROM STASH is "use existing artwork" → now **stills-only** via `_isStill()`
+(drops `type === 'animation'` and any `context.kind === 'video'`). Empty-state copy updated. To edit a saved
+animation, open it from the Stash grid — `editStashItem` already reopens it as a playable video (unchanged).
+
+Verified: Node sim of both functions — filter shows only stills (animation/video/text-only dropped); the
+old handler reproduces the never-fired bug, the new handler fires with the picked item. ⚠️ Doug to confirm
+live (login + a saved still/flyer) that picking a still lands it in the Forge. Spec:
+[stash_forge_integration.md](spec/stash_forge_integration.md).
+
 ## [2026-06-26] Favicon — cave logo on brand dark square (branch n/a, site-wide asset)
 Added a real favicon (was none). Self-contained `favicon.svg` wraps the actual brand logo
 (`brand/logo/soundcave_logo_2026-05-11.svg`) on a `#0a0a0a` rounded square (rx 104) so the light-grey mark

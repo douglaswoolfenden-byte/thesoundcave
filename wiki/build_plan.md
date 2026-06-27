@@ -1,8 +1,9 @@
 # Build Plan — tech-house campaign studio (keep top of mind)
 
 > The staged plan from here. **Canonical sequence** — the specs hold detail, this holds the map + where we are.
-> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [style_gallery (Etchings)](spec/style_gallery.md) · [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
-> **Versioning:** these stages are **First-Age milestones** — Stage N = version `1.N` ([roadmap](roadmap.md) · [decision 0013](decisions/0013_version_ages.md)). Currently `v1.0.0` (Stage 0 done); next ship is `1.1.0`.
+> Essence: [decision 0008](decisions/0008_campaign_studio_first.md). Specs: [forge_ux_principles](spec/forge_ux_principles.md). Baked-vs-overlay: [decision 0009](decisions/0009_baked_vs_overlay.md).
+>
+> **⚠️ Reframed 2026-06-27 — the canonical milestone map is now [roadmap.md](roadmap.md) ([decision 0014](decisions/0014_age1_milestones_reframed.md)).** Age 1 milestones are the real segments/tools — **Cave (`1.0`) · Firepit (`1.1`) · Forge formats (`1.2`)** — not the stage ladder below. **Etchings is retired.** The notes below stay as the **tactical record of the Forge recipe/quality work** (the Flyer format), which lives inside Milestone `1.2`. We are at `v1.2.2`.
 
 ## 📍 WHERE WE ARE
 **Stage 0 (P0) — ✅ DONE (2026-06-22).** Fired a real fal generation (TECHNO HOUSE ref + forced 12-act lineup). Verdict: **dense text bakes clean** (content trigger dropped, decision [0009](decisions/0009_baked_vs_overlay.md)); **model capable, recipe is the bottleneck** (3 fixable flaws: stranded leftover text · duplicate lineup blocks · inverted headline hierarchy). Doug's taste: **close — recipe fixes get it there.** Full verdict in [log 2026-06-22](log.md).
@@ -29,10 +30,8 @@
 - **Depends on:** P0 verdict · your sourced reference flyers · locked fonts (1 mono + 1 grotesk).
 - **Resolves:** baked-text-vs-layer — settled in [decision 0009](decisions/0009_baked_vs_overlay.md) (baked default; overlay = gated escape hatch). P0 adds the dense-text stress test that decides whether the content trigger is even needed. Refine richness sits *post*-generation.
 
-### Stage 2 — Build Etchings (the gallery)
-- **Goal:** the "pick a look" gallery UI — pick a tile → injects the STYLE ref into the proven pipeline; upload-your-own stays.
-- **Done when:** picking an Etching reliably yields a scene-correct flyer. (Runs the `ui-change-protocol` first.)
-- **Depends on:** Stage 1 proven recipe.
+### Stage 2 — Build Etchings (the gallery) — ❌ RETIRED (2026-06-27)
+- **Dropped from the plan** — Etchings (curated style gallery) no longer exists. See [decision 0014](decisions/0014_age1_milestones_reframed.md). Kept here only so older references resolve.
 
 ### Stage 3 — The refine loop (iterative richness)
 - **Goal:** post-generation refine + A/B (your full-iterative-richness call), fast-async feel.

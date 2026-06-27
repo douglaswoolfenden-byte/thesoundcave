@@ -1,5 +1,13 @@
 # Sound Cave Wiki — Log
 
+## [2026-06-27] Age 1 milestones reframed to the real build → `v1.2.2` (branch `claude/version-tier-roadmap-l3nzhu`)
+Doug reframed Age 1's milestones to match how the studio was *actually* built (breadth-first), and we set the live version to reflect it. New decision [0014](decisions/0014_age1_milestones_reframed.md).
+- **Age 1 milestones are now the real segments/tools:** `1.0` **The Cave** (Mural · Foraging · Clan · Footprints, built; Foraging search being smoothed) · `1.1` **The Firepit** (Forge · Gatherings · Stash · Trail Map · Marks, built; Trail Map calendar parked) · `1.2` **Forge formats** (Flyer ✅ · Animation ✅ · Still ⏳ · Carousel ⏳ — the only new builds left).
+- **Iteration digit = "make it all work"** — hardening every page, no new features beyond Still + Carousel.
+- **Etchings retired** — the curated style gallery is dropped from the plan (marked retired in [glossary](glossary.md), [build_plan](build_plan.md) Stage 2, [index](index.md), [style_gallery spec](spec/style_gallery.md)); history left intact.
+- **Gate → Age 2:** all four formats shipped + studio solid + ready for users (replaces the old "Etchings live" gate).
+- **Version → `1.2.2`** (Age 1 · Forge-formats milestone · Cave+Firepit built, Flyer+Animation done). Updated root `VERSION`, `js/version.js` fallback, the two `index.html` stamp fallbacks, and rewrote [roadmap](roadmap.md) Age 1. The site corner stamp now shows `V1.2.2`.
+
 ## [2026-06-27] Version surfaced in the corner stamp (branch `claude/version-tier-roadmap-l3nzhu`)
 Carried the live version into the UI off the back of the Ages system below. The splash bottom-left stamp went from a hardcoded `{S0UNDCAV3 / V1}` to `{51.5°N 0.1°W} {S0UNDCAV3 / V1.0.0} {FIRST AGE}`, and the **same stamp now persists bottom-left on every app page** (Doug's ask — "locked in at the bottom left on every page").
 - **Single source of truth:** new [`js/version.js`](../js/version.js) reads the root `/VERSION` file and paints any `[data-version]` / `[data-age]` slot → `V<number>` + the Age label. Splash (`#caveStamp`) and app-shell (`#appStamp`) share the markup contract, so one paint keeps both in sync. Bumping `/VERSION` updates the UI automatically; the Age is a one-line constant in `version.js` (bumps only at a graduation gate).

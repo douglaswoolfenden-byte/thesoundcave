@@ -50,7 +50,7 @@
 | **Cut** | Remove an artist from active tracking. Cut artists are preserved but hidden from the Mural & Footprints. | `status: 'cut'` on a Clan/`roster` row |
 | **Beat** | Rights-gated audio attached to posts (clip picker + copyright gate). | `firepit_beat`, `hero_track_url` |
 | **Summon / Gathering** | A single event/campaign. | a row in `events` |
-| **Etchings / an Etching** | The curated style gallery inside Forge — pick a look ("an Etching") as a *starting anchor* for generation (deviate via refs + Additional Context). Each tile is backed by an owned "in-style-of" plate + fonts/palette; picking one injects a STYLE-role ref. | *(to build)* — Forge style picker; see [spec/style_gallery](spec/style_gallery.md) |
+| **Etchings / an Etching** *(❌ retired 2026-06-27)* | Was the proposed curated style gallery inside Forge (pick a look → inject a STYLE-role ref). **Dropped from the plan** — see [decision 0014](decisions/0014_age1_milestones_reframed.md). Never built. Kept here so older log/wiki references resolve. | *(retired)* — old spec [spec/style_gallery](spec/style_gallery.md) |
 | **Corner stamp** | The faint bottom-left mono stamp — `{coords} {S0UNDCAV3 / V<version>} {<Age>}`. Shown on the splash and on every app page. Version is read live from `/VERSION`; Age from `js/version.js`. | splash `.cave-stamp` (`#caveStamp`) + app-shell `.app-stamp` (`#appStamp`); painted by [`js/version.js`](../js/version.js) |
 
 ## Versioning terms (internal — not UI labels)
@@ -65,6 +65,7 @@
 | **Tier** | **Subscription plan** (`tier_solo_monthly` — Solo/Label/Agency, [decision 0003](decisions/0003_saas_architecture.md)) **or** a video quality level (composite/standard/premium). **≠ Age** — eras are "Ages," never "Tiers." | Reserved word; don't reuse for eras. |
 
 ## Rename log (UI label history)
+- **2026-06-27:** **Etchings retired** — the curated style gallery is dropped from the plan ([decision 0014](decisions/0014_age1_milestones_reframed.md)); never built.
 - **2026-06-27:** versioning vocabulary added — **Age / Milestone / Iteration** (eras are "Ages," not "Tiers"; "Tier" stays subscription/video). See [decision 0013](decisions/0013_version_ages.md).
 - **2026-06-17:** new label **Etchings** (Forge style gallery, not yet built); "Markings"/"Cave Paintings"/"Totems" considered, **Etchings** chosen ("Markings" rejected — collides with "Marks").
 - **2026-06-09:** Dashboard → **Mural**; Roster → **Clan** (reverted); Summons → **Gatherings**.

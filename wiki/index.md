@@ -1,9 +1,9 @@
 # Sound Cave Wiki — Index
 
 ## 🧭 Current focus
-- [Roadmap — the Ages](roadmap.md) — the **era-level map** (`Age.Milestone.Iteration` versioning, the 3 Ages + graduation gates). **We are at `v1.0.0` · First Age · Milestone `1.1` next.**
-- [Build plan](build_plan.md) — the staged builds *inside* the First Age (P0 → prove 3 looks → Etchings → refine loop → 20+). **Keep top of mind.**
-- [Go-to-market](gtm.md) — first 100 → first 1000 users (the Second Age). **Plan, not yet executing.**
+- [Roadmap — the Ages](roadmap.md) — the **era-level map** (`Age.Milestone.Iteration` versioning, the 3 Ages + graduation gates). **We are at `v1.2.2` · Age 1 (The Studio) · Milestone `1.2` (Forge formats).**
+- [Build plan](build_plan.md) — tactical Forge-recipe record. **Reframed 2026-06-27** — milestone map moved to the roadmap; Etchings retired ([decision 0014](decisions/0014_age1_milestones_reframed.md)).
+- [Go-to-market](gtm.md) — first 100 → first 1000 users (Age 2). **Plan, not yet executing.**
 
 ## Terminology
 - [Glossary](glossary.md) — **source of truth** for UI labels ↔ what they mean ↔ internal code names ↔ old aliases. Read this when a term on the website doesn't match the code. Keep current on every rename.
@@ -17,7 +17,7 @@
 - [App-wide redesign v1](spec/redesign_v1.md) — KVS skin extended across the app. **Chrome shipped 2026-05-08, per-tab content awaits Doug's morning walkthrough.**
 - [Forge output recipes](spec/forge_output_recipes.md) — per-type media generation spec (Post / Carousel / Event Promo / Event Poster / Artist Bio): format, composition, style, model. **Approved 2026-06-09.**
 - [Forge context pipeline](spec/forge_context_pipeline.md) — every generation digests ALL context; WHO/WHERE/WHAT/STYLE role-tagged refs + the Context Stack. **Signed off 2026-06-11.**
-- [Style gallery — "Etchings"](spec/style_gallery.md) — "pick a look" curated STYLE tiles (visual genre selection) over the role-tagged pipeline. **Approved 2026-06-17.**
+- [Style gallery — "Etchings"](spec/style_gallery.md) — ❌ **RETIRED 2026-06-27** ([decision 0014](decisions/0014_age1_milestones_reframed.md)); never built. Kept for reference only.
 - [Forge UX principles](spec/forge_ux_principles.md) — iterative control · examples as guide-rails · series style-consistency · closing the vision gap. **Captured 2026-06-17 (2 tensions with P1.5 flagged).**
 
 ## Features
@@ -46,6 +46,7 @@
 - [0011 — Admin accounts bypass in-app credits](decisions/0011_admin_unlimited_credits.md)
 - [0012 — Invite-gate launch safety (gate the gift, not the signup)](decisions/0012_invite_gate_launch_safety.md)
 - [0013 — Versioning by Ages (Age.Milestone.Iteration)](decisions/0013_version_ages.md) — **the version system + roadmap framing (2026-06-27).**
+- [0014 — Age 1 milestones reframed to the real build (Etchings retired)](decisions/0014_age1_milestones_reframed.md) — **Cave · Firepit · Forge formats; now at `v1.2.2` (2026-06-27).**
 
 ## Personas
 - [Artist](personas/artist.md) — stub

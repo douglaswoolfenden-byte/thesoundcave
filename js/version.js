@@ -11,8 +11,8 @@
 // app shell (#appStamp) carry those slots, so one paint keeps them in sync.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 (function () {
-  const FALLBACK_VERSION = '1.0.0';   // mirrors /VERSION if the fetch fails
-  const AGE = 'First Age';            // First → Second → Third (the Studio now)
+  const FALLBACK_VERSION = '1.2.2';   // mirrors /VERSION if the fetch fails
+  const AGE = 'First Age';            // Age 1 (The Studio) → Market → Platform
 
   function paint(version) {
     document.querySelectorAll('[data-version]').forEach(el => {

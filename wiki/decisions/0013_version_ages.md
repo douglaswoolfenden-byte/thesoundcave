@@ -26,7 +26,9 @@ Two naming collisions had to be avoided: **Tier** already means subscription pla
 | **2** | The Market | go-to-market + monetize, first 100→1000 users | ~1000 active · proven retention · proven free→paid conversion |
 | **3** | The Platform | multi-genre, un-park discovery, discovery→studio round-trip, data flywheel | — (open horizon) |
 
-First Age milestones map 1:1 onto the existing [build_plan](../build_plan.md) stages (Stage N = Milestone `1.N`). Second Age milestones are detailed in [gtm.md](../gtm.md). The macro map lives in [roadmap.md](../roadmap.md); **this decision is the rule, the roadmap is the live position.**
+Second Age milestones are detailed in [gtm.md](../gtm.md). The macro map lives in [roadmap.md](../roadmap.md); **this decision is the rule, the roadmap is the live position.**
+
+> **Superseded (2026-06-27):** the Age 1 milestone content below (and the `Stage N = Milestone 1.N` / Etchings mapping) was reframed to the real build — Cave (`1.0`) · Firepit (`1.1`) · Forge formats (`1.2`). See [decision 0014](0014_age1_milestones_reframed.md). The `Age.Milestone.Iteration` scheme itself is unchanged.
 
 **Anchors:**
 - The root [`VERSION`](../../VERSION) file holds the current number — the single machine-readable source of truth.

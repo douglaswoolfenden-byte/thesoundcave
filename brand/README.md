@@ -12,6 +12,7 @@ deck, a poster, or a social post, it's here.
 | The app icon / favicon (logo on dark square) | `icons/favicon.svg` |
 | The alternate / boxed logo | `logo/dormant/soundcave_logo_alt_2026-05-11.svg` |
 | The fonts | `fonts/DMSans-Regular.ttf`, `fonts/DMMono-Regular.ttf` |
+| A Reddit profile banner (logo + wordmark) | `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` |
 
 ## Structure
 
@@ -26,9 +27,11 @@ brand/
 │   ├── favicon.svg          512×512, logo on the dark rounded square
 │   ├── favicon-32.png       32×32 PNG fallback
 │   └── apple-touch-icon.png 180×180 home-screen icon
-└── fonts/                   brand typefaces (TTF)
-    ├── DMSans-Regular.ttf
-    └── DMMono-Regular.ttf
+├── fonts/                   brand typefaces (TTF)
+│   ├── DMSans-Regular.ttf
+│   └── DMMono-Regular.ttf
+└── banners/                 horizontal lockups for social profile headers
+    └── soundcave_banner_reddit_1920x384_2026-06-29.png
 ```
 
 ## Full asset list
@@ -55,6 +58,26 @@ These are the logo rendered as an app icon (mark on the brand dark rounded squar
 > because GitHub Pages serves icons from the site root. The copies in `icons/` are the
 > findable **reference masters** — if you change an icon, update **both** the root copy
 > and the copy here so they don't drift.
+
+### Banners / social
+
+Lockups (logo + `S0UNDCAV3` wordmark, no glow) on cave-black, sized for social profile headers.
+
+| File | Size | For |
+|---|---|---|
+| `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` | 1920×384 (5:1) | Reddit profile banner — **stacked** (logo above wordmark) |
+
+> **Reddit mobile crops the banner inward to ~the centre third**, so a wide horizontal
+> logo-left/wordmark-right lockup loses its ends on a phone. The Reddit banner therefore
+> uses a **stacked** lockup sized to sit inside the full safe zone — the art spans only
+> x 832–1088 and y 108–274 of the 1920×384 canvas, i.e. inside both the centre-third
+> width *and* the central ~200px height, so it stays whole on every viewport (Reddit crops
+> inward on mobile both horizontally and vertically). Recommended size is 1920×384; keep
+> key art inside the central 1300×200 px. Keep the PNG under ~400 KB or Reddit re-compresses it.
+>
+> Built from the master logo SVG + DM Mono wordmark via headless Chromium. For a wider
+> header (e.g. X/Twitter 1500×500, which crops less aggressively) a horizontal lockup is
+> fine — re-render keeping the group centred.
 
 ### Fonts
 

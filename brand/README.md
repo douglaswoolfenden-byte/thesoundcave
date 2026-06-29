@@ -61,16 +61,22 @@ These are the logo rendered as an app icon (mark on the brand dark rounded squar
 
 ### Banners / social
 
-Horizontal lockups (logo on the left, `S0UNDCAV3` wordmark on the right) on cave-black,
-sized for social profile headers. The lockup is centred so it survives mobile centre-crop.
+Lockups (logo + `S0UNDCAV3` wordmark, no glow) on cave-black, sized for social profile headers.
 
 | File | Size | For |
 |---|---|---|
-| `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` | 1920×384 (5:1) | Reddit profile banner |
+| `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` | 1920×384 (5:1) | Reddit profile banner — **stacked** (logo above wordmark) |
 
-> Built from the master logo SVG + DM Mono wordmark. To make another size (e.g. X/Twitter
-> header 1500×500), re-render the same lockup at the new dimensions — keep the logo and
-> wordmark centred as a group so platform cropping never clips the mark.
+> **Reddit mobile crops the banner inward to ~the centre third**, so a wide horizontal
+> logo-left/wordmark-right lockup loses its ends on a phone. The Reddit banner therefore
+> uses a **stacked** lockup sized to sit inside the central ~640px safe zone (here the art
+> spans only x 800–1120 of 1920) — it stays whole on every viewport. Recommended size is
+> 1920×384; keep key art inside the central 1300×200 px (centre third on mobile). Keep the
+> PNG under ~400 KB or Reddit re-compresses it.
+>
+> Built from the master logo SVG + DM Mono wordmark via headless Chromium. For a wider
+> header (e.g. X/Twitter 1500×500, which crops less aggressively) a horizontal lockup is
+> fine — re-render keeping the group centred.
 
 ### Fonts
 

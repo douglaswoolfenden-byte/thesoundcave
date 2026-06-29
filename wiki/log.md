@@ -1429,3 +1429,11 @@ Doug asked to gather the S0UNDCAV3 logos & brand assets somewhere easy to find. 
 - **Deployed icon copies stay at the repo root** (`index.html` links them root-relative because GitHub Pages serves icons from site root) — the README flags the root copies as the live ones and the `brand/icons/` copies as findable masters, with a don't-drift note.
 - **Rewrote `brand/README.md`** into a complete index: a "just need the logo" quick-grab table, a folder tree, a full asset list (logos + dormant alt + icons + fonts), plus the existing locked palette & type. No mark/colour was changed — purely organisation + documentation.
 - **Wiki:** added a **Brand** section to [index.md](index.md) pointing at `brand/README.md` (distinct from the brand-kit *spec* pages in `wiki/spec/brand_*.md`).
+
+## [2026-06-29] Brand — horizontal banner for social profiles (Reddit)
+
+Doug wanted a logo-left / wordmark-right lockup sized for his Reddit profile banner, as a raster file.
+
+- **Added `brand/banners/soundcave_banner_reddit_1920x384_2026-06-29.png`** — the master logo SVG (`brand/logo/soundcave_logo_2026-05-11.svg`) on the left + `S0UNDCAV3` wordmark on the right, on cave-black `#0a0a0a`. Wordmark is DM Mono, weight 500, uppercase, `0.18em` tracking, `#e8e8e8` — exactly the splash lockup tokens. Subtle `{HEADPHONES RECOMMENDED}` tag beneath in muted `#888`. 1920×384 (5:1), the standard Reddit profile-banner size; lockup centred so mobile centre-crop never clips it.
+- **How it was made:** composed an HTML lockup (`@font-face` → `brand/fonts/DMMono-Regular.ttf`, inline logo SVG) and rasterised with the pre-installed Playwright Chromium (`--headless --screenshot`, `--window-size=1920,384`). No new mark/colour — pure composition of existing brand assets.
+- **`brand/README.md`** now has a *Banners / social* section + quick-grab row, with a note on re-rendering other sizes (e.g. X header 1500×500) keeping the group centred.

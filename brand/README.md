@@ -12,6 +12,7 @@ deck, a poster, or a social post, it's here.
 | The app icon / favicon (logo on dark square) | `icons/favicon.svg` |
 | The alternate / boxed logo | `logo/dormant/soundcave_logo_alt_2026-05-11.svg` |
 | The fonts | `fonts/DMSans-Regular.ttf`, `fonts/DMMono-Regular.ttf` |
+| A Reddit profile banner (logo + wordmark) | `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` |
 
 ## Structure
 
@@ -26,9 +27,11 @@ brand/
 │   ├── favicon.svg          512×512, logo on the dark rounded square
 │   ├── favicon-32.png       32×32 PNG fallback
 │   └── apple-touch-icon.png 180×180 home-screen icon
-└── fonts/                   brand typefaces (TTF)
-    ├── DMSans-Regular.ttf
-    └── DMMono-Regular.ttf
+├── fonts/                   brand typefaces (TTF)
+│   ├── DMSans-Regular.ttf
+│   └── DMMono-Regular.ttf
+└── banners/                 horizontal lockups for social profile headers
+    └── soundcave_banner_reddit_1920x384_2026-06-29.png
 ```
 
 ## Full asset list
@@ -55,6 +58,19 @@ These are the logo rendered as an app icon (mark on the brand dark rounded squar
 > because GitHub Pages serves icons from the site root. The copies in `icons/` are the
 > findable **reference masters** — if you change an icon, update **both** the root copy
 > and the copy here so they don't drift.
+
+### Banners / social
+
+Horizontal lockups (logo on the left, `S0UNDCAV3` wordmark on the right) on cave-black,
+sized for social profile headers. The lockup is centred so it survives mobile centre-crop.
+
+| File | Size | For |
+|---|---|---|
+| `banners/soundcave_banner_reddit_1920x384_2026-06-29.png` | 1920×384 (5:1) | Reddit profile banner |
+
+> Built from the master logo SVG + DM Mono wordmark. To make another size (e.g. X/Twitter
+> header 1500×500), re-render the same lockup at the new dimensions — keep the logo and
+> wordmark centred as a group so platform cropping never clips the mark.
 
 ### Fonts
 

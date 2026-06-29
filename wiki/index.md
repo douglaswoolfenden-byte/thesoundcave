@@ -11,6 +11,9 @@
 ## Stack
 - [Stack & Integrations](stack.md) — every tool, API & model the product uses (text-gen, image-gen, video-gen, infra). **Reviewed 2026-06-09.**
 
+## Brand
+- [Brand assets](../brand/README.md) — **the one place to find every logo, app icon, font, colour & type.** Logos in `brand/logo/` (dormant alts in `logo/dormant/`), app-icon set in `brand/icons/` (deployed copies live at repo root for GitHub Pages), fonts in `brand/fonts/`. Brand-kit *spec/UI* lives in `wiki/spec/brand_*.md`.
+
 ## Spec
 - [Overview](spec/overview.md) — what Sound Cave is, who for, what it's NOT. **Essence updated 2026-06-17 — campaign studio first (decision 0008).**
 - [Splash + Cave Entrance](spec/splash_cave_entrance.md) — KVS×Augen redesign. **Doug-confirmed 2026-05-08.**
